@@ -1,0 +1,29 @@
+@media screen{
+
+  body{
+    padding: 10px;
+    margin: 0;
+  }
+
+  .sidebar{
+    position: fixed;
+    left: 0;
+    background: #434A54;
+    top: 0;
+    width: 180px;
+    bottom: 0;
+    padding: 10px;
+  }
+
+  .sidebar *{
+    color: #CCD1D9;
+  }
+
+  .content{
+
+    margin-left: 200px;
+
+  }
+
+
+}

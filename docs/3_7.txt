@@ -1,0 +1,26 @@
+ALTER TABLE `indosps`.`purchaseorder`
+ADD COLUMN `refno` VARCHAR(15) NULL AFTER `moved`,
+ADD COLUMN `eta` DATETIME NULL AFTER `refno`,
+ADD COLUMN `term` INT(3) NULL AFTER `eta`;
+ALTER TABLE `indosps`.`inventory` ADD COLUMN `taxable_excluded` INT(1) NULL DEFAULT '0' AFTER `taxable`;
+ALTER TABLE `indosps`.`salesinvoice` CHANGE COLUMN `tax_code` `tax_code` VARCHAR(25) NULL DEFAULT '' ;
+
+ALTER TABLE `indosps`.`purchaseinvoice` ADD COLUMN `tax_code` VARCHAR(45) NULL AFTER `taxable`;
+ALTER TABLE `indosps`.`taxcodereservationpool`
+ADD INDEX `fk_taxcodereservationpool_1_idx` (`tid` ASC);
+ALTER TABLE `indosps`.`taxcodereservationpool`
+ADD CONSTRAINT `fk_taxcodereservationpool_1`
+  FOREIGN KEY (`tid`)
+  REFERENCES `indosps`.`taxcodereservation` (`id`)
+  ON DELETE CASCADE
+  ON UPDATE CASCADE;
+
+  ALTER TABLE `indosps`.`journalvoucher`
+  ADD COLUMN `lastupdatedon` DATETIME NULL AFTER `moved`,
+  ADD COLUMN `lastupdatedby` INT(10) NULL AFTER `lastupdatedon`;
+
+**
+
+ALTER TABLE `indosps`.`user` ADD COLUMN `dept` VARCHAR(45) NULL;
+ALTER TABLE `indosps`.`user` ADD COLUMN `position` VARCHAR(45) NULL;
+ALTER TABLE `indosps`.`inventorywarehouse` ADD COLUMN `total_amount` DOUBLE(16,2) NULL;

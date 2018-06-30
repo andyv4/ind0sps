@@ -1,0 +1,10 @@
+.idea
+usr/
+.DS_Store
+rcfx/.DS_Store
+rcfx/css/.DS_Store
+rcfx/font/.DS_Store
+rcfx/img/.DS_Store
+rcfx/js/.DS_Store
+rcfx/php/.DS_Store
+ui/.DS_Store

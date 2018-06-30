@@ -1,0 +1,58 @@
+ALTER TABLE `indosps`.`purchaseinvoiceinventory`
+ADD COLUMN `unitcostprice` DOUBLE(16,2) NULL,
+ADD COLUMN `unittax` DOUBLE(16,2) NULL;
+
+ALTER TABLE `indosps`.`salesinvoice`
+ADD COLUMN `iscash` INT(1) NULL AFTER `isgroup`;
+
+ALTER TABLE `indosps`.`inventorybalance`
+ADD COLUMN `refitemid` INT(10) NULL AFTER `refid`;
+
+ALTER TABLE `indosps`.`inventorybalance`
+ADD INDEX `fk_inventorybalance_4` (`ref` ASC, `refitemid` ASC);
+
+ALTER TABLE `indosps`.`customer`
+ADD COLUMN `override_sales` INT(1) NULL AFTER `tax_registration_number`,
+ADD COLUMN `sales_companyname` VARCHAR(45) NULL AFTER `override_sales`,
+ADD COLUMN `sales_addressline1` VARCHAR(100) NULL AFTER `sales_companyname`,
+ADD COLUMN `sales_addressline2` VARCHAR(100) NULL AFTER `sales_addressline1`,
+ADD COLUMN `sales_addressline3` VARCHAR(100) NULL AFTER `sales_addressline2`;
+
+
+****
+
+ALTER TABLE `indosps`.`salesinvoiceinventory`
+ADD INDEX `fk_salesinvoiceinventory_2` (`inventoryid` ASC, `qty` ASC);
+
+ALTER TABLE `indosps`.`purchaseinvoiceinventory`
+ADD INDEX `fk_purchaseinvoiceinventory_2` (`inventoryid` ASC, `qty` ASC);
+
+ALTER TABLE `indosps`.`sampleinvoiceinventory`
+ADD INDEX `fk_sampleinvoiceinventory_2` (`inventoryid` ASC, `qty` ASC);
+
+ALTER TABLE `indosps`.`inventoryadjustmentdetail`
+ADD INDEX `fk_inventoryadjustmentdetail_2` (`inventoryid` ASC, `qty` ASC);
+
+ALTER TABLE `indosps`.`warehousetransferinventory`
+ADD INDEX `fk_warehousetransferinventory_2` (`inventoryid` ASC, `qty` ASC);
+
+ALTER TABLE `indosps`.`journalvoucher`
+ADD INDEX `fk_journalvoucher_1` (`date` ASC);
+
+ALTER TABLE `indosps`.`purchaseinvoice`
+ADD COLUMN `taxdate` DATE NULL AFTER `clearance_fee`,
+ADD COLUMN `taxaccountid` INT(10) NULL AFTER `taxdate`,
+ADD COLUMN `pphdate` DATE NULL AFTER `taxaccountid`,
+ADD COLUMN `pphaccountid` INT(10) NULL AFTER `pphdate`,
+ADD COLUMN `ksodate` DATE NULL AFTER `pphaccountid`,
+ADD COLUMN `ksoaccountid` INT(10) NULL AFTER `ksodate`,
+ADD COLUMN `skidate` DATE NULL AFTER `ksoaccountid`,
+ADD COLUMN `skiaccountid` INT(10) NULL AFTER `skidate`,
+ADD COLUMN `clearance_fee_date` DATE NULL AFTER `skiaccountid`,
+ADD COLUMN `clearance_fee_accountid` INT(10) NULL AFTER `clearance_fee_date`,
+ADD COLUMN `import_cost` DOUBLE(18,3) NULL AFTER `clearance_fee_accountid`,
+ADD COLUMN `import_cost_date` DATE NULL AFTER `import_cost`,
+ADD COLUMN `import_cost_accountid` INT(10) NULL AFTER `import_cost_date`,
+ADD COLUMN `downpayment` DOUBLE(18,3) NULL AFTER `import_cost_accountid`,
+ADD COLUMN `downpaymentdate` DATE NULL AFTER `downpayment`,
+ADD COLUMN `downpaymentaccountid` INT(10) NULL AFTER `downpaymentdate`;

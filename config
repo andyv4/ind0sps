@@ -1,0 +1,4 @@
+Host github-indosps
+  HostName github.com
+  User andyv4
+  IdentityFile ~/.ssh/id_rsa_indosps

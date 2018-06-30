@@ -1,0 +1,181 @@
+@media screen{
+
+  .sidebar{
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 40px;
+    background: #fefefe;
+    width: 200px;
+    border-right: solid 1px #eee;
+  }
+  .sidebar .head h1{
+    color: #efefef;
+    font-size: 42px;
+  }
+  .sidebar .menulist{
+  }
+  .sidebar .menuitem{
+    padding: 5px 10px;
+  }
+  .sidebar .menuitem *{
+    color: #E9573F;
+
+  }
+  .sidebar .menuitem.active{
+    border-right: solid 2px #E9573F;
+  }
+
+  .content{
+    margin-left: 201px;
+  }
+  .content .head{
+    position: fixed;
+    left: 201px;
+    top: 0;
+    right: 0;
+    background: rgba(255, 255, 255, .9);
+  }
+  .content .head .sect1{
+    float: right;
+    padding: 5px 10px;
+  }
+  .content .head .sect1 .user{
+
+  }
+  .content .head .sect1 .user .fa{
+    font-size: 2em;
+    color: #E9573F;
+  }
+  .content .head .sect1 .user label{
+    font-size: 24px;
+    color: #E9573F;
+    font-family: OpenSansLight;
+  }
+
+  .button-plus:before{
+    content: "+";
+  }
+  .button-plus{
+    vertical-align: middle;
+    font-size: 42px;
+    padding: 0 16px;
+    margin: 0;
+    color: #E9573F;
+  }
+  .button-plus:hover{
+  }
+
+  .button-reload:before{
+    content: "Reload";
+  }
+  .button-reload{
+    vertical-align: middle;
+    color: #E9573F;
+    padding-top: 4px;
+  }
+
+  .tasklist{
+    max-width: 800px;
+  }
+  .tasklist .item{
+    white-space: nowrap;
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 100%;
+    margin: 8px;
+  }
+  .tasklist .item td{
+    vertical-align: top;
+    padding: 8px;
+  }
+  .tasklist .item .td0{
+    width: 2px;
+    background: #fff;
+    padding: 0;
+  }
+  .tasklist .item .td1{
+    width: 24px;
+  }
+  .tasklist .item .td2{
+    width: 100%;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+  .tasklist .item .td10{
+    width: 2px;
+    padding: 0 8px;
+  }
+  .tasklist .item .td10 *{
+    color: #aaa;
+    padding: 4px;
+  }
+  .tasklist .item .td2.title{
+    font-size: 14px;
+    text-transform: capitalize;
+    cursor: default;
+  }
+  .tasklist .item .td2.title:hover{
+    color: #000;
+  }
+  .tasklist .item .td3{
+    opacity: 0;
+    -moz-transition: opacity 300ms ease-in;
+    -webkit-transition: opacity 300ms ease-in;
+    transition: opacity 300ms ease-in;
+  }
+  .tasklist .item:hover .td3{
+    opacity: 1;
+  }
+  .tasklist .item .td3 .fa{
+    cursor: pointer;
+    color: #E9573F;
+  }
+
+  .taskentry{
+    width: 600px;
+  }
+  .taskentry .item{
+    white-space: nowrap;
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 100%;
+    margin: 8px;
+  }
+  .taskentry .item td{
+    vertical-align: top;
+    padding: 8px;
+  }
+  .taskentry .item .td0{
+    width: 2px;
+    background: #fff;
+    padding: 0;
+  }
+  .taskentry .item .td1{
+    width: 24px;
+  }
+  .taskentry .item .td2{
+    width: 100%;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+  .taskentry .item .td2 .textbox{
+    border: none;
+    border-bottom: solid 1px #eee;
+    width: 550px;
+    padding: 8px;
+  }
+  .taskentry .section{
+    vertical-align: top;
+  }
+  .taskentry small{
+    color: #aaa;
+    font-size: 10px;
+    padding: 2px 8px;
+    display: inline-block;
+  }
+
+
+}

@@ -1,0 +1,15 @@
+@media screen{
+
+  .table-style1{
+
+
+  }
+
+  .table-style1 th, .table-style1 td{
+
+    padding: 8px;
+    background: rgba(0, 0, 0, .03);
+
+  }
+
+}

@@ -1,0 +1,40 @@
+===============
+Database Update
+===============
+
+ALTER TABLE `indosps`.`user` ADD COLUMN `multilogin` INT NOT NULL DEFAULT 0;
+ALTER TABLE `indosps`.`customer` ADD COLUMN `issuspended` INT(1) NULL AFTER `isactive`;
+ALTER TABLE `indosps`.`salesinvoice` ADD INDEX `idx_salesinvoice_0` (`salesinvoicegroupid` ASC);
+ALTER TABLE `indosps`.`customerinventory` DROP FOREIGN KEY `fk_customerinventory_1`;
+ALTER TABLE `indosps`.`customerinventory` ADD CONSTRAINT `fk_customerinventory_1` FOREIGN KEY (`inventoryid`) REFERENCES `indosps`.`inventory` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+CREATE TABLE `notification` (
+  `key` varchar(40) NOT NULL COMMENT 'ref:\n1. salesinvoice.due\n2. customer.new',
+  `title` varchar(100) DEFAULT NULL,
+  `description` text,
+  `lastupdatedon` datetime DEFAULT NULL,
+  PRIMARY KEY (`key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+==
+
+CREATE TABLE `inventorywarehouse` (
+  `inventoryid` int(10) NOT NULL,
+  `warehouseid` int(10) NOT NULL,
+  `qty` double(16,2) DEFAULT NULL,
+  PRIMARY KEY (`inventoryid`,`warehouseid`),
+  KEY `fk_inventorywarehouse_2_idx` (`warehouseid`),
+  CONSTRAINT `fk_inventorywarehouse_1` FOREIGN KEY (`inventoryid`) REFERENCES `inventory` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_inventorywarehouse_2` FOREIGN KEY (`warehouseid`) REFERENCES `warehouse` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+ALTER TABLE `indosps`.`salesinvoice`
+DROP INDEX `salesinvoice_extidx_0` ,
+ADD INDEX `fk_salesinvoice_3` (`code` ASC, `customerdescription` ASC),
+DROP INDEX `salesinvoice_code` ,
+ADD INDEX `fk_salesinvoice_4` (`code` ASC),
+DROP INDEX `idx_salesinvoice_0` ,
+ADD INDEX `fk_salesinvoice_5` (`salesinvoicegroupid` ASC, `salesmanid` ASC);
+
+ALTER TABLE `indosps`.`salesinvoice`
+DROP INDEX `fk_salesinvoice_5` ,
+ADD INDEX `fk_salesinvoice_5` (`salesinvoicegroupid` ASC);
