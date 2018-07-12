@@ -63,6 +63,10 @@ $purchaseinvoice_columns = [
   'taxdate'=>[ 'active'=>0, 'text'=>'Tgl PPn', 'width'=>100, 'datatype'=>'date'],
   'taxaccountid'=>[ 'active'=>0, 'text'=>'ID Akun PPn', 'width'=>30, 'datatype'=>'number'],
 
+  'import_cost'=>[ 'active'=>0, 'text'=>'Import Cost', 'width'=>100, 'datatype'=>'money'],
+  'import_cost_date'=>[ 'active'=>0, 'text'=>'Tgl Import', 'width'=>100, 'datatype'=>'date'],
+  'import_cost_accountid'=>[ 'active'=>0, 'text'=>'ID Import Cost', 'width'=>30, 'datatype'=>'number'],
+
 ];
 
 function purchaseinvoice_uicolumns(){
@@ -375,6 +379,14 @@ function purchaseinvoicevalidate(&$updated, $original = null){
     }
   }
 
+  if(isset($updated['import_cost']) && $updated['import_cost'] > 0 &&
+    isset($updated['import_cost_accountid']) && $updated['import_cost_accountid'] > 0 &&
+    isset($updated['import_cost_date'])
+  ){
+    if(date('Ymd', strtotime($updated['import_cost_date'])) < date('Ymd')) exc('Invalid import cost date');
+    if(!chartofaccountdetail(null, [ 'id'=>$updated['import_cost_accountid'] ])) exc('Invalid import account');
+  }
+
 
 }
 
@@ -486,7 +498,6 @@ function purchaseinvoicemodify($purchaseinvoice){
   $fp = acquire_lock("purchaseinvoice_modify_$id");
 
   $updated = module_modify($current, $purchaseinvoice, $purchaseinvoice_columns);
-  console_log($updated);
   purchaseinvoicevalidate($updated, $current);
   mysql_update_row('purchaseinvoice', $updated, [ 'id'=>$id ]);
 

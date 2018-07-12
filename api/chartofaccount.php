@@ -148,6 +148,25 @@ function chartofaccountmutation($filters, $sorts = null){
 
   if(!$rows) $rows = array();
 
+  // Resolve description into more readable text
+  if(count($rows) > 0){
+
+    $purchaseinvoiceids = [];
+    $purchaseinvoices = [];
+    foreach($rows as $row)
+      if($row['ref'] == 'PI') $purchaseinvoiceids[] = $row['refid'];
+    if(count($purchaseinvoiceids) > 0){
+      $purchaseinvoices = pmrs("select `id`, concat(`code`, ' - ', supplierdescription) as description from purchaseinvoice where `id` in (" . implode(', ', $purchaseinvoiceids) . ")");
+      $purchaseinvoices = array_index($purchaseinvoices, [ 'id' ], 1);
+    }
+
+    foreach($rows as $index=>$row){
+      if($row['ref'] == 'PI' && isset($purchaseinvoices[$row['refid']]))
+        $rows[$index]['description'] = $purchaseinvoices[$row['refid']]['description'];
+    }
+
+  }
+
   // Opening balance and balance only calculated on below criteria
   if(count($rows) > 0 &&
     count($filter_names) == 2 && in_array('coaid', $filter_names) && in_array('date', $filter_names) &&

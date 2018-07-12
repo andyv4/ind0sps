@@ -121,7 +121,7 @@ $invoicefontsize = count($items) >= 20 ? 'font6pt' : (count($items) >= 10 ? 'fon
           <i>Amount</i>
         </td>
         <td style="width:8mm;text-align: center">:</td>
-        <td># <?=ucwords(terbilang($salesreceipt['total']))?></td>
+        <td># <?=ucwords(terbilang(round($salesreceipt['total'])))?></td>
       </tr>
       <tr>
         <td style="text-align: center;width:40mm">

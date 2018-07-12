@@ -92,13 +92,13 @@ for($a = 0 ; $a < $page ; $a++){
           <tr>
             <td rowspan="5" width="60mm" style="vertical-align: top"><img width="60mm" height="60mm" src="<?=$logo?>"/></td>
             <td>&nbsp</td>
-            <td width="100%" style="white-space: nowrap"><h1 style="white-space: nowrap"><?=$companyname?></h1></td>
+            <td width="100%" style="white-space: nowrap"><h1 style="white-space: nowrap;font-size:14pt"><?=$companyname?></h1></td>
           </tr>
           <?php } else { ?>
           <tr>
             <td rowspan="5" style="vertical-align: top"></td>
             <td>&nbsp</td>
-            <td width="100%" style="white-space: nowrap"><h1 style="white-space: nowrap"><?=$companyname?></h1></td>
+            <td width="100%" style="white-space: nowrap"><h1 style="white-space: nowrap;font-size:14pt"><?=$companyname?></h1></td>
           </tr>
           <?php } ?>
           <tr><td>&nbsp;</td><td><?=$addressline1?></td></tr>

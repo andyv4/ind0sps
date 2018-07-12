@@ -1,4 +1,4 @@
-<?php
+salesreceipt<?php
 
 $companyname = systemvarget('companyname');
 $logo = systemvarget('logo');

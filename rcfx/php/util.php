@@ -1947,6 +1947,7 @@ function array_replace_rows_with_arrayobject($arr, $arrobj, $key){
 
 function terbilang($x)
 {
+
   $abil = array("", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan", "sepuluh", "sebelas");
   if ($x < 12)
     return " " . $abil[$x];

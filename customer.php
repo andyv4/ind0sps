@@ -185,7 +185,7 @@ function customerlist_status($obj){
 function customerlist_isactive($obj){
 
   $html = [ "<div class='align-center'>" ];
-  if(privilege_get('customer', 'modify') && in_array($_SESSION['user']['dept'], [ 'accounting' ])){
+  if(privilege_get('customer', 'modify') && in_array($_SESSION['user']['dept'], [ 'accounting', 'management' ])){
     $html[] = "<input data-id=\"" . ov('id', $obj) . "\" data-text=\"" . ov('description', $obj) . "\" type='checkbox'" . (ov('isactive', $obj, 0) > 0 ? ' checked' : '') . " onchange='return customer_isactive_onchange(event, this)'/>";
   }
   else{

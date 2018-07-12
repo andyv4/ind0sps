@@ -285,7 +285,7 @@ function customermodify($customer){
 
   if(isset($customer['isactive']) && $current_customer['isactive'] != $customer['isactive']){
     $user = staffdetail([ 'dept' ], [ 'id'=>$_SESSION['user']['id'] ]);
-    if(privilege_get('customer', 'modify') && in_array($user['dept'], [ 'accounting' ])) {
+    if(privilege_get('customer', 'modify') && in_array($user['dept'], [ 'accounting', 'management' ])) {
       $updatedrow['isactive'] = $customer['isactive'];
     }
   }

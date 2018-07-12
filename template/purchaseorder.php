@@ -44,7 +44,7 @@ $eta = $purchaseorder['eta'];
 
 $date = date('j M Y', strtotime($date));
 $eta = date('j M Y', strtotime($eta));
-if($eta == '1 Jan 1970') $eta = '-';
+if(date('Ymd', strtotime($ta)) < 20150101) $eta = '-';
 
 $companyname = systemvarget('purchase_company_name');
 $logo = systemvarget('logo');
