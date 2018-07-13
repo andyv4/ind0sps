@@ -213,10 +213,14 @@ function salesinvoicegroupentry($salesinvoicegroup){
     $typeid = ov('typeid', $item);
     switch($type){
       case 'SI':
-        $salesinvoice = pmr("SELECT taxable FROM salesinvoice WHERE `id` = ?", [ $typeid ]);
+        $salesinvoice = pmr("SELECT customerdescription, taxable FROM salesinvoice WHERE `id` = ?", [ $typeid ]);
         if(!$salesinvoice) throw new Exception('Faktur yang dimasukkan salah.');
-        if($taxable === null) $taxable = $salesinvoice['taxable'];
-        else if($taxable != $salesinvoice['taxable']) exc('Tidak bisa menggabungkan faktur pajak dan non pajak dalam 1 (satu) group faktur.');
+        $is_genki = strpos(strtolower($salesinvoice['customerdescription']), 'genki') !== false;
+
+        if(!$is_genki){
+          if($taxable === null) $taxable = $salesinvoice['taxable'];
+          else if($taxable != $salesinvoice['taxable']) exc('Tidak bisa menggabungkan faktur pajak dan non pajak dalam 1 (satu) group faktur.');
+        }
         break;
       case 'SN':
         if(pmc("SELECT COUNT(*) FROM salesreturn WHERE `id` = ?", array($typeid)) <= 0) throw new Exception('Retur yang dimasukkan salah.');

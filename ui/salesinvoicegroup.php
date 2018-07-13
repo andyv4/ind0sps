@@ -332,16 +332,33 @@ function ui_salesinvoicegroupdetail_createfrominvoices($salesinvoiceids){
   // Validation
   // 1. Validate parameter
   if(gettype($salesinvoiceids) != 'array' || count($salesinvoiceids) <= 0) throw new Exception('Tidak dapat membuat faktur, tidak ada faktur dipilih.');
+
+  // Check if genki
+  $is_genki = true;
+  $customers = pmrs("select customerdescription from salesinvoice where `id` in (" . implode(', ', $salesinvoiceids) . ")");
+  foreach($customers as  $customer){
+    if(strpos(strtolower($customer['customerdescription']), 'genki') !== false);
+    else $is_genki = false;
+  }
+
   // 2. Check if salesinvoiceids is grouped and is the same customerid
   $items = array(); // Retrieve each salesinvoice data
   $customerid = null;
   $salesinvoiceids = array_unique($salesinvoiceids);
+  $taxable = 0; $non_taxable = 0;
   foreach($salesinvoiceids as $salesinvoiceid){
     $salesinvoice = salesinvoicedetail(null, array('id'=>$salesinvoiceid));
     if(!$salesinvoice) throw new Exception('Tidak dapat membuat grup, faktur tidak terdaftar.');
     if($salesinvoice['isgroup']) throw new Exception('Tidak dapat membuat grup, faktur sudah ada grup');
-    if($customerid == null) $customerid = $salesinvoice['customerid'];
-    else if($salesinvoice['customerid'] != $customerid) throw new Exception('Tidak dapat membuat grup faktur dari pelanggan yang berbeda.');
+
+    if(!$is_genki){
+      if($customerid == null) $customerid = $salesinvoice['customerid'];
+      else if($salesinvoice['customerid'] != $customerid) throw new Exception('Tidak dapat membuat grup faktur dari pelanggan yang berbeda.');
+      if($salesinvoice['taxable']) $taxable = 1;
+      else $non_taxable = 1;
+      if($taxable + $non_taxable > 1) exc("Tidak dapat membuat grup faktur dari faktur non pajak dan pajak");
+    }
+
     $salesinvoice['type'] = 'SI';
     $salesinvoice['typeid'] = $salesinvoice['id'];
     $items[] = $salesinvoice;

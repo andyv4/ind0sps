@@ -113,7 +113,8 @@ function salesinvoicelist_groupopt_checkstate(){
     if(groups.length > 0){
       groupable = true;
       var groupable_taxable = -1;
-      for(var i = 0 ; i < groups.length ; i++){
+
+      /*for(var i = 0 ; i < groups.length ; i++){
         var group = groups[i];
         var taxable = group.getAttribute("data-taxable");
         if(groupable_taxable == -1) groupable_taxable = taxable;
@@ -121,7 +122,7 @@ function salesinvoicelist_groupopt_checkstate(){
           groupable = false;
           break;
         }
-      }
+      }*/
     }
 
     groupable ? $('#groupable').show() : $('#groupable').hide();
