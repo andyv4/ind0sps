@@ -215,7 +215,8 @@ function salesinvoicegroupentry($salesinvoicegroup){
       case 'SI':
         $salesinvoice = pmr("SELECT customerdescription, taxable FROM salesinvoice WHERE `id` = ?", [ $typeid ]);
         if(!$salesinvoice) throw new Exception('Faktur yang dimasukkan salah.');
-        $is_genki = strpos(strtolower($salesinvoice['customerdescription']), 'genki') !== false;
+        $is_genki = strpos(strtolower($salesinvoice['customerdescription']), 'genki') !== false ||
+          strpos(strtolower($salesinvoice['customerdescription']), 'aeon') !== false;
 
         if(!$is_genki){
           if($taxable === null) $taxable = $salesinvoice['taxable'];
