@@ -1,4 +1,5 @@
 <?php
+
 $printermargin = systemvarget('printermargin');
 $paperwidth = systemvarget('paperwidth');
 $paperheight = systemvarget('paperheight');
@@ -165,7 +166,9 @@ for($a = 0 ; $a < $page ; $a++){
             <div style="width:40mm;height:22mm;border-bottom: solid 1px #000;text-align: center">
               Authorized Sign
             </div>
-            <div style="font-size:.9em;width:40mm;text-align: center"><?=ucwords($_SESSION['user']['name'])?></div>
+            <div style="font-size:.9em;width:40mm;text-align: center">
+              <?=ucwords($_SESSION['user']['name'])?>
+            </div>
           </td>
           <td><div style="width:10mm"></div></td>
           <td style="vertical-align: top">
@@ -209,7 +212,11 @@ for($a = 0 ; $a < $page ; $a++){
         <tr>
           <th style="text-align: right;white-space: nowrap"></th>
           <td></td>
-          <td style="font-size:.8em;width:20mm;text-align: right"><?=$salesinvoice['salesmanname']?></td>
+          <td style="font-size:.8em;width:40mm;text-align: right">
+            <?=$salesinvoice['salesmanname']?>
+            <div></div>
+            harga barang sudah termasuk pajak
+          </td>
         </tr>
       </table>
     </div>

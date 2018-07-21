@@ -132,5 +132,11 @@ function currency_default_set($id){
   pm("UPDATE currency SET isdefault = 1 WHERE `id` = ?", array($id));
 
 }
+function currency_epsilon($id){
+
+  $code = pmc("select UPPER(code) from currency where `id` = ?", [ $id ]);
+  return $code == 'IDR' ? 0.99 : 0.0099;
+
+}
 
 ?>

@@ -38,50 +38,77 @@ function purchaseinvoice_subtotal(){
 
 function purchaseinvoice_total(){
 
+  var currencyrate = parseFloat($("*[data-name='currencyrate']", '.modal').val());
   var subtotal = purchaseinvoice_subtotal();
-  var discountamount = parseFloat(ui.textbox_value(ui('%discountamount', ui('.modal'))));
-  if(isNaN(discountamount)) discountamount = 0;
-  var subtotal_after_discount = subtotal - discountamount;
-  var taxamount = parseFloat(ui.control_value(ui('%taxamount', ui('.modal'))));
-  if(isNaN(taxamount)) taxamount = 0;
-  var freightcharge = parseFloat(ui.control_value(ui('%freightcharge', ui('.modal'))));
-  if(isNaN(freightcharge)) freightcharge = 0;
-  var pph = parseFloat(ui.control_value(ui('%pph', ui('.modal'))));
-  if(isNaN(pph)) pph = 0;
-  var kso = parseFloat(ui.control_value(ui('%kso', ui('.modal'))));
-  if(isNaN(kso)) kso = 0;
-  var ski = parseFloat(ui.control_value(ui('%ski', ui('.modal'))));
-  if(isNaN(ski)) ski = 0;
-  var clearance_fee = parseFloat(ui.control_value(ui('%clearance_fee', ui('.modal'))));
-  if(isNaN(clearance_fee)) clearance_fee = 0;
-  var total = subtotal - discountamount;
+  var discountamount = parseFloat($("*[data-name='discountamount']", '.modal').val());
+  var taxamount = parseFloat($("*[data-name='taxamount']", '.modal').val());
+  var freightcharge = parseFloat($("*[data-name='freightcharge']", '.modal').val());
+  var pph = parseFloat($("*[data-name='pph']", '.modal').val());
+  var kso = parseFloat($("*[data-name='kso']", '.modal').val());
+  var ski = parseFloat($("*[data-name='ski']", '.modal').val());
+  var clearance_fee = parseFloat($("*[data-name='clearance_fee']", '.modal').val());
+  var handlingfeepaymentamount = parseFloat($("*[data-name='handlingfeepaymentamount']", '.modal').val());
 
-  ui.label_setvalue(ui('%total', ui('.modal')), total);
+  if(isNaN(currencyrate)) currencyrate = 1;
+  if(isNaN(taxamount)) taxamount = 0;
+  if(isNaN(freightcharge)) freightcharge = 0;
+  if(isNaN(pph)) pph = 0;
+  if(isNaN(kso)) kso = 0;
+  if(isNaN(ski)) ski = 0;
+  if(isNaN(clearance_fee)) clearance_fee = 0;
+  if(isNaN(handlingfeepaymentamount)) handlingfeepaymentamount = 0;
+
+  var total = subtotal - discountamount + freightcharge;
+  $("*[data-name='total']", '.modal').val(total);
+
+  subtotal = subtotal * currencyrate;
+  discountamount = discountamount * currencyrate;
+  freightcharge = freightcharge * currencyrate;
+  total = subtotal - discountamount + freightcharge;
+
+  var subtotal_after_discount = subtotal - discountamount;
 
   var discount_percentage = discountamount / subtotal;
-  var tax_percentage = (taxamount + freightcharge + pph + kso + ski + clearance_fee) / subtotal_after_discount;
+  var tax_percentage = (freightcharge + taxamount + pph + kso + ski + clearance_fee + handlingfeepaymentamount) / subtotal_after_discount;
 
-  var currencyrate = ui.control_value(ui('%currencyrate', ui('.modal')));
+  console.log([
+    taxamount,
+    freightcharge,
+    pph,
+    kso,
+    ski,
+    clearance_fee,
+    handlingfeepaymentamount,
+    subtotal_after_discount,
+    tax_percentage,
+    discount_percentage
+  ]);
+
   var total_unittax = 0;
   $('#inventories tr').each(function(){
 
     if(this.classList.contains('newrowopt')) return;
 
-    var qty = ui.textbox_value(ui('%qty', this));
-    var unittotal = ui.label_value(ui('%unittotal', this));
-    var unittax = ui.textbox_value(ui('%unittax', this));
+    var qty = $("*[data-name='qty']", this).val();
+    var unittotal = $("*[data-name='unittotal']", this).val();
+    var unittax = $("*[data-name='unittax']", this).val();
+
+    if(isNaN(qty)) qty = 0;
+    if(isNaN(unittotal)) unittotal = 0;
+    if(isNaN(unittax)) unittax = 0;
+
+    unittax_per_unit = unittax / qty;
     var unitprice = unittotal / qty;
     var unitcostprice = unitprice - (discount_percentage * unitprice);
     unitcostprice = unitcostprice + (tax_percentage * unitcostprice);
     unitcostprice = isNaN(unitcostprice) ? 0 : unitcostprice;
-    unitcostprice = Math.round(unitcostprice * currencyrate) + unittax;
-    ui.textbox_setvalue(ui('%unitcostprice', this), unitcostprice);
+    unitcostprice = Math.round(unitcostprice * currencyrate) + unittax_per_unit;
+    $("*[data-name='unitcostprice']", this).val(unitcostprice);
 
-    total_unittax += unittax;
+    total_unittax += unittax > 0 ? unittax : 0;
 
-  })
-
-  ui.textbox_setvalue(ui('%import_cost'), total_unittax);
+  });
+  $("*[data-name='import_cost']", '.modal').val(total_unittax);
 
   return total;
 
@@ -124,9 +151,7 @@ function purchaseinvoice_ispaid(){
 
 function purchaseinvoice_paymentamount(){
 
-  var currencyrate = ui.control_value(ui('%currencyrate', ui('.modal')));
   var total = purchaseinvoice_total();
-  total = total * currencyrate;
 
   /*
   var handlingfee = ui.control_value(ui('%handlingfeepaymentamount', ui('.modal')));

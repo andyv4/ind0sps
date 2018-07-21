@@ -88,10 +88,15 @@ function purchaseorder_taxchange(){
 function purchaseorder_ispaid(){
 
   var ispaid = ui.checkbox_value(ui('%ispaid', ui('.modal')));
-  if(ispaid)
+  if(ispaid){
     purchaseorder_paymentamount();
-  else
-    ui.control_setvalue(ui('%paymentamount'), 0);
+    if($("*[data-name='paymentdate']").val() == '')
+      $("*[data-name='paymentdate']").val(date('Ymd'));
+  }
+  else{
+    $("*[data-name='paymentdate']").val('');
+    $("*[data-name='paymentamount']").val(0);
+  }
 
 }
 
@@ -116,7 +121,6 @@ function purchaseorder_onhandlingfeechange(){
 
 function purchaseorder_paymentamountchange(){
 
-  console.warn('[purchaseorder_paymentamountchange]');
   var total = purchaseorder_total();
   var currencyrate = ui.control_value(ui('%currencyrate', ui('.modal')));
   total = total * currencyrate;
@@ -126,13 +130,12 @@ function purchaseorder_paymentamountchange(){
 
   var paymentamount = ui.control_value(ui('%paymentamount'), total);
 
-
   if(paymentamount > total){
     alert('Pelunasan tidak dapat lebih besar dari total order.');
     ui.control_setvalue(ui('%paymentamount'), total);
     paymentamount = total;
   }
-  ui.control_setvalue(ui('%ispaid', ui('.modal')), paymentamount == total ? 1 : 0);
+  ui.control_setvalue(ui('%ispaid', ui('.modal')), paymentamount > 0 ? 1 : 0);
 
 }
 

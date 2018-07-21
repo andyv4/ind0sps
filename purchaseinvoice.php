@@ -310,6 +310,7 @@ function ui_purchaseinvoicedetail_journal($purchaseinvoiceid){
     [ 'active'=>1, 'name'=>'coaname', 'text'=>'Nama Akun', 'width'=>190, 'nodittomark'=>1 ],
     [ 'active'=>1, 'name'=>'debit', 'text'=>'Debit', 'width'=>90, 'nodittomark'=>1, 'datatype'=>'money' ],
     [ 'active'=>1, 'name'=>'credit', 'text'=>'Kredit', 'width'=>90, 'nodittomark'=>1, 'datatype'=>'money' ],
+    [ 'active'=>1, 'name'=>'description', 'text'=>'Deskripsi', 'width'=>200, 'nodittomark'=>1 ],
   ];
 
   $c = "<element exp='.dialog'>";
@@ -332,7 +333,7 @@ function ui_purchaseinvoicedetail_journal($purchaseinvoiceid){
       ";
   $c .= "</element>";
   $c .= uijs("
-        ui.dialog_open({ width:640 });
+        ui.dialog_open({ width:900 });
       ");
   return $c;
 

@@ -213,6 +213,10 @@ function purchaseorderentry($purchaseorder){
 
   if(!isdate($date)) exc('Tanggal harus diisi.');
   if(!is_array($inventories) || count($inventories) == 0) throw new Exception('Barang harus diisi.');
+  if($ispaid){
+    if(!isdate($paymentdate)) exc('Tanggal pelunasan harus diisi.');
+    if(!chartofaccount_id_exists($paymentaccountid)) exc("Akun pelunasan harus diisi.");
+  }
 
   $query = "INSERT INTO purchaseorder(isinvoiced, code, `date`, supplierid, supplierdescription, currencyid, currencyrate, address, note, ispaid, paymentaccountid, paymentamount, paymentdate,
     discount, discountamount, taxable, createdon, createdby, lastupdatedon, freightcharge, handlingfeevolume, handlingfeeamount, handlingfeeaccountid, handlingfeedate, handlingfeepaymentamount,
@@ -256,8 +260,6 @@ function purchaseorderentry($purchaseorder){
     purchaseordercalculate($id);
     inventory_purchaseorderqty();
 
-    if(is_debugmode()) console_warn("Purchaseorder created.");
-
     userlog('purchaseorderentry', $purchaseorder, '', $_SESSION['user']['id'], $id);
 
     fclose($fp);
@@ -293,88 +295,65 @@ function purchaseordermodify($purchaseorder){
     $updatedrows['supplierid'] = supplierdetail(null, array('description'=>$purchaseorder['supplierdescription']))['id'];
     $updatedrows['supplierdescription'] = $purchaseorder['supplierdescription'];
   }
-
   if(isset($purchaseorder['date']) && $purchaseorder['date'] != $current_purchaseorder['date']){
     if(!isdate($purchaseorder['date'])) exc('Format tanggal salah');
     $updatedrows['date'] = ov('date', $purchaseorder, 1, array('type'=>'date'));
   }
-
   if(isset($purchaseorder['address']) && $purchaseorder['address'] != $current_purchaseorder['address']){
     $updatedrows['address'] = $purchaseorder['address'];
   }
-
   if(isset($purchaseorder['currencyid']) && $purchaseorder['currencyid'] != $current_purchaseorder['currencyid']){
     $updatedrows['currencyid'] = $purchaseorder['currencyid'];
   }
-
   if(isset($purchaseorder['currencyrate']) && $purchaseorder['currencyrate'] != $current_purchaseorder['currencyrate']){
     $updatedrows['currencyrate'] = $purchaseorder['currencyrate'];
   }
-
   if(isset($purchaseorder['discount']) && $purchaseorder['discount'] != $current_purchaseorder['discount']){
     $updatedrows['discount'] = $purchaseorder['discount'];
   }
-
   if(isset($purchaseorder['discountamount']) && $purchaseorder['discountamount'] != $current_purchaseorder['discountamount']){
     $updatedrows['discountamount'] = $purchaseorder['discountamount'];
   }
-
   if(isset($purchaseorder['eta']) && $purchaseorder['eta'] != $current_purchaseorder['eta']){
     $updatedrows['eta'] = $purchaseorder['eta'];
   }
-
   if(isset($purchaseorder['refno']) && $purchaseorder['refno'] != $current_purchaseorder['refno']){
     $updatedrows['refno'] = $purchaseorder['refno'];
   }
-
   if(isset($purchaseorder['term']) && $purchaseorder['term'] != $current_purchaseorder['term']){
     $updatedrows['term'] = $purchaseorder['term'];
   }
-
   if(isset($purchaseorder['taxable']) && $purchaseorder['taxable'] != $current_purchaseorder['taxable']){
     $updatedrows['taxable'] = $purchaseorder['taxable'];
   }
-
   if(isset($purchaseorder['note']) && $purchaseorder['note'] != $current_purchaseorder['note'])
     $updatedrows['note'] = $purchaseorder['note'];
 
   if(isset($purchaseorder['ispaid']) && $purchaseorder['ispaid'] != $current_purchaseorder['ispaid']){
+
+    if($purchaseorder['ispaid']){
+
+      $paymentdate = ov('paymentdate', $purchaseorder);
+      $paymentamount = ov('paymentamount', $purchaseorder, 0, 0);
+      $paymentaccountid = ov('paymentaccountid', $purchaseorder, 0, 2);
+      $total_per_currency = ova('total', $purchaseorder, $current_purchaseorder);
+      $currency_rate = ova('currencyrate', $purchaseorder, $current_purchaseorder);
+
+      if(!isdate($paymentdate)) exc('Tanggal pelunasan harus diisi.');
+      if(!chartofaccount_id_exists($paymentaccountid)) exc("Akun pelunasan harus diisi.");
+      if(!money_is_equal($paymentamount, $total_per_currency * $currency_rate)) exc("Jumlah pelunasan salah.");
+
+    }
+
+    $updatedrows['paymentdate'] = isset($paymentdate) ? $paymentdate : '';
+    $updatedrows['paymentaccountid'] = isset($paymentaccountid) ? $paymentaccountid : null;
+    $updatedrows['paymentamount'] = isset($paymentamount) ? $paymentamount : 0;
     $updatedrows['ispaid'] = $purchaseorder['ispaid'];
+
   }
-
-  if(isset($purchaseorder['paymentaccountname']))
-    $updatedrows['paymentaccountid'] = chartofaccountdetail(null, array('name'=>$purchaseorder['paymentaccountname']))['id'];
-
-  if(isset($purchaseorder['paymentaccountid']))
-    $updatedrows['paymentaccountid'] = $purchaseorder['paymentaccountid'];
-
-  if(isset($purchaseorder['paymentamount']) && $purchaseorder['paymentamount'] != $current_purchaseorder['paymentamount'])
-    $updatedrows['paymentamount'] = $purchaseorder['paymentamount'];
-
-  if(isset($purchaseorder['paymentdate']) && strtotime($purchaseorder['paymentdate']) != strtotime($current_purchaseorder['paymentdate'])){
-    $updatedrows['paymentdate'] = date('Ymd', strtotime($purchaseorder['paymentdate']));
-  }
-
-  if(isset($purchaseorder['handlingfeevolume']) && $purchaseorder['handlingfeevolume'] != $current_purchaseorder['handlingfeevolume'])
-    $updatedrows['handlingfeevolume'] = $purchaseorder['handlingfeevolume'];
-
-  if(isset($purchaseorder['handlingfeeamount']) && $purchaseorder['handlingfeeamount'] != $current_purchaseorder['handlingfeeamount'])
-    $updatedrows['handlingfeeamount'] = $purchaseorder['handlingfeeamount'];
-
-  if(isset($purchaseorder['handlingfeeaccountname'])){
-    $handlingfeeaccount = chartofaccountdetail(null, array('name'=>$purchaseorder['handlingfeeaccountname']));
-    if($handlingfeeaccount && $handlingfeeaccount['id'] != $current_purchaseorder['handlingfeeaccountid'])
-      $updatedrows['handlingfeeaccountid'] = $handlingfeeaccount['id'];
-  }
-
-  if(isset($purchaseorder['handlingfeepaymentamount']) && $purchaseorder['handlingfeepaymentamount'] != $current_purchaseorder['handlingfeepaymentamount'])
-    $updatedrows['handlingfeepaymentamount'] = $purchaseorder['handlingfeepaymentamount'];
 
   if(isset($purchaseorder['freightcharge']) && $purchaseorder['freightcharge'] != $current_purchaseorder['freightcharge'])
     $updatedrows['freightcharge'] = $purchaseorder['freightcharge'];
-
-  if(isset($purchaseorder['handlingfeedate']) && strtotime($purchaseorder['handlingfeedate']) != strtotime($current_purchaseorder['handlingfeedate']))
-    $updatedrows['handlingfeedate'] = date('Ymd', strtotime($purchaseorder['handlingfeedate']));
 
   if(count($updatedrows) > 0){
     $updatedrows['lastupdatedon'] = date('YmdHis');
@@ -516,8 +495,7 @@ function purchaseordercalculate($id){
       'details'=>$details
     ));
   }
-
-  $ispaid = $paymentamount == $total ? 1 : 0;
+  $ispaid = money_is_equal($paymentamount, $total * $currencyrate) ? 1 : 0;
 
   mysql_update_row('purchaseorder', [ 'ispaid'=>$ispaid ], [ 'id'=>$id ]);
 

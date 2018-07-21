@@ -259,6 +259,9 @@ function isdate($value){
 
   return false;
 }
+function money_is_equal($val1, $val2, $epsilon = 0.9){
+  return abs($val1 - $val2) <= $epsilon ? true : false;
+}
 function isdatetime($value){
 
   $date_format_regexes = array(

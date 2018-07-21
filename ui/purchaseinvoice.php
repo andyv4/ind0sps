@@ -154,7 +154,7 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
     'import_cost_date'=>array('type'=>'datepicker', 'name'=>'import_cost_date', 'value'=>$import_cost_date, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseinvoice_total()", 'align'=>'right'),
     'import_cost_accountid'=>array('type'=>'dropdown', 'name'=>'import_cost_accountid', 'value'=>$import_cost_accountid, 'width'=>150, 'items'=>$chartofaccounts, 'readonly'=>$readonly, 'onchange'=>"purchaseinvoice_total()", 'align'=>'right'),
 
-    'handlingfeepaymentamount'=>array('type'=>'textbox', 'name'=>'handlingfeepaymentamount', 'value'=>$handlingfeepaymentamount, 'readonly'=>$readonly, 'width'=>150, 'datatype'=>'money', 'onchange'=>"purchaseinvoice_onhandlingfeechange()"),
+    'handlingfeepaymentamount'=>array('type'=>'textbox', 'name'=>'handlingfeepaymentamount', 'value'=>$handlingfeepaymentamount, 'readonly'=>$readonly, 'width'=>150, 'datatype'=>'money', 'onchange'=>"purchaseinvoice_total()"),
     'handlingfeedate'=>array('type'=>'datepicker', 'name'=>'handlingfeedate', 'value'=>$handlingfeedate, 'readonly'=>$readonly, 'align'=>'right'),
     'handlingfeeaccountid'=>array('type'=>'dropdown', 'name'=>'handlingfeeaccountid', 'value'=>$handlingfeeaccountid, 'items'=>$chartofaccounts, 'readonly'=>$readonly, 'width'=>150, 'onchange'=>"", 'align'=>'right'),
 
@@ -269,55 +269,69 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
               <td>" . ui_control($controls['paymentaccountid']) . "</td>
             </tr>";
 
-          $c .= "<tr>
+          if(systemvarget('purchaseinvoice_taxaccountid') > 0) {
+            $c .= "<tr>
               <th><label>PPn</label></th>
               <td class='align-right'></td>
               <td>" . ui_control($controls['taxamount']) . "</td>
               <td>" . ui_control($controls['taxdate']) . "</td>
               <td>" . ui_control($controls['taxaccountid']) . "</td>
             </tr>";
+          }
 
-          $c .= "<tr>
+
+          if(systemvarget('purchaseinvoice_pphaccountid') > 0) {
+            $c .= "<tr>
               <th><label>PPH</label></th>
               <td class='align-right'></td>
               <td>" . ui_control($controls['pph']) . "</td>
               <td>" . ui_control($controls['pphdate']) . "</td>
               <td>" . ui_control($controls['pphaccountid']) . "</td>
             </tr>";
+          }
 
-          $c .= "<tr>
+          if(systemvarget('purchaseinvoice_ksoaccountid') > 0) {
+            $c .= "<tr>
               <th><label>KSO</label></th>
               <td class='align-right'></td>
               <td>" . ui_control($controls['kso']) . "</td>
               <td>" . ui_control($controls['ksodate']) . "</td>
               <td>" . ui_control($controls['ksoaccountid']) . "</td>
             </tr>";
+          }
 
-          $c .= "<tr>
+          if(systemvarget('purchaseinvoice_skiaccountid') > 0) {
+            $c .= "<tr>
               <th><label>SKI</label></th>
               <td class='align-right'></td>
               <td>" . ui_control($controls['ski']) . "</td>
               <td>" . ui_control($controls['skidate']) . "</td>
               <td>" . ui_control($controls['skiaccountid']) . "</td>
             </tr>";
+          }
 
-          $c .= "<tr>
+          if(systemvarget('purchaseinvoice_clearance_fee_accountid') > 0) {
+            $c .= "<tr>
               <th><label>Clearance Fee</label></th>
               <td class='align-right'></td>
               <td>" . ui_control($controls['clearance_fee']) . "</td>
               <td>" . ui_control($controls['clearance_fee_date']) . "</td>
               <td>" . ui_control($controls['clearance_fee_accountid']) . "</td>
             </tr>";
+          }
 
-          $c .= "<tr>
+          if(systemvarget('purchaseinvoice_import_cost_accountid') > 0) {
+            $c .= "<tr>
               <th><label>Bea Masuk</label></th>
               <td class='align-right'></td>
               <td>" . ui_control($controls['import_cost']) . "</td>
               <td>" . ui_control($controls['import_cost_date']) . "</td>
               <td>" . ui_control($controls['import_cost_accountid']) . "</td>
             </tr>";
+          }
 
-          $c .= "<tr>
+          if(systemvarget('purchaseinvoice_handlingfeeaccountid') > 0) {
+            $c .= "<tr>
               <th><label>Handling Fee</label></th>
               <td class='align-right'></td>
               <td>" . ui_control($controls['handlingfeepaymentamount']) . ui_control($controls['purchaseorderhandlingpaymentamount']) . "</td>
@@ -325,6 +339,7 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
               <td>" . ui_control($controls['handlingfeeaccountid']) . "</td>
               <td></td>
             </tr>";
+          }
 
           $c .= " 
           </table>
@@ -525,15 +540,19 @@ function ui_purchaseinvoicedetail_col8($obj, $params){
 }
 function ui_purchaseinvoicedetail_col9($obj, $params){
 
-  return ui_textbox(array(
-    'name'=>'unittax',
-    'value'=>ov('unittax', $obj),
-    'readonly'=>$params['readonly'],
-    'class'=>'block',
-    'datatype'=>'money',
-    'onchange'=>'purchaseinvoice_total()',
-    'ischild'=>1
-  ));
+  if(systemvarget('purchaseinvoice_import_cost_accountid') > 0){
+    return ui_textbox(array(
+      'name'=>'unittax',
+      'value'=>ov('unittax', $obj),
+      'readonly'=>$params['readonly'],
+      'class'=>'block',
+      'datatype'=>'money',
+      'onchange'=>'purchaseinvoice_total()',
+      'ischild'=>1
+    ));
+  }
+  else
+    return "<div class='align-right'>-</div>";
 
 }
 function ui_purchaseinvoicedetail_datechanged($date, $taxable, $release = ''){

@@ -254,6 +254,10 @@ function chartofaccountmutation($filters, $sorts = null){
   return $rows;
 
 }
+function chartofaccount_id_exists($id){
+  $count = pmc("select count(*) from chartofaccount where `id` = ?", [ $id ]);
+  return $count > 0 ? true : false;
+}
 
 function chartofaccountentry($chartofaccount){
 

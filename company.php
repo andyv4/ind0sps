@@ -5,6 +5,7 @@ require_once 'api/chartofaccount.php';
 require_once 'api/system.php';
 
 $chartofaccounts = array_cast(chartofaccountlist(), array('text'=>'name', 'value'=>'id'));
+array_splice($chartofaccounts, 0, 0, [[ 'text'=>'Disabled', 'value'=>'' ]]);
 
 ui_async();
 ?>
@@ -244,7 +245,7 @@ ui_async();
       </td>
     </tr>
     <tr>
-      <th class="width240"><label>Akun KSO</label></th>
+      <th class="width240"><label>Akun SKI</label></th>
       <td>
         <?=ui_dropdown([
           'items'=>$chartofaccounts,

@@ -45,8 +45,15 @@ function salesinvoicegroupdetail($columns, $filters){
       IF(`type` = 'SN', (SELECT ispaid FROM salesreturn WHERE `id` = typeid), (SELECT ispaid FROM salesinvoice WHERE `id` = typeid)) as ispaid,
       IF(`type` = 'SN', (SELECT returnamount FROM salesreturn WHERE `id` = typeid), (SELECT paymentamount FROM salesinvoice WHERE `id` = typeid)) as paymentamount
       FROM salesinvoicegroupitem WHERE salesinvoicegroupid = ?", array($salesinvoicegroup['id']));
-    $salesinvoicegroup['items'] = $items;
 
+    $total = 0;
+    foreach($items as $index=>$item){
+      $items[$index]['total'] = round($item['total']);
+      $total += round($item['total']);
+    }
+    $salesinvoicegroup['items'] = $items;
+    $salesinvoicegroup['total'] = $total;
+    pm("update salesinvoicegroup set total = ? where `id` = ?", [ $total, $salesinvoicegroup['id'] ]);
     $paymentaccount = chartofaccountdetail(null, array('id'=>$salesinvoicegroup['paymentaccountid']));
     $salesinvoicegroup['paymentaccountname'] = isset($paymentaccount['name']) ? $paymentaccount['name'] : '';
   }

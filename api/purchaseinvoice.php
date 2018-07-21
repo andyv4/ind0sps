@@ -254,15 +254,11 @@ function purchaseinvoiceremovable($params){
  */
 function purchaseinvoicevalidate(&$updated, $original = null){
 
-  global $purchaseinvoice_payment_tolerance;
-
+  $date = ova('date', $updated, $original);
+  $currencyid = ova('currencyid', $updated, $original);
+  $currencyrate = ova('currencyrate', $updated, $original);
   $inventories = ova('inventories', $updated, $original);
   $discountamount = ova('discountamount', $updated, $original);
-  $taxamount = ova('taxamount', $updated, $original);
-  $pph = ova('pph', $updated, $original);
-  $kso = ova('kso', $updated, $original);
-  $ski = ova('ski', $updated, $original);
-  $clearance_fee = ova('clearance_fee', $updated, $original);
   $freightcharge = ova('freightcharge', $updated, $original);
   $taxable = ova('taxable', $updated, $original);
   $actual_subtotal = 0;
@@ -271,122 +267,183 @@ function purchaseinvoicevalidate(&$updated, $original = null){
     $unittotal = $inventory['unittotal'];
     $actual_subtotal += $unittotal;
   }
-  $actual_total = $actual_subtotal - $discountamount;
+  $actual_total = $actual_subtotal - $discountamount + $freightcharge;
 
-  // Validation
-  foreach($updated as $key=>$value){
-    switch($key){
-      case 'code':
-        if(pmc("select count(*) from purchaseinvoice where code = ?", [ $value ]) > 0) exc('Nomor faktur sudah dipakai');
-        break;
-      case 'supplierdescription':
-        if(!($supplier = supplierdetail(null, array('description'=>$value)))) exc('Supplier tidak terdaftar');
-        $updated['supplierid'] = $supplier['id'];
-        break;
-      case 'currencyid':
-        if(!($currency = currencydetail(null, [ 'id'=>$value ]))) exc("Mata uang tidak terdaftar");
-        break;
-      case 'warehouseid':
-        if(!($warehouse = warehousedetail(null, [ 'id'=>$value ]))) exc("Gudang tidak terdaftar");
-        break;
-      case 'currencyrate':
-        if($value <= 0) exc("Nilai tukar harus diisi");
-        break;
-      case 'inventories':
-        if(!is_array_object($value) || count($value) <= 0) exc("Barang harus diisi");
-        $inventory_count = 0;
-        foreach($value as $index=>$inventory){
+  $downpaymentamount = ov('downpaymentamount', $original, 0);
+  $total_in_currency = $actual_total * $currencyrate;
+  $remaining_amount = $total_in_currency - $downpaymentamount;
 
-          if(isset($inventory['__flag']) && $inventory['__flag'] == 'removed') continue; // Skip removed row
+  if(isset($updated['code']) && $updated['code'] != ov('code', $original)){
+    if(pmc("select count(*) from purchaseinvoice where code = ?", [ $updated['code'] ]) > 0) exc('Nomor faktur sudah dipakai');
+  }
 
-          $inventorycode = ov('inventorycode', $inventory);
-          if(!($inventory_data = inventorydetail(null, array('code'=>$inventorycode)))) exc("Barang $inventorycode tidak terdaftar");
-          $inventoryid = $inventory_data['id'];
-          $inventorycode = $inventory_data['code'];
-          $inventorydescription = $inventory_data['description'];
-          $qty = ov('qty', $inventory);
-          if(!$qty) exc("Kuantitas di baris ke " . ($index + 1) . " salah");
-          $unit = ov('unit', $inventory);
-          $unitprice = ov('unitprice', $inventory);
-          if(!$unitprice) exc("Harga di baris ke " . ($index + 1) . " salah");
-          $unittotal = ov('unittotal', $inventory);
-          $unitcostprice = ov('unitcostprice', $inventory, 0, 0);
-          $unittax = ov('unittax', $inventory, 0, 0);
+  if(isset($updated['supplierdescription']) && $updated['supplierdescription'] != ov('supplierdescription', $original)){
+    if(!($supplier = supplierdetail(null, array('description'=>$updated['supplierdescription'])))) exc('Supplier tidak terdaftar');
+    $updated['supplierid'] = $supplier['id'];
+    $updated['supplierdescription'] = $supplier['description'];
+  }
 
-          $actual_unittotal = $qty * $unitprice;
-          if(round($unittotal) != round($actual_unittotal)) exc("Total $inventorycode salah. $unittotal : $actual_unittotal ");
-          if(!$unitcostprice) exc("Harga modal $inventorycode salah");
-          if($taxable && !$inventory_data['taxable']) exc("Barang $inventorycode tidak kena pajak, tidak dapat dimasukkan kedalam faktur pajak");
+  if(isset($updated['currencyid']) && $updated['currencyid'] != ov('currencyid', $original)){
+    if(!($currency = currencydetail(null, [ 'id'=>$updated['currencyid'] ]))) exc("Mata uang tidak terdaftar");
+  }
 
-          $updated['inventories'][$index]['inventoryid'] = $inventoryid;
-          $updated['inventories'][$index]['inventorycode'] = $inventorycode;
-          $updated['inventories'][$index]['inventorydescription'] = $inventorydescription;
-          $updated['inventories'][$index]['unit'] = $unit;
-          $inventory_count++;
+  if(isset($updated['warehouseid']) && $updated['warehouseid'] != ov('warehouseid', $original)){
+    if(!($warehouse = warehousedetail(null, [ 'id'=>$updated['warehouseid'] ]))) exc("Gudang tidak terdaftar");
+  }
 
-        }
-        if($inventory_count <= 0) exc("Barang harus diisi");
-        break;
-      case 'subtotal':
-        if(abs($value - $actual_subtotal) > 0.01) exc("Subtotal salah, silakan kalkulasi ulang subtotal: [{$value}:{$actual_subtotal}]");
-        break;
-      case 'total':
-        if(abs($value - $actual_total) > 0.01) exc("Total salah, silakan kalkulasi ulang total: [{$value}:{$actual_total}]");
-        break;
-      case 'paymentdate':
-        $paymentamount = ova('paymentamount', $updated, $original);
-        if($paymentamount > 0){
-          $date = ova('date', $updated, $original);
-          if(date('Ymd', strtotime($value)) < date('Ymd', strtotime($date))) exc("Tanggal pelunasan tidak bisa diisi sebelum tanggal faktur");
-          if(date('Ymd', strtotime($value)) > date('Ymd')) exc("Tanggal pelunasan tidak dapat diisi dengan tanggal setelah hari ini");
-        }
-        break;
-      case 'paymentaccountid':
-        $paymentamount = ova('paymentamount', $updated, $original);
-        if($paymentamount > 0){
-          if(!chartofaccountdetail(null, [ 'id'=>$value ])) exc("Akun pelunasan harus diisi");
-        }
-        break;
-      case 'paymentamount':
-        if($value > 0){
-          $currencyrate = ova('currencyrate', $updated, $original);
-          $purchaseorderid = ova('purchaseorderid', $updated, $original);
-          $paymentdate = ova('paymentdate', $updated, $original);
-          $date = ova('date', $updated, $original);
-          $paymentaccountid = ova('paymentaccountid', $updated, $original);
-          $purchaseorder = $purchaseorderid ? purchaseorderdetail(null, [ 'id'=>$purchaseorderid ]) : null;
-          $downpaymentamount = $purchaseorder ? $purchaseorder['paymentamount'] - $purchaseorder['handlingfeepaymentamount'] : 0;
-          $total_idr = $actual_total * $currencyrate;
-          $due_amount = $total_idr - $downpaymentamount;
-          if(!isdate($paymentdate)) exc("Tanggal pelunasan salah");
-          if(date('Ymd', strtotime($paymentdate)) < date('Ymd', strtotime($date))) exc("Tanggal pelunasan tidak bisa diisi sebelum tanggal faktur");
-          if(date('Ymd', strtotime($paymentdate)) > date('Ymd')) exc("Tanggal pelunasan tidak dapat diisi dengan tanggal setelah hari ini");
-          if(!chartofaccountdetail(null, [ 'id'=>$paymentaccountid ])) exc("Akun pelunasan salah");
-          if($value > $due_amount + $purchaseinvoice_payment_tolerance) exc("Nilai pelunasan lebih besar dari total faktur.\nNilai yang bisa diterima maksimal Rp. " . number_format_auto($due_amount));
-        }
-        break;
-      case 'handlingfeepaymentamount':
-        if($value > 0){
-          $date = ova('date', $updated, $original);
-          $handlingfeeaccountid = ova('handlingfeeaccountid', $updated, $original);
-          $handlingfeedate = ova('handlingfeedate', $updated, $original);
-          if(!isdate($handlingfeedate)) exc("Tanggal handling fee salah");
-          if(date('Ymd', strtotime($handlingfeedate)) < date('Ymd', strtotime($date))) exc("Tanggal handling fee tidak bisa diisi sebelum tanggal faktur");
-          if(date('Ymd', strtotime($handlingfeedate)) > date('Ymd')) exc("Tanggal handling fee tidak dapat diisi dengan tanggal setelah hari ini");
-          if(!chartofaccountdetail(null, [ 'id'=>$handlingfeeaccountid ])) exc("Akun handling fee salah");
-        }
-        break;
+  if(isset($updated['currencyrate']) && $updated['currencyrate'] != ov('currencyrate', $original)){
+    if($updated['currencyrate'] <= 0) exc("Nilai tukar harus diisi");
+  }
+
+  if(isset($updated['subtotal']) && $updated['subtotal'] != ov('subtotal', $original)){
+    if(!money_is_equal($updated['subtotal'], $actual_subtotal, currency_epsilon($currencyid))) exc("Subtotal salah, silakan kalkulasi ulang total: [{$updated[subtotal]}:{$actual_subtotal}]");
+  }
+
+  if(isset($updated['total']) && $updated['total'] != ova('total', $updated, $original)){
+    if(!money_is_equal($updated['total'], $actual_total, currency_epsilon($currencyid))) exc("Total salah, silakan kalkulasi ulang total: [{$updated[$actual_total]}:{$actual_total}]");
+  }
+
+  if(isset($updated['paymentamount']) && $updated['paymentamount'] != ov('paymentamount', $original)){
+
+    $paymentdate = ova('paymentdate', $updated, $original);
+    $paymentaccountid = ova('paymentaccountid', $updated, $original);
+    $paymentamount = ova('paymentamount', $updated, $original);
+
+    if($paymentamount > $remaining_amount) exc("Jumlah pembayaran melebihi total yang harus dibayar.");
+    if(!isdate($paymentdate)) exc("Tanggal pelunasan belum diisi.");
+    if(!chartofaccount_id_exists($paymentaccountid)) exc("Akun pelunasan belum diisi.");
+    if($paymentdate < $date) exc("Tanggal pelunasan salah.");
+
+  }
+
+  if(isset($updated['taxamount']) && $updated['taxamount'] != ov('taxamount', $original)){
+
+    $taxdate = ova('taxdate', $updated, $original);
+    $taxaccountid = ova('taxaccountid', $updated, $original);
+    $taxamount = ova('taxamount', $updated, $original);
+
+    if(!isdate($taxdate)) exc("Tanggal PPn belum diisi.");
+    if(!chartofaccount_id_exists($taxaccountid)) exc("Akun PPn belum diisi.");
+    if($taxamount < 0) exc("Jumlah PPn salah.");
+    if($taxdate < $date) exc("Tanggal PPn salah.");
+
+  }
+
+  if(isset($updated['pph']) && $updated['pph'] != ov('pph', $original)){
+
+    $pphdate = ova('pphdate', $updated, $original);
+    $pphaccountid = ova('pphaccountid', $updated, $original);
+    $pph = ova('pph', $updated, $original);
+
+    if(!isdate($pphdate)) exc("Tanggal PPH belum diisi.");
+    if(!chartofaccount_id_exists($pphaccountid)) exc("Akun PPH belum diisi.");
+    if($pph < 0) exc("Jumlah PPH salah.");
+    if($pphdate < $date) exc("Tanggal PPH salah.");
+
+  }
+
+  if(isset($updated['kso']) && $updated['kso'] != ov('kso', $original)){
+
+    $ksodate = ova('ksodate', $updated, $original);
+    $ksoaccountid = ova('ksoaccountid', $updated, $original);
+    $kso = ova('kso', $updated, $original);
+
+    if(!isdate($ksodate)) exc("Tanggal KSO belum diisi.");
+    if(!chartofaccount_id_exists($ksoaccountid)) exc("Akun KSO belum diisi.");
+    if($kso < 0) exc("Jumlah KSO salah.");
+    if($ksodate < $date) exc("Tanggal KSO salah.");
+
+  }
+
+  if(isset($updated['ski']) && $updated['ski'] != ov('ski', $original)){
+
+    $skidate = ova('skidate', $updated, $original);
+    $skiaccountid = ova('skiaccountid', $updated, $original);
+    $ski = ova('ski', $updated, $original);
+
+    if(!isdate($skidate)) exc("Tanggal SKI belum diisi.");
+    if(!chartofaccount_id_exists($skiaccountid)) exc("Akun SKI belum diisi.");
+    if($ski < 0) exc("Jumlah SKI salah.");
+    if($skidate < $date) exc("Tanggal SKI salah.");
+
+  }
+
+  if(isset($updated['clearance_fee']) && $updated['clearance_fee'] != ov('clearance_fee', $original)){
+
+    $clearance_fee_date = ova('clearance_fee_date', $updated, $original);
+    $clearance_fee_accountid = ova('clearance_fee_accountid', $updated, $original);
+    $clearance_fee = ova('clearance_fee', $updated, $original);
+
+    if(!isdate($clearance_fee_date)) exc("Tanggal clearance fee belum diisi.");
+    if(!chartofaccount_id_exists($clearance_fee_accountid)) exc("Akun clearance fee belum diisi.");
+    if($clearance_fee < 0) exc("Jumlah clearance fee salah.");
+    if($clearance_fee_date < $date) exc("Tanggal clearance fee salah.");
+
+  }
+
+  if(isset($updated['import_cost']) && $updated['import_cost'] != ov('import_cost', $original)){
+
+    $import_cost_date = ova('import_cost_date', $updated, $original);
+    $import_cost_accountid = ova('import_cost_accountid', $updated, $original);
+    $import_cost = ova('import_cost', $updated, $original);
+
+    if(!isdate($import_cost_date)) exc("Tanggal bea masuk belum diisi.");
+    if(!chartofaccount_id_exists($import_cost_accountid)) exc("Akun bea masuk belum diisi.");
+    if($import_cost < 0) exc("Jumlah bea masuk salah.");
+    if($import_cost_date < $date) exc("Tanggal bea masuk salah.");
+
+  }
+
+  if(isset($updated['handlingfeepaymentamount']) && $updated['handlingfeepaymentamount'] != ov('handlingfeepaymentamount', $original)){
+
+    $handlingfeedate = ova('handlingfeedate', $updated, $original);
+    $handlingfeeaccountid = ova('handlingfeeaccountid', $updated, $original);
+    $handlingfeepaymentamount = ova('handlingfeepaymentamount', $updated, $original);
+
+    if(!isdate($handlingfeedate)) exc("Tanggal handling fee belum diisi.");
+    if(!chartofaccount_id_exists($handlingfeeaccountid)) exc("Akun handling fee belum diisi.");
+    if($handlingfeepaymentamount < 0) exc("Jumlah handling fee salah.");
+    if($handlingfeedate < $date) exc("Tanggal handling fee salah.");
+
+  }
+
+  if(isset($updated['inventories'])){
+
+    if(!is_array_object($updated['inventories']) || count($updated['inventories']) <= 0) exc("Barang harus diisi");
+    $inventory_count = 0;
+    foreach($updated['inventories'] as $index=>$inventory){
+
+      if(isset($inventory['__flag']) && $inventory['__flag'] == 'removed') continue; // Skip removed row
+
+      $inventorycode = ov('inventorycode', $inventory);
+      if(!($inventory_data = inventorydetail(null, array('code'=>$inventorycode)))) exc("Barang $inventorycode tidak terdaftar");
+      $inventoryid = $inventory_data['id'];
+      $inventorycode = $inventory_data['code'];
+      $inventorydescription = $inventory_data['description'];
+      $qty = ov('qty', $inventory);
+      if(!$qty) exc("Kuantitas di baris ke " . ($index + 1) . " salah");
+      $unit = ov('unit', $inventory);
+      $unitprice = ov('unitprice', $inventory);
+      if(!$unitprice) exc("Harga di baris ke " . ($index + 1) . " salah");
+      $unittotal = ov('unittotal', $inventory);
+      $unitcostprice = ov('unitcostprice', $inventory, 0, 0);
+      $unittax = ov('unittax', $inventory, 0, 0);
+
+      $actual_unittotal = $qty * $unitprice;
+      if(round($unittotal) != round($actual_unittotal)) exc("Total $inventorycode salah. $unittotal : $actual_unittotal ");
+      if(!$unitcostprice) exc("Harga modal $inventorycode salah");
+      if($taxable && !$inventory_data['taxable']) exc("Barang $inventorycode tidak kena pajak, tidak dapat dimasukkan kedalam faktur pajak");
+
+      $updated['inventories'][$index]['inventoryid'] = $inventoryid;
+      $updated['inventories'][$index]['inventorycode'] = $inventorycode;
+      $updated['inventories'][$index]['inventorydescription'] = $inventorydescription;
+      $updated['inventories'][$index]['unit'] = $unit;
+      $inventory_count++;
+
     }
-  }
+    if($inventory_count <= 0) exc("Barang harus diisi");
 
-  if(isset($updated['import_cost']) && $updated['import_cost'] > 0 &&
-    isset($updated['import_cost_accountid']) && $updated['import_cost_accountid'] > 0 &&
-    isset($updated['import_cost_date'])
-  ){
-    if(date('Ymd', strtotime($updated['import_cost_date'])) < date('Ymd')) exc('Invalid import cost date');
-    if(!chartofaccountdetail(null, [ 'id'=>$updated['import_cost_accountid'] ])) exc('Invalid import account');
   }
-
 
 }
 
@@ -718,7 +775,7 @@ function purchaseinvoicecalculate($id){
     $details[] =  array('coaid'=>$taxaccountid, 'debitamount'=>0, 'creditamount'=>$taxamount);
     $journalvoucher = array(
       'date'=>$taxdate,
-      'description'=>$code . " #ppn",
+      'description'=>$code . " PPn",
       'ref'=>'PI',
       'refid'=>$id,
       'type'=>'A',
@@ -739,7 +796,7 @@ function purchaseinvoicecalculate($id){
     $details[] =  array('coaid'=>$pphaccountid, 'debitamount'=>0, 'creditamount'=>$pph);
     $journalvoucher = array(
       'date'=>$pphdate,
-      'description'=>$code . " #pph",
+      'description'=>$code . " PPH",
       'ref'=>'PI',
       'refid'=>$id,
       'type'=>'A',
@@ -760,7 +817,7 @@ function purchaseinvoicecalculate($id){
     $details[] =  array('coaid'=>$ksoaccountid, 'debitamount'=>0, 'creditamount'=>$kso);
     $journalvoucher = array(
       'date'=>$ksodate,
-      'description'=>$code . " #kso",
+      'description'=>$code . " KSO",
       'ref'=>'PI',
       'refid'=>$id,
       'type'=>'A',
@@ -781,7 +838,7 @@ function purchaseinvoicecalculate($id){
     $details[] =  array('coaid'=>$skiaccountid, 'debitamount'=>0, 'creditamount'=>$ski);
     $journalvoucher = array(
       'date'=>$skidate,
-      'description'=>$code . " #ski",
+      'description'=>$code . " SKI",
       'ref'=>'PI',
       'refid'=>$id,
       'type'=>'A',
@@ -802,7 +859,7 @@ function purchaseinvoicecalculate($id){
     $details[] =  array('coaid'=>$clearance_fee_accountid, 'debitamount'=>0, 'creditamount'=>$clearance_fee);
     $journalvoucher = array(
       'date'=>$clearance_fee_date,
-      'description'=>$code . " #clearance-fee",
+      'description'=>$code . " CLEARANCE FEE",
       'ref'=>'PI',
       'refid'=>$id,
       'type'=>'A',
@@ -823,7 +880,7 @@ function purchaseinvoicecalculate($id){
     $details[] =  array('coaid'=>$import_cost_accountid, 'debitamount'=>0, 'creditamount'=>$import_cost);
     $journalvoucher = array(
       'date'=>$import_cost_date,
-      'description'=>$code . " #import_cost",
+      'description'=>$code . " BEA MASUK",
       'ref'=>'PI',
       'refid'=>$id,
       'type'=>'A',
@@ -840,7 +897,7 @@ function purchaseinvoicecalculate($id){
     $details[] =  array('coaid'=>$handlingfeeaccountid, 'debitamount'=>0, 'creditamount'=>$handlingfeepaymentamount);
     $journalvoucher = array(
       'date'=>$handlingfeedate,
-      'description'=>$code,
+      'description'=>$code . " HANDLING FEE",
       'ref'=>'PI',
       'refid'=>$id,
       'type'=>'A',
