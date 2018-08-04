@@ -508,15 +508,16 @@ function purchaseinvoiceentry($purchaseinvoice){
     $unittotal = $unittotal - $unitdiscountamount;
     $unithandlingfee = 0;
     $unitcostprice = $inventory['unitcostprice'];
+    $unitcostpriceflag = $inventory['unitcostpriceflag'];
     $unittax = $inventory['unittax'];
 
-    $values[] = "(?, ?, ?, ?, ?, ?, ?, ?, ? , ?, ?, ?, ?)";
+    $values[] = "(?, ?, ?, ?, ?, ?, ?, ?, ? , ?, ?, ?, ?, ?)";
     array_push($params, $id, $inventoryid, $inventorycode, $inventorydescription, $qty, $unit, $unitprice, $unitdiscount,
-      $unitdiscountamount, $unittotal, $unithandlingfee, $unitcostprice, $unittax);
+      $unitdiscountamount, $unittotal, $unithandlingfee, $unitcostprice, $unitcostpriceflag, $unittax);
   }
   try{
     pm("INSERT INTO purchaseinvoiceinventory(purchaseinvoiceid, inventoryid, inventorycode, inventorydescription, qty, 
-      unit, unitprice, unitdiscount, unitdiscountamount, unittotal, unithandlingfee, unitcostprice, unittax) VALUES " . implode(', ', $values),
+      unit, unitprice, unitdiscount, unitdiscountamount, unittotal, unithandlingfee, unitcostprice, unitcostpriceflag, unittax) VALUES " . implode(', ', $values),
       $params);
   }
   catch(Exception $ex){
@@ -596,11 +597,12 @@ function purchaseinvoicemodify($purchaseinvoice){
       $unittotal = $inventory['unittotal'];
       $unittax = $inventory['unittax'];
       $unitcostprice = $inventory['unitcostprice'];
+      $unitcostpriceflag = $inventory['unitcostpriceflag'];
 
       $queries[] = "INSERT INTO purchaseinvoiceinventory(`id`, purchaseinvoiceid, inventoryid, inventorycode, inventorydescription, 
-        qty, unit, unitprice, unittotal, unitcostprice, unittax) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        qty, unit, unitprice, unittotal, unitcostprice, unitcostpriceflag, unittax) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
       array_push($params, null, $id, $inventoryid, $inventorycode, $inventorydescription,
-        $qty, $unit, $unitprice, $unittotal, $unitcostprice, $unittax);
+        $qty, $unit, $unitprice, $unittotal, $unitcostprice, $unitcostpriceflag, $unittax);
 
     }
     if(count($queries) > 0)
@@ -678,7 +680,6 @@ function purchaseinvoicecalculate($id){
   $paymentamount = ov('paymentamount', $purchaseinvoice);
   $total = ov('total', $purchaseinvoice);
   $totalpercurrency = round($total * $currencyrate);
-  $handlingfeepaymentamount = $purchaseinvoice['handlingfeepaymentamount'];
   $handlingfeeaccountid = $purchaseinvoice['handlingfeeaccountid'];
   $handlingfeedate = $purchaseinvoice['handlingfeedate'];
 
@@ -686,6 +687,22 @@ function purchaseinvoicecalculate($id){
   $purchaseorder = purchaseorderdetail(null, array('id'=>$purchaseorderid));
   $purchaseorder_paymentamount = ov('paymentamount', $purchaseorder, 0);
   $downpaymentamount = $purchaseorder_paymentamount;
+
+  /* Calculate cost price */
+  /*$currencyrate = floatval($purchaseinvoice['currencyrate']);
+  $subtotal = 0;
+  foreach($inventories as $inventory){
+    $unit_total = floatval($inventory['unittotal']);
+    $subtotal += $unit_total;
+  }
+  $discountamount = floatval($purchaseinvoice['discountamount']);
+  $taxamount = floatval($purchaseinvoice['taxamount']);
+  $freightcharge = floatval($purchaseinvoice['freightcharge']);
+  $pph = floatval($purchaseinvoice['pph']);
+  $kso = floatval($purchaseinvoice['kso']);
+  $ski = floatval($purchaseinvoice['ski']);
+  $clearance_fee = floatval($purchaseinvoice['clearance_fee']);
+  $handlingfeepaymentamount = floatval($purchaseinvoice['handlingfeepaymentamount']);*/
 
   /**
    * Inventory Balance

@@ -180,7 +180,6 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
       //$controls['items']['readonly'] = 1;
 
       if($purchaseorder['ispaid'] && $purchaseorder['paymentamount'] > 0){
-
         $controls['currencyid']['readonly'] = 1;
         $controls['currencyrate']['readonly'] = 1;
         $controls['discount']['readonly'] = 1;
@@ -253,6 +252,7 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
         <span style='background:rgb(255, 250, 237)' class='padding10'>
           <table cellspacing='0' class='form'>";
 
+          if($downpaymentamount > 0){
             $c .= "<tr>
               <th><label>Uang Muka</label></th>
               <td></td>
@@ -260,6 +260,7 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
               <td>" . ui_control($controls['downpaymentdate']) . "</td>
               <td>" . ui_control($controls['downpaymentaccountid']) . "</td>
             </tr>";
+          }
 
           $c .= "<tr>
               <th><label>Pelunasan</label></th>
@@ -527,15 +528,46 @@ function ui_purchaseinvoicedetail_col7($obj, $params){
 }
 function ui_purchaseinvoicedetail_col8($obj, $params){
 
-  return ui_textbox(array(
-    'name'=>'unitcostprice',
-    'value'=>ov('unitcostprice', $obj),
-    'readonly'=>$params['readonly'],
-    'class'=>'block',
-    'datatype'=>'money',
-    'onchange'=>'',
-    'ischild'=>1
-  ));
+  return "<div style='position:relative'>" .
+    ui_checkbox([
+      'name'=>'unitcostpriceflag',
+      'value'=>ov('unitcostpriceflag', $obj, 0, 0),
+      'style'=>"position:absolute;left:1px;top:6px",
+      'onchange'=>"purchaseinvoice_unitcostpriceflag_changed(this)",
+      'readonly'=>$params['readonly'],
+    ]) .
+    ui_textbox([
+      'name'=>'unitcostprice',
+      'value'=>ov('unitcostprice', $obj),
+      'readonly'=>$params['readonly'],
+      'class'=>'block',
+      'datatype'=>'money',
+      'onchange'=>"purchaseinvoice_unitcostprice_changed(this)",
+      'ischild'=>1
+    ]) .
+  "</div>";
+
+
+  $html = [];
+  $html[] = "<table cellspacing='0' cellpadding='0'><tr>";
+  /*$html[] =
+    "<td style='padding:0'>" . ui_checkbox([
+      'name'=>'unitcostpriceflag',
+      'value'=>ov('unitcostpriceflag', $obj, 0, 0)
+    ]) . "</td>";*/
+  $html[] =
+    "<td style='padding:0' width='100%'>" . ui_textbox([
+      'name'=>'unitcostprice',
+      'value'=>ov('unitcostprice', $obj),
+      'readonly'=>$params['readonly'],
+      'class'=>'block',
+      'datatype'=>'money',
+      'onchange'=>'',
+      'ischild'=>1
+    ]) .
+    "</td>";
+  $html[] = "</tr></table>";
+  return implode('', $html);
 
 }
 function ui_purchaseinvoicedetail_col9($obj, $params){

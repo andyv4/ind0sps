@@ -227,11 +227,13 @@ for($a = 0 ; $a < $page ; $a++){
           <td>&nbsp;:&nbsp;</td>
           <td style="width:20mm;text-align: right"><?=number_format($discountamount)?></td>
         </tr>
+        <?php if($taxamount > 0){ ?>
         <tr>
           <th style="text-align: right;white-space: nowrap">PPn</th>
           <td>&nbsp;:&nbsp;</td>
           <td style="width:20mm;text-align: right"><?=number_format($taxamount)?></td>
         </tr>
+        <?php } ?>
         <?php if($deliverycharge > 0){ ?>
         <tr>
           <th style="text-align: right;white-space: nowrap">Delivery Charge</th>

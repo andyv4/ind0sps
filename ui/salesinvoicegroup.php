@@ -338,7 +338,8 @@ function ui_salesinvoicegroupdetail_createfrominvoices($salesinvoiceids){
   $customers = pmrs("select customerdescription from salesinvoice where `id` in (" . implode(', ', $salesinvoiceids) . ")");
   foreach($customers as  $customer){
     if(strpos(strtolower($customer['customerdescription']), 'genki') !== false ||
-      strpos(strtolower($customer['customerdescription']), 'aeon'));
+      strpos(strtolower($customer['customerdescription']), 'aeon') ||
+      strpos(strtolower($customer['customerdescription']), 'suncity'));
     else $is_genki = false;
   }
 

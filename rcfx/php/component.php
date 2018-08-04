@@ -185,11 +185,12 @@ function ui_checkbox($params){
   $value = ov('value', $params);
   $readonly = ov('readonly', $params);
   $onchange = ov('onchange', $params);
+  $style = ov('style', $params, 0, '');
   $ischild = ov('ischild', $params, 0, 0);
   if($ischild) $ischild = 1;
 
   $c = '';
-  $c .= "<span id='$id' class='checkbox' data-name='$name' data-ischild='$ischild' data-onchange=\"$onchange\" data-type='checkbox' style='width:$width;white-space: pre-wrap'>";
+  $c .= "<span id='$id' class='checkbox' data-name='$name' data-ischild='$ischild' data-onchange=\"$onchange\" data-type='checkbox' style='width:$width;white-space: pre-wrap;$style'>";
   if(is_array($items))
     for($i = 0 ; $i < count($items) ; $i++){
       $item = $items[$i];

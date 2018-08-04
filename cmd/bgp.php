@@ -91,7 +91,8 @@ function run_bgp(){
   }
   $state['cp_lastupdatedon'] = $cp_lastupdatedon;
   echo "Last updated on: $cp_lastupdatedon" . PHP_EOL;
-  echo "costprice_calculate " . (microtime(1) - $t1) . PHP_EOL;*/
+  echo "costprice_calculate " . (microtime(1) - $t1) . PHP_EOL;
+  */
 
   // Post processing...
   //inventoryqty_calculate(array_keys($inventoryids));

@@ -71,7 +71,7 @@ function purchaseinvoice_total(){
   var discount_percentage = discountamount / subtotal;
   var tax_percentage = (freightcharge + taxamount + pph + kso + ski + clearance_fee + handlingfeepaymentamount) / subtotal_after_discount;
 
-  console.log([
+  /*console.log([
     taxamount,
     freightcharge,
     pph,
@@ -82,7 +82,7 @@ function purchaseinvoice_total(){
     subtotal_after_discount,
     tax_percentage,
     discount_percentage
-  ]);
+  ]);*/
 
   var total_unittax = 0;
   $('#inventories tr').each(function(){
@@ -92,6 +92,9 @@ function purchaseinvoice_total(){
     var qty = $("*[data-name='qty']", this).val();
     var unittotal = $("*[data-name='unittotal']", this).val();
     var unittax = $("*[data-name='unittax']", this).val();
+    var unitcostpriceflag = $("*[data-name='unitcostpriceflag']", this).val();
+
+    if(unitcostpriceflag) return; // Skip manual cost price row
 
     if(isNaN(qty)) qty = 0;
     if(isNaN(unittotal)) unittotal = 0;
@@ -123,6 +126,23 @@ function purchaseinvoice_discountchange(){
     ui.textbox_setvalue(ui('%discountamount', ui('.modal')), discountamount);
   }
   purchaseinvoice_total();
+
+}
+
+function purchaseinvoice_unitcostprice_changed(textbox){
+
+  ui.checkbox_setvalue(textbox.previousElementSibling, true);
+
+}
+
+function purchaseinvoice_unitcostpriceflag_changed(checkbox){
+
+  if(ui.checkbox_value(checkbox) > 0){
+    ui.textbox_setvalue(checkbox.nextElementSibling, '');
+    $("input", checkbox.nextElementSibling).select();
+  }
+  else
+    purchaseinvoice_total();
 
 }
 

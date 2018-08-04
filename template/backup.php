@@ -1,5 +1,4 @@
 <?php
-
 $printermargin = systemvarget('printermargin');
 $paperwidth = systemvarget('paperwidth');
 $paperheight = systemvarget('paperheight');
@@ -56,11 +55,11 @@ for($a = 0 ; $a < $page ; $a++){
   <div class="paper" style="width:<?=$contentwidth?>mm;height:<?=$contentheight?>mm;padding:0;margin:0;overflow:hidden">
 
     <?php if(strtolower(trim($customerdescription)) == 'cash'){ ?>
-    <div style="position: absolute;left:36mm;top:36mm;bottom:0;right:0;z-index:1">
-      <h1 style="font-size:16em;transform:rotate(30deg);color:rgba(0, 0, 0, .05)">CASH</h1>
-    </div>
+      <div style="position: absolute;left:36mm;top:36mm;bottom:0;right:0;z-index:1">
+        <h1 style="font-size:16em;transform:rotate(30deg);color:rgba(0, 0, 0, .05)">CASH</h1>
+      </div>
     <?php } ?>
-    
+
     <!-- Row 0 -->
     <div style="position: absolute;left: 0;top: 0;width: <?=$row0col0width?>mm;height:<?=$row0height?>mm;z-index:2">
       <div style="position: relative">
@@ -125,18 +124,18 @@ for($a = 0 ; $a < $page ; $a++){
           <th width="20mm" style="width:20mm;text-align: right">Total</th>
         </tr>
         <?php
-          for($i = $a * 7 ; $i < count($inventories) && $i < ($a * 7) + 7 ; $i++){
-            $inventory = $inventories[$i];
-        ?>
-        <tr>
-          <td style="text-align: right"><?=$i + 1?></td>
-          <td><?=$inventory['inventorycode']?></td>
-          <td><?=$inventory['inventorydescription']?></td>
-          <td style="text-align: right"><?=$inventory['qty']?></td>
-          <td><?=$inventory['unit']?></td>
-          <td style="text-align: right"><?=number_format($inventory['unitprice'])?></td>
-          <td style="text-align: right"><?=number_format($inventory['unittotal'])?></td>
-        </tr>
+        for($i = $a * 7 ; $i < count($inventories) && $i < ($a * 7) + 7 ; $i++){
+          $inventory = $inventories[$i];
+          ?>
+          <tr>
+            <td style="text-align: right"><?=$i + 1?></td>
+            <td><?=$inventory['inventorycode']?></td>
+            <td><?=$inventory['inventorydescription']?></td>
+            <td style="text-align: right"><?=$inventory['qty']?></td>
+            <td><?=$inventory['unit']?></td>
+            <td style="text-align: right"><?=number_format($inventory['unitprice'])?></td>
+            <td style="text-align: right"><?=number_format($inventory['unittotal'])?></td>
+          </tr>
         <?php } ?>
       </table>
       <div><?=$note?></div>
@@ -166,9 +165,7 @@ for($a = 0 ; $a < $page ; $a++){
             <div style="width:40mm;height:22mm;border-bottom: solid 1px #000;text-align: center">
               Authorized Sign
             </div>
-            <div style="font-size:.9em;width:40mm;text-align: center">
-              <?=ucwords($_SESSION['user']['name'])?>
-            </div>
+            <div style="font-size:.9em;width:40mm;text-align: center"><?=ucwords($_SESSION['user']['name'])?></div>
           </td>
           <td><div style="width:10mm"></div></td>
           <td style="vertical-align: top">
@@ -191,19 +188,17 @@ for($a = 0 ; $a < $page ; $a++){
           <td>&nbsp;:&nbsp;</td>
           <td style="width:20mm;text-align: right"><?=number_format($discountamount)?></td>
         </tr>
-        <?php if($taxamount > 0){ ?>
         <tr>
           <th style="text-align: right;white-space: nowrap">VAT</th>
           <td>&nbsp;:&nbsp;</td>
           <td style="width:20mm;text-align: right"><?=number_format($taxamount)?></td>
         </tr>
-        <?php } ?>
         <?php if($deliverycharge > 0){ ?>
-        <tr>
-          <th style="text-align: right;white-space: nowrap">Delivery Charge</th>
-          <td>&nbsp;:&nbsp;</td>
-          <td style="width:20mm;text-align: right"><?=number_format($deliverycharge)?></td>
-        </tr>
+          <tr>
+            <th style="text-align: right;white-space: nowrap">Delivery Charge</th>
+            <td>&nbsp;:&nbsp;</td>
+            <td style="width:20mm;text-align: right"><?=number_format($deliverycharge)?></td>
+          </tr>
         <?php } ?>
         <tr>
           <th style="text-align: right;white-space: nowrap">Total</th>
@@ -214,11 +209,7 @@ for($a = 0 ; $a < $page ; $a++){
         <tr>
           <th style="text-align: right;white-space: nowrap"></th>
           <td></td>
-          <td style="font-size:.8em;width:40mm;text-align: right">
-            <?=$salesinvoice['salesmanname']?>
-            <br /><br /><br />
-            harga sudah termasuk ppn
-          </td>
+          <td style="font-size:.8em;width:20mm;text-align: right"><?=$salesinvoice['salesmanname']?></td>
         </tr>
       </table>
     </div>
