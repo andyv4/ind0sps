@@ -339,7 +339,8 @@ function ui_salesinvoicegroupdetail_createfrominvoices($salesinvoiceids){
   foreach($customers as  $customer){
     if(strpos(strtolower($customer['customerdescription']), 'genki') !== false ||
       strpos(strtolower($customer['customerdescription']), 'aeon') ||
-      strpos(strtolower($customer['customerdescription']), 'suncity'));
+      strpos(strtolower($customer['customerdescription']), 'suncity') ||
+      strpos(strtolower($customer['customerdescription']), 'inti idola'));
     else $is_genki = false;
   }
 
