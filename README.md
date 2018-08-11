@@ -1,8 +1,3 @@
-
-# indosps  v3
-
-
-
 # indosps  v3.9
 
 - Rework purchase invoice UI to support other type of payment
