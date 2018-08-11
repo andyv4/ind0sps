@@ -97,8 +97,6 @@ function run_bgp(){
   // Post processing...
   //inventoryqty_calculate(array_keys($inventoryids));
 
-  return;
-
   $t1 = microtime(1);
   inventoryqty_calculateall();
   echo "inventoryqty_calculateall " . (microtime(1) - $t1) . PHP_EOL;

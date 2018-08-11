@@ -18,6 +18,7 @@ function ui_customerdetail($id = null, $mode = 'read', $index = 0){
   $controls = array(
     'id'=>array('type'=>'hidden', 'name'=>'id', 'value'=>$customer['id']),
     'isactive'=>array('type'=>'checkbox', 'name'=>'isactive', 'value'=>ov('isactive', $customer, 0, 1), 'readonly'=>$readonly),
+    'salesinvoicegroup_combinable'=>array('type'=>'checkbox', 'name'=>'salesinvoicegroup_combinable', 'value'=>ov('salesinvoicegroup_combinable', $customer, 0, 1), 'readonly'=>$readonly),
     'code'=>array('type'=>'textbox', 'name'=>'code','width'=>'100px', 'value'=>$customer['code'], 'readonly'=>$readonly),
     'description'=>array('type'=>'textbox', 'name'=>'description','width'=>'300px', 'value'=>$customer['description'], 'readonly'=>$readonly),
     'tax_registration_number'=>array('type'=>'textbox', 'name'=>'tax_registration_number','width'=>'200px', 'value'=>$customer['tax_registration_number'], 'readonly'=>$readonly),
@@ -89,6 +90,7 @@ function ui_customerdetail($id = null, $mode = 'read', $index = 0){
               <tr><th><label>" . lang('c16') . "</label></th><td>" . ui_control($controls['defaultsalesmanid']) . "</td></tr>
               <tr><th><label>" . lang('c17') . "</label></th><td>" . ui_control($controls['creditterm']) . "</td></tr>
               <tr><th><label>" . lang('c18') . "</label></th><td>" . ui_control($controls['creditlimit']) . "</td></tr>
+              <tr><th><label>Gabung Grup Faktur</label></th><td>" . ui_control($controls['salesinvoicegroup_combinable']) . "<small>Jika dinyalakan, grup faktur bisa digabung antara PPn dan Non PPn</small></td></tr>
               <tr><th><label>Override Sales Template</label></th><td>" . ui_control($controls['override_sales']) . "</td></tr>
               <tr><th><label>Nama Perusahaan</label></th><td>" . ui_control($controls['sales_companyname']) . "</td></tr>
               <tr><th><label>Alamat (baris 1)</label></th><td>" . ui_control($controls['sales_addressline1']) . "</td></tr>

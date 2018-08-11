@@ -43,16 +43,17 @@ function salesinvoicegroupdetail($columns, $filters){
       IF(`type` = 'SN', (SELECT customerdescription FROM salesreturn WHERE `id` = typeid), (SELECT customerdescription FROM salesinvoice WHERE `id` = typeid)) as customerdescription,
       IF(`type` = 'SN', (SELECT total FROM salesreturn WHERE `id` = typeid), (SELECT total FROM salesinvoice WHERE `id` = typeid)) as total,
       IF(`type` = 'SN', (SELECT ispaid FROM salesreturn WHERE `id` = typeid), (SELECT ispaid FROM salesinvoice WHERE `id` = typeid)) as ispaid,
-      IF(`type` = 'SN', (SELECT returnamount FROM salesreturn WHERE `id` = typeid), (SELECT paymentamount FROM salesinvoice WHERE `id` = typeid)) as paymentamount
+      IF(`type` = 'SN', (SELECT returnamount FROM salesreturn WHERE `id` = typeid), (SELECT paymentamount FROM salesinvoice WHERE `id` = typeid)) as paymentamount,
+      IF(`type` = 'SN', FALSE, (SELECT taxable FROM salesinvoice WHERE `id` = typeid)) as taxable
       FROM salesinvoicegroupitem WHERE salesinvoicegroupid = ?", array($salesinvoicegroup['id']));
 
     $total = 0;
     foreach($items as $index=>$item){
-      $items[$index]['total'] = round($item['total']);
-      $total += round($item['total']);
+      $items[$index]['total'] = floor($item['total']);
+      $total += floor($item['total']);
     }
     $salesinvoicegroup['items'] = $items;
-    $salesinvoicegroup['total'] = $total;
+    $salesinvoicegroup['total'] = floor($total);
     pm("update salesinvoicegroup set total = ? where `id` = ?", [ $total, $salesinvoicegroup['id'] ]);
     $paymentaccount = chartofaccountdetail(null, array('id'=>$salesinvoicegroup['paymentaccountid']));
     $salesinvoicegroup['paymentaccountname'] = isset($paymentaccount['name']) ? $paymentaccount['name'] : '';
@@ -220,14 +221,17 @@ function salesinvoicegroupentry($salesinvoicegroup){
     $typeid = ov('typeid', $item);
     switch($type){
       case 'SI':
-        $salesinvoice = pmr("SELECT customerdescription, taxable FROM salesinvoice WHERE `id` = ?", [ $typeid ]);
+        $salesinvoice = pmr("SELECT customerid, customerdescription, taxable FROM salesinvoice WHERE `id` = ?", [ $typeid ]);
         if(!$salesinvoice) throw new Exception('Faktur yang dimasukkan salah.');
-        $is_genki = strpos(strtolower($salesinvoice['customerdescription']), 'genki') !== false ||
+
+        /*$is_genki = strpos(strtolower($salesinvoice['customerdescription']), 'genki') !== false ||
           strpos(strtolower($salesinvoice['customerdescription']), 'aeon') !== false ||
           strpos(strtolower($salesinvoice['customerdescription']), 'suncity') !== false ||
-          strpos(strtolower($salesinvoice['customerdescription']), 'inti idola') !== false;
+          strpos(strtolower($salesinvoice['customerdescription']), 'inti idola') !== false ||
+          strpos(strtolower($salesinvoice['customerdescription']), 'fishman') !== false;*/
 
-        if(!$is_genki){
+        $combinable = pmc("select salesinvoicegroup_combinable from customer where `id` = ?", [ $salesinvoice['customerid'] ]);
+        if(!$combinable){
           if($taxable === null) $taxable = $salesinvoice['taxable'];
           else if($taxable != $salesinvoice['taxable']) exc('Tidak bisa menggabungkan faktur pajak dan non pajak dalam 1 (satu) group faktur.');
         }

@@ -244,7 +244,7 @@ for($a = 0 ; $a < $page ; $a++){
         <tr>
           <th style="text-align: right;white-space: nowrap;font-size:1.2em">Total</th>
           <td>&nbsp;:&nbsp;</td>
-          <td style="width:20mm;text-align: right;font-size:1.2em"><?=number_format($total)?></td>
+          <td style="width:20mm;text-align: right;font-size:1.2em"><?=number_format(floor($total))?></td>
         </tr>
         <tr><td><div style="height:7mm">&nbsp;</div></td></tr>
         <tr>

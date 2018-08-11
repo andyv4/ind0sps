@@ -115,6 +115,8 @@ function salesinvoicedetail($columns, $filters){
     $salesinvoice['salesmanname'] = userdetail(null, array('id'=>$salesinvoice['salesmanid']))['name'];
     $salesinvoice['paymentaccountname'] = $paymentaccount ? $paymentaccount['name'] : '';
 
+    $salesinvoice['total'] = floor($salesinvoice['total']); // Always floor total
+
     if(in_array('customer', $columns)){
       $customer = pmr("select `id`, tax_registration_number from customer where `id` = ?", [ $salesinvoice['customerid'] ]);
       $salesinvoice['customer'] = [];

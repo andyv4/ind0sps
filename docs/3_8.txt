@@ -56,3 +56,9 @@ ADD COLUMN `import_cost_accountid` INT(10) NULL AFTER `import_cost_date`,
 ADD COLUMN `downpayment` DOUBLE(18,3) NULL AFTER `import_cost_accountid`,
 ADD COLUMN `downpaymentdate` DATE NULL AFTER `downpayment`,
 ADD COLUMN `downpaymentaccountid` INT(10) NULL AFTER `downpaymentdate`;
+
+ALTER TABLE `indosps`.`customer`
+ADD COLUMN `salesinvoicegroup_combinable` INT(1) DEFAULT 0;
+
+update customer set salesinvoicegroup_combinable = 1 where description like '%pt. aeon%'
+or description like '%genki%' or description like '%suncity%' or description like '%inti idola%' or description like '%fishman%';

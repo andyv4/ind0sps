@@ -38,6 +38,7 @@ $customers_columnaliases = array(
   'sales_addressline1'=>'t1.sales_addressline1',
   'sales_addressline2'=>'t1.sales_addressline2',
   'sales_addressline3'=>'t1.sales_addressline3',
+  'salesinvoicegroup_combinable'=>'t1.salesinvoicegroup_combinable',
 );
 
 function customer_uicolumns(){
@@ -191,6 +192,7 @@ function customersaleslist($customerid, $status = null){
 function customerentry($customer){
 
   $isactive = ov('isactive', $customer, 0, 1);
+  $salesinvoicegroup_combinable = ov('salesinvoicegroup_combinable', $customer, 0, 0);
   $code = ov('code', $customer, 1, '', 'string', array('notempty'=>1));
   $description = ov('description', $customer, 1, '', 'string', array('notempty'=>1));
   $tax_registration_number = ov('tax_registration_number', $customer, 1, '', 'string');
@@ -307,6 +309,9 @@ function customermodify($customer){
 
   if(isset($customer['address']) && $current_customer['address'] != $customer['address'])
     $updatedrow['address'] = $customer['address'];
+
+  if(isset($customer['salesinvoicegroup_combinable']) && $current_customer['salesinvoicegroup_combinable'] != $customer['salesinvoicegroup_combinable'])
+    $updatedrow['salesinvoicegroup_combinable'] = $customer['salesinvoicegroup_combinable'];
 
   if(isset($customer['billingaddress']) && $current_customer['billingaddress'] != $customer['billingaddress'])
     $updatedrow['billingaddress'] = $customer['billingaddress'];
