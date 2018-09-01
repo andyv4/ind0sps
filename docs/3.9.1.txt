@@ -1,0 +1,5 @@
+ALTER TABLE `indosps`.`purchaseorder`
+ADD COLUMN `isbaddebt` INT(1) NULL AFTER `term`,
+ADD COLUMN `baddebtamount` DOUBLE(18,3) NULL AFTER `isbaddebt`,
+ADD COLUMN `baddebtaccountid` INT(10) NULL AFTER `baddebtamount`
+ADD COLUMN `baddebtdate` DATE NULL AFTER `baddebtaccountid`;

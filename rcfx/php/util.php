@@ -4,6 +4,7 @@ define('RESULT_NORMAL', 1);
 define('RESULT_CLEAN', 2);
 $__DEBUGS = array();
 $__WORDS = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus gravida nisl a neque elementum gravida. Donec commodo maximus nulla, ac fringilla tellus tristique eget. Nullam fermentum, tellus sit amet mattis convallis, leo neque semper nunc, eu finibus nunc tellus vel lectus. Nam tempus felis quis gravida maximus. Nunc efficitur luctus purus, id suscipit sem vulputate eget. Sed lobortis, lacus quis laoreet suscipit, lacus dolor scelerisque orci, sed finibus felis nulla at ipsum. Maecenas nunc libero, aliquam vel accumsan lacinia, iaculis id risus. Nam fermentum, quam vel consequat lacinia, dui mauris pulvinar tellus, eget eleifend augue erat ac arcu. Fusce ut felis orci. Vestibulum malesuada orci sit amet dui luctus, sagittis feugiat turpis dictum.";
+$__APP_DIR = '';
 
 function debug($arr){
   global $__DEBUGS;
@@ -122,6 +123,20 @@ function object_keys($obj, $keys){
     $result[$key] = $obj[$key];
   }
   return $result;
+
+}
+
+function app_dir(){
+
+  global $__APP_DIR;
+  if(!$__APP_DIR) $__APP_DIR = realpath(__DIR__ . '/../../');
+  return $__APP_DIR;
+
+}
+
+function usr_dir(){
+
+  return app_dir() . '/usr/';
 
 }
 
@@ -600,7 +615,6 @@ function ui_async_put(){
 
   //echo json_encode(array('url'=>$url, 'mimetype'=>$mimetype));
 }
-
 function ui_async_post(){
 
   $method = $_GET['_asyncm'];
@@ -628,7 +642,6 @@ function ui_async_post(){
   else
     throw new Exception("Method not exists. [$method]");
 }
-
 function ui_async(){
 
   if(isset($_GET['_async'])){
