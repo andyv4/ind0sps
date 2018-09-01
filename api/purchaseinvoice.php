@@ -272,6 +272,7 @@ function purchaseinvoicevalidate(&$updated, $original = null){
   $downpaymentamount = ov('downpaymentamount', $original, 0);
   $total_in_currency = $actual_total * $currencyrate;
   $remaining_amount = $total_in_currency - $downpaymentamount;
+  if($remaining_amount < 0) $remaining_amount = 0;
 
   if(isset($updated['code']) && $updated['code'] != ov('code', $original)){
     if(pmc("select count(*) from purchaseinvoice where code = ?", [ $updated['code'] ]) > 0) exc('Nomor faktur sudah dipakai');
@@ -312,7 +313,7 @@ function purchaseinvoicevalidate(&$updated, $original = null){
     if($paymentamount > $remaining_amount) exc("Jumlah pembayaran melebihi total yang harus dibayar.");
     if(!isdate($paymentdate)) exc("Tanggal pelunasan belum diisi.");
     if(!chartofaccount_id_exists($paymentaccountid)) exc("Akun pelunasan belum diisi.");
-    if($paymentdate < $date) exc("Tanggal pelunasan salah.");
+    if($updated['paymentamount'] > 0 && $paymentdate < $date) exc("Tanggal pelunasan salah.");
 
   }
 
@@ -394,7 +395,7 @@ function purchaseinvoicevalidate(&$updated, $original = null){
 
   }
 
-  if(isset($updated['handlingfeepaymentamount']) && $updated['handlingfeepaymentamount'] != ov('handlingfeepaymentamount', $original)){
+  if(isset($updated['handlingfeepaymentamount']) && floatval($updated['handlingfeepaymentamount']) != floatval(ov('handlingfeepaymentamount', $original))){
 
     $handlingfeedate = ova('handlingfeedate', $updated, $original);
     $handlingfeeaccountid = ova('handlingfeeaccountid', $updated, $original);
@@ -411,6 +412,7 @@ function purchaseinvoicevalidate(&$updated, $original = null){
 
     if(!is_array_object($updated['inventories']) || count($updated['inventories']) <= 0) exc("Barang harus diisi");
     $inventory_count = 0;
+
     foreach($updated['inventories'] as $index=>$inventory){
 
       if(isset($inventory['__flag']) && $inventory['__flag'] == 'removed') continue; // Skip removed row
@@ -682,6 +684,7 @@ function purchaseinvoicecalculate($id){
   $totalpercurrency = round($total * $currencyrate);
   $handlingfeeaccountid = $purchaseinvoice['handlingfeeaccountid'];
   $handlingfeedate = $purchaseinvoice['handlingfeedate'];
+  $handlingfeepaymentamount = $purchaseinvoice['handlingfeepaymentamount'];
 
   $purchaseorderid = ov('purchaseorderid', $purchaseinvoice, 0, null);
   $purchaseorder = purchaseorderdetail(null, array('id'=>$purchaseorderid));
@@ -736,33 +739,42 @@ function purchaseinvoicecalculate($id){
    */
   $journalvouchers = [];
   $oweamount = $totalpercurrency - $downpaymentamount;
+  if($oweamount < 0) $oweamount = 0;
   $debtamount = $totalpercurrency - $downpaymentamount - $paymentamount;
+  if($debtamount < 1) $debtamount = 0; // If debtamount < 1, consider as paid
   $paymentamount = $paymentamount > 0 && abs($paymentamount - $downpaymentamount) <= $purchaseinvoice_payment_tolerance ? $oweamount : $paymentamount;
 
   // Default journal
   $details = [];
-  $details[] =  array('coaid'=>$purchaseinvoice_inventoryaccountid, 'debitamount'=>$totalpercurrency, 'creditamount'=>0); // 10: Persediaan Barang Dagang
-  if($downpaymentamount > 0)
-    $details[] =  array('coaid'=>$purchaseinvoice_downpaymentaccountid, 'debitamount'=>0, 'creditamount'=>$downpaymentamount); // 18: Uang Muka Pembelian
-  if($paymentamount > 0){
-    if(date('Ymd', strtotime($paymentdate)) == date('Ymd', strtotime($date))) {
-      $details[] =  array('coaid'=>$paymentaccountid, 'debitamount'=>0, 'creditamount'=>$paymentamount); // As of payment account id
-      if($debtamount > 0) $details[] =  array('coaid'=>$purchaseinvoice_debtaccountid, 'debitamount'=>0, 'creditamount'=>$debtamount); // 5: Hutang
+  if($paymentamount > 0) {
+
+    $details[] = array('coaid' => $purchaseinvoice_inventoryaccountid, 'debitamount' => $totalpercurrency, 'creditamount' => 0); // 10: Persediaan Barang Dagang
+
+    if ($downpaymentamount > 0)
+      $details[] = array('coaid' => $purchaseinvoice_downpaymentaccountid, 'debitamount' => 0, 'creditamount' => $downpaymentamount); // 18: Uang Muka Pembelian
+
+    if($paymentamount > 0){
+      if (date('Ymd', strtotime($paymentdate)) == date('Ymd', strtotime($date))) {
+        $details[] = array('coaid' => $paymentaccountid, 'debitamount' => 0, 'creditamount' => $paymentamount); // As of payment account id
+        if ($debtamount > 0) $details[] = array('coaid' => $purchaseinvoice_debtaccountid, 'debitamount' => 0, 'creditamount' => $debtamount); // 5: Hutang
+      }
+      else
+        $details[] = array('coaid' => $purchaseinvoice_debtaccountid, 'debitamount' => 0, 'creditamount' => $totalpercurrency - $downpaymentamount); // 5: Hutang
     }
-    else
-      $details[] =  array('coaid'=>$purchaseinvoice_debtaccountid, 'debitamount'=>0, 'creditamount'=>$totalpercurrency - $downpaymentamount); // 5: Hutang
+    else if ($totalpercurrency - $downpaymentamount > 0)
+      $details[] = array('coaid' => $purchaseinvoice_debtaccountid, 'debitamount' => 0, 'creditamount' => $totalpercurrency - $downpaymentamount); // 5: Hutang
+
+    $journalvoucher = array(
+      'date' => $date,
+      'description' => $code,
+      'ref' => 'PI',
+      'refid' => $id,
+      'type' => 'A',
+      'details' => $details
+    );
+    $journalvouchers[] = $journalvoucher;
+
   }
-  else if($totalpercurrency - $downpaymentamount > 0)
-    $details[] =  array('coaid'=>$purchaseinvoice_debtaccountid, 'debitamount'=>0, 'creditamount'=>$totalpercurrency - $downpaymentamount); // 5: Hutang
-  $journalvoucher = array(
-    'date'=>$date,
-    'description'=>$code,
-    'ref'=>'PI',
-    'refid'=>$id,
-    'type'=>'A',
-    'details'=>$details
-  );
-  $journalvouchers[] = $journalvoucher;
 
   // Create another journal if payment date different from invoice date
   if($paymentamount > 0 && date('Ymd', strtotime($paymentdate)) != date('Ymd', strtotime($date))){
@@ -923,7 +935,7 @@ function purchaseinvoicecalculate($id){
     $journalvouchers[] = $journalvoucher;
 
   }
-
+  //exc($journalvouchers);
   if(count($journalvouchers) > 0){
     journalvoucherremove(array('ref'=>'PI', 'refid'=>$id));
     journalvoucherentries($journalvouchers);

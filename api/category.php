@@ -1,6 +1,11 @@
 <?php
 require_once dirname(__FILE__) . '/log.php';
 
+/**
+ * Get category columns for grid
+ * @return array
+ * @since 1.0
+ */
 function category_ui_columns(){
 
   $columns = array(
@@ -14,25 +19,48 @@ function category_ui_columns(){
   return $columns;
 
 }
+
+/**
+ * Get category detail
+ * @param $columns
+ * @param $filters
+ * @return mixed
+ * @throws Exception
+ * @since 1.0
+ */
 function categorydetail($columns, $filters){
 
   $category = mysql_get_row('category', $filters, $columns);
-
   return $category;
 
 }
+
+/**
+ * Get category list
+ * @param $columns
+ * @param $filters
+ * @return array
+ * @throws Exception
+ * @since 1.0
+ */
 function categorylist($columns, $filters){
 
   return mysql_get_rows('category', $columns, $filters);
 
 }
 
+/**
+ * Save new category
+ * @param $category
+ * @return array
+ * @throws Exception
+ * @since 1.0
+ */
 function categoryentry($category){
 
   $name = ov('name', $category);
   $frontend_active = ov('frontend_active', $category);
   $imageurl = ov('imageurl', $category);
-
   $exists = pmc("select count(*) from category where `name` = ?", array($name));
   if($exists) throw new Exception('Nama kategori sudah ada, silakan menggunakan nama lain.');
 
@@ -51,6 +79,13 @@ function categoryentry($category){
   return array('id'=>$id);
 
 }
+
+/**
+ * Modify a category
+ * @param $category
+ * @throws Exception
+ * @since 1.0
+ */
 function categorymodify($category){
 
   $id = ov('id', $category);
@@ -87,6 +122,13 @@ function categorymodify($category){
   unlink($lock_file);
 
 }
+
+/**
+ * Remove a category
+ * @param $filters
+ * @throws Exception
+ * @since 1.0
+ */
 function categoryremove($filters){
 
   $category = categorydetail(null, $filters);

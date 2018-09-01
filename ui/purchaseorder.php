@@ -40,6 +40,27 @@ function ui_purchaseorderdetail($id, $mode = 'read', $obj = null){
     $readonly = true;
   }
 
+  $pph = ov('pph', $obj, 0, 0);
+  $kso = ov('kso', $obj, 0, 0);
+  $ski = ov('ski', $obj, 0, 0);
+  $clearance_fee = ov('clearance_fee', $obj, 0, 0);
+  $taxamount = ov('taxamount', $obj, 0, 0);
+  $taxdate = ov('taxdate', $obj, 0, 0);
+  $taxaccountid = ov('taxaccountid', $obj, 0, 0);
+  $pphdate = ov('pphdate', $obj, 0, 0);
+  $pphaccountid = ov('pphaccountid', $obj, 0, 0);
+  $ksodate = ov('ksodate', $obj, 0, 0);
+  $ksoaccountid = ov('ksoaccountid', $obj, 0, 0);
+  $skidate = ov('skidate', $obj, 0, 0);
+  $skiaccountid = ov('skiaccountid', $obj, 0, 0);
+  $clearance_fee_date = ov('clearance_fee_date', $obj, 0, 0);
+  $clearance_fee_accountid = ov('clearance_fee_accountid', $obj, 0, 0);
+  $import_cost = ov('import_cost', $obj, 0, 0);
+  $import_cost_date = ov('import_cost_date', $obj, 0, 0);
+  $import_cost_accountid = ov('import_cost_accountid', $obj, 0, 0);
+
+  $chartofaccounts = array_cast(chartofaccountlist(), array('text'=>'name', 'value'=>'id'));
+
   $controls = array(
     'id'=>array('type'=>'hidden', 'name'=>'id', 'value'=>ov('id', $obj)),
     'code'=>array('type'=>'textbox', 'name'=>'code', 'value'=>$code, 'width'=>100, 'readonly'=>$readonly),
@@ -65,17 +86,39 @@ function ui_purchaseorderdetail($id, $mode = 'read', $obj = null){
     'refno'=>[ 'type'=>'textbox', 'name'=>'refno', 'value'=>ov('refno', $obj, 0), 'readonly'=>$readonly, 'width'=>100 ],
     'eta'=>[ 'type'=>'datepicker', 'name'=>'eta', 'value'=>ov('eta', $obj, 0), 'readonly'=>$readonly ],
     'term'=>[ 'type'=>'dropdown', 'name'=>'term', 'items'=>$terms, 'value'=>ov('term', $obj, 0), 'readonly'=>$readonly ],
+    'taxamount'=>array('type'=>'textbox', 'name'=>'taxamount', 'value'=>$taxamount, 'width'=>150, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()"),
+    'taxdate'=>array('type'=>'datepicker', 'name'=>'taxdate', 'value'=>$taxdate, 'readonly'=>$readonly, 'onchange'=>"", 'align'=>'right', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()"),
+    'taxaccountid'=>array('type'=>'dropdown', 'name'=>'taxaccountid', 'value'=>$taxaccountid, 'items'=>$chartofaccounts, 'readonly'=>$readonly, 'width'=>150, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
+    'pph'=>array('type'=>'textbox', 'name'=>'pph', 'value'=>$pph, 'width'=>150, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()"),
+    'pphdate'=>array('type'=>'datepicker', 'name'=>'pphdate', 'value'=>$pphdate, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
+    'pphaccountid'=>array('type'=>'dropdown', 'name'=>'pphaccountid', 'value'=>$pphaccountid, 'width'=>150, 'items'=>$chartofaccounts, 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
+    'kso'=>array('type'=>'textbox', 'name'=>'kso', 'value'=>$kso, 'width'=>150, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()"),
+    'ksodate'=>array('type'=>'datepicker', 'name'=>'ksodate', 'value'=>$ksodate, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
+    'ksoaccountid'=>array('type'=>'dropdown', 'name'=>'ksoaccountid', 'value'=>$ksoaccountid, 'width'=>150, 'items'=>$chartofaccounts, 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
+    'ski'=>array('type'=>'textbox', 'name'=>'ski', 'value'=>$ski, 'width'=>150, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()"),
+    'skidate'=>array('type'=>'datepicker', 'name'=>'skidate', 'value'=>$skidate, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
+    'skiaccountid'=>array('type'=>'dropdown', 'name'=>'skiaccountid', 'value'=>$skiaccountid, 'width'=>150, 'items'=>$chartofaccounts, 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
+    'clearance_fee'=>array('type'=>'textbox', 'name'=>'clearance_fee', 'value'=>$clearance_fee, 'width'=>150, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()"),
+    'clearance_fee_date'=>array('type'=>'datepicker', 'name'=>'clearance_fee_date', 'value'=>$clearance_fee_date, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
+    'clearance_fee_accountid'=>array('type'=>'dropdown', 'name'=>'clearance_fee_accountid', 'value'=>$clearance_fee_accountid, 'width'=>150, 'items'=>$chartofaccounts, 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
+    'import_cost'=>array('type'=>'textbox', 'name'=>'import_cost', 'value'=>$import_cost, 'width'=>150, 'datatype'=>'money', 'readonly'=>1, 'onchange'=>"purchaseorder_total()"),
+    'import_cost_date'=>array('type'=>'datepicker', 'name'=>'import_cost_date', 'value'=>$import_cost_date, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
+    'import_cost_accountid'=>array('type'=>'dropdown', 'name'=>'import_cost_accountid', 'value'=>$import_cost_accountid, 'width'=>150, 'items'=>$chartofaccounts, 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
+    'handlingfeepaymentamount'=>array('type'=>'textbox', 'name'=>'handlingfeepaymentamount', 'value'=>$handlingfeepaymentamount, 'readonly'=>$readonly, 'width'=>150, 'datatype'=>'money', 'onchange'=>"purchaseorder_total()"),
+    'handlingfeedate'=>array('type'=>'datepicker', 'name'=>'handlingfeedate', 'value'=>$handlingfeedate, 'readonly'=>$readonly, 'align'=>'right'),
+    'handlingfeeaccountid'=>array('type'=>'dropdown', 'name'=>'handlingfeeaccountid', 'value'=>$handlingfeeaccountid, 'items'=>$chartofaccounts, 'readonly'=>$readonly, 'width'=>150, 'onchange'=>"", 'align'=>'right'),
   );
 
   $detailcolumns = array(
     array('active'=>1, 'name'=>'col7', 'text'=>'Kode', 'type'=>'html', 'html'=>'ui_purchaseorderdetail_col7', 'width'=>80),
-    array('active'=>1, 'name'=>'col0', 'text'=>'Barang', 'type'=>'html', 'html'=>'ui_purchaseorderdetail_col0', 'width'=>300, 'nodittomark'=>1),
+    array('active'=>1, 'name'=>'col0', 'text'=>'Barang', 'type'=>'html', 'html'=>'ui_purchaseorderdetail_col0', 'width'=>200, 'nodittomark'=>1),
     array('active'=>1, 'name'=>'col1', 'text'=>'Kts', 'type'=>'html', 'html'=>'ui_purchaseorderdetail_col1', 'width'=>50, 'nodittomark'=>1),
     array('active'=>1, 'name'=>'col2', 'text'=>'Satuan', 'type'=>'html', 'html'=>'ui_purchaseorderdetail_col2', 'width'=>60, 'nodittomark'=>1),
     array('active'=>1, 'name'=>'col2', 'text'=>'Harga', 'type'=>'html', 'html'=>'ui_purchaseorderdetail_col3', 'width'=>100, 'nodittomark'=>1),
     array('active'=>1, 'name'=>'col2', 'text'=>'Diskon', 'type'=>'html', 'html'=>'ui_purchaseorderdetail_col4', 'width'=>60, 'nodittomark'=>1),
     array('active'=>1, 'name'=>'col2', 'text'=>'Total', 'type'=>'html', 'html'=>'ui_purchaseorderdetail_col5', 'width'=>100, 'nodittomark'=>1),
     array('active'=>1, 'name'=>'col3', 'text'=>'', 'type'=>'html', 'html'=>'ui_purchaseorderdetail_col6', 'width'=>24, 'nodittomark'=>1),
+    array('active'=>1, 'name'=>'col8', 'text'=>"Bea Masuk", 'type'=>'html', 'html'=>'ui_purchaseorderdetail_col9', 'width'=>90, 'align'=>'right', 'class'=>'bg-light-yellow'),
   );
 
   // Inventories completion
@@ -129,20 +172,113 @@ function ui_purchaseorderdetail($id, $mode = 'read', $obj = null){
         " . ui_grid(array('columns'=>$detailcolumns, 'name'=>'inventories', 'value'=>$inventories, 'mode'=>'write', 'readonly'=>$readonly, 'id'=>'inventories')) . "
       </div>
       <div style='height:22px'></div>
-      <table class='form'>
-        " . ui_formrow('Catatan', ui_control($controls['note'])) . "
-      </table>
-      <table class='form' style='float:right'>
-        <tr><th><label>Subtotal</label></th><td></td><td align='right'>" . ui_control($controls['subtotal']) . "</td></tr>
-        <tr><th><label>Diskon</label></th><td>" . ui_control($controls['discount']) . "</td><td align='right'>" . ui_control($controls['discountamount']) . "</td></tr>
-        <tr><th><label>PPn</label></th><td>" . ui_control($controls['taxable']) . "</td><td align='right'>" . ui_control($controls['taxamount']) . "</td></tr>
-        <tr><th><label>Freight</label></th><td></td><td align='right'>" . ui_control($controls['freightcharge']) . "</td></tr>
-        <tr><th><label>Total</label></th><td></td><td align='right'>" . ui_control($controls['total']) . "</td></tr>
-        <tr><td><div style='height:10px'></div></td></tr>
-        <tr><th><label>Pelunasan</label></th><td>" . ui_control($controls['ispaid']) . "</td><td align='right'>" . ui_control($controls['paymentamount']) . "</td></tr>
-        <tr><th><label>Tanggal Pelunasan</label></th><td></td><td align='right'>" . ui_control($controls['paymentdate']) . "</td></tr>
-        <tr><th><label>Akun Pelunasan</label></th><td></td><td align='right'>" . ui_control($controls['paymentaccountid']) . "</td></tr>
-      </table>
+      <table cellspacing='0'>
+        <tr>
+          <td class='valign-top'>
+            <table class='form'>
+              " . ui_formrow('Catatan', ui_control($controls['note'])) . "
+            </table>
+          </td>
+          <td style='width:100%'></td>
+          <td class='valign-top'>
+            <table class='form' style='float:right'>
+              <tr><th><label>Subtotal</label></th><td></td><td align='right'>" . ui_control($controls['subtotal']) . "</td></tr>
+              <tr><th><label>Diskon</label></th><td>" . ui_control($controls['discount']) . "</td><td align='right'>" . ui_control($controls['discountamount']) . "</td></tr>
+              <tr><th><label>Freight</label></th><td></td><td align='right'>" . ui_control($controls['freightcharge']) . "</td></tr>
+              <tr><th><label>Total</label></th><td></td><td align='right'>" . ui_control($controls['total']) . "</td></tr>
+              <tr><td><div style='height:10px'></div></td></tr>
+            </table>
+          </td>
+        </tr>
+      </table>      
+      <div style='height:20px'></div>
+      <div class='align-right'>
+        <span style='background:rgb(255, 250, 237)' class='padding10'>
+          <table cellspacing='0' class='form'>";
+
+          $c .= "<tr>
+              <th><label>Pelunasan</label></th>
+              <td class='align-right'>" . ui_control($controls['ispaid']) . "</td>
+              <td>" . ui_control($controls['paymentamount']) . "</td>
+              <td>" . ui_control($controls['paymentdate']) . "</td>
+              <td>" . ui_control($controls['paymentaccountid']) . "</td>
+            </tr>";
+
+          if(systemvarget('purchaseinvoice_taxaccountid') > 0){
+            $c .= "<tr>
+              <th><label>PPn</label></th>
+              <td class='align-right'></td>
+              <td>" . ui_control($controls['taxamount']) . "</td>
+              <td>" . ui_control($controls['taxdate']) . "</td>
+              <td>" . ui_control($controls['taxaccountid']) . "</td>
+            </tr>";
+          }
+
+          if(systemvarget('purchaseinvoice_pphaccountid') > 0){
+            $c .= "<tr>
+              <th><label>PPH</label></th>
+              <td class='align-right'></td>
+              <td>" . ui_control($controls['pph']) . "</td>
+              <td>" . ui_control($controls['pphdate']) . "</td>
+              <td>" . ui_control($controls['pphaccountid']) . "</td>
+            </tr>";
+          }
+
+          if(systemvarget('purchaseinvoice_ksoaccountid') > 0){
+            $c .= "<tr>
+              <th><label>KSO</label></th>
+              <td class='align-right'></td>
+              <td>" . ui_control($controls['kso']) . "</td>
+              <td>" . ui_control($controls['ksodate']) . "</td>
+              <td>" . ui_control($controls['ksoaccountid']) . "</td>
+            </tr>";
+          }
+
+          if(systemvarget('purchaseinvoice_skiaccountid') > 0){
+            $c .= "<tr>
+              <th><label>SKI</label></th>
+              <td class='align-right'></td>
+              <td>" . ui_control($controls['ski']) . "</td>
+              <td>" . ui_control($controls['skidate']) . "</td>
+              <td>" . ui_control($controls['skiaccountid']) . "</td>
+            </tr>";
+          }
+
+          if(systemvarget('purchaseinvoice_clearance_fee_accountid') > 0){
+            $c .= "<tr>
+              <th><label>Clearance Fee</label></th>
+              <td class='align-right'></td>
+              <td>" . ui_control($controls['clearance_fee']) . "</td>
+              <td>" . ui_control($controls['clearance_fee_date']) . "</td>
+              <td>" . ui_control($controls['clearance_fee_accountid']) . "</td>
+            </tr>";
+          }
+
+          if(systemvarget('purchaseinvoice_import_cost_accountid') > 0){
+            $c .= "<tr>
+              <th><label>Bea Masuk</label></th>
+              <td class='align-right'></td>
+              <td>" . ui_control($controls['import_cost']) . "</td>
+              <td>" . ui_control($controls['import_cost_date']) . "</td>
+              <td>" . ui_control($controls['import_cost_accountid']) . "</td>
+            </tr>";
+          }
+
+          if(systemvarget('purchaseinvoice_handlingfeeaccountid') > 0){
+            $c .= "<tr>
+              <th><label>Handling Fee</label></th>
+              <td class='align-right'></td>
+              <td>" . ui_control($controls['handlingfeepaymentamount']) . "</td>
+              <td>" . ui_control($controls['handlingfeedate']) . "</td>
+              <td>" . ui_control($controls['handlingfeeaccountid']) . "</td>
+              <td></td>
+            </tr>";
+          }
+
+          $c .= " 
+          </table>
+        </span>
+      </div>
       <div style='height:88px'></div>
     </div>
     <div class='foot'>
@@ -318,6 +454,24 @@ function ui_purchaseorderdetail_col7($obj, $params){
   $c = ui_label(array('name'=>'inventorycode', 'class'=>'block', 'value'=>ov('inventorycode', $obj)));
   $c .= ui_hidden(array('name'=>'taxable', 'class'=>'block', 'value'=>ov('taxable', $obj)));
   return $c;
+
+}
+
+function ui_purchaseorderdetail_col9($obj, $params){
+
+  if(systemvarget('purchaseinvoice_import_cost_accountid') > 0){
+    return ui_textbox(array(
+      'name'=>'unittax',
+      'value'=>ov('unittax', $obj),
+      'readonly'=>$params['readonly'],
+      'class'=>'block',
+      'datatype'=>'money',
+      'onchange'=>'purchaseorder_total()',
+      'ischild'=>1
+    ));
+  }
+  else
+    return "<div class='align-right'>-</div>";
 
 }
 

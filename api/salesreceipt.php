@@ -76,7 +76,7 @@ function salesreceiptdetail($columns, $filters){
     for($i = 0 ; $i < count($salesinvoicegroups) ; $i++){
     	$totalamount += $salesinvoicegroups[$i]['total'];
     }
-    $salesreceipt['total'] = floor($totalamount);
+    $salesreceipt['total'] = $totalamount;
     pm("UPDATE salesreceipt SET total = ? WHERE id = ?", array($totalamount, $id));
 
     $paymentaccount = chartofaccountdetail(null, array('id'=>$salesreceipt['paymentaccountid']));

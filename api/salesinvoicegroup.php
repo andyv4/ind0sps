@@ -13,7 +13,7 @@ function salesinvoicegroup_uicolumns(){
     array('active'=>1, 'name'=>'ispaid', 'text'=>'Lunas', 'width'=>40, 'type'=>'html', 'align'=>'center', 'html'=>'salesinvoicegrouplist_ispaid'),
     array('active'=>1, 'name'=>'isreceipt', 'text'=>'Kwitansi', 'width'=>55, 'type'=>'html', 'align'=>'center', 'html'=>'salesinvoicegrouplist_isreceipt'),
     array('active'=>1, 'name'=>'date', 'text'=>'Tanggal', 'width'=>90, 'datatype'=>'date'),
-    array('active'=>1, 'name'=>'code', 'text'=>'Kode', 'width'=>70),
+    array('active'=>1, 'name'=>'code', 'text'=>'Kode', 'width'=>90),
     array('active'=>1, 'name'=>'customerdescription', 'text'=>'Pelanggan', 'width'=>150),
     array('active'=>0, 'name'=>'address', 'text'=>'Alamat', 'width'=>150),
     array('active'=>0, 'name'=>'note', 'text'=>'Catatan', 'width'=>150),
@@ -25,7 +25,7 @@ function salesinvoicegroup_uicolumns(){
     array('active'=>0, 'name'=>'salesreceiptid', 'text'=>'ID Kwitansi', 'width'=>30, 'datatype'=>'number'),
     array('active'=>0, 'name'=>'salesinvoiceid', 'text'=>'ID Faktur', 'width'=>30, 'datatype'=>'number'),
     array('active'=>1, 'name'=>'itemtype', 'text'=>'Tipe', 'width'=>40),
-    array('active'=>1, 'name'=>'itemcode', 'text'=>'Kode Faktur', 'width'=>80, 'nodittomark'=>1),
+    array('active'=>1, 'name'=>'itemcode', 'text'=>'Kode Faktur', 'width'=>100, 'nodittomark'=>1),
     array('active'=>1, 'name'=>'itemtotal', 'text'=>'Total Faktur', 'width'=>80, 'datatype'=>'money'),
     array('active'=>0, 'name'=>'createdon', 'text'=>'Dibuat Pada', 'width'=>100, 'datatype'=>'datetime'),
   );
@@ -49,11 +49,11 @@ function salesinvoicegroupdetail($columns, $filters){
 
     $total = 0;
     foreach($items as $index=>$item){
-      $items[$index]['total'] = floor($item['total']);
-      $total += floor($item['total']);
+      $items[$index]['total'] = $item['total'];
+      $total += $item['total'];
     }
     $salesinvoicegroup['items'] = $items;
-    $salesinvoicegroup['total'] = floor($total);
+    $salesinvoicegroup['total'] = $total;
     pm("update salesinvoicegroup set total = ? where `id` = ?", [ $total, $salesinvoicegroup['id'] ]);
     $paymentaccount = chartofaccountdetail(null, array('id'=>$salesinvoicegroup['paymentaccountid']));
     $salesinvoicegroup['paymentaccountname'] = isset($paymentaccount['name']) ? $paymentaccount['name'] : '';
@@ -70,6 +70,7 @@ function salesinvoicegrouplist($columns, $sorts = null, $filters = null, $groups
     'customerdescription'=>'t1.customerdescription',
     'total'=>'t1.total',
     'invoicecode'=>'t2.code as invoicecode',
+    'salesinvoicecode'=>'t2.code as salesinvoicecode',
     'invoicetotal'=>'t2.total as invoicetotal',
     'invoiceispaid'=>'t2.ispaid as invoiceispaid',
     'createdon'=>'t1.createdon'

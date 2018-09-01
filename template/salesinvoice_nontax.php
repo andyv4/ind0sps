@@ -38,6 +38,7 @@ $code = $salesinvoice['code'];
 $date = date('M j, Y', strtotime($salesinvoice['date']));
 $customerdescription = $salesinvoice['customerdescription'];
 $address = $salesinvoice['address'];
+$creditterm = $salesinvoice['creditterm'];
 $inventories = $salesinvoice['inventories'];
 $subtotal = $salesinvoice['subtotal'];
 $discountamount = $salesinvoice['discountamount'];
@@ -55,10 +56,10 @@ for($a = 0 ; $a < $page ; $a++){
   ?>
   <div class="paper" style="width:<?=$contentwidth?>mm;height:<?=$contentheight?>mm;padding:0;margin:0;overflow:hidden">
 
-    <?php if(strtolower(trim($customerdescription)) == 'cash'){ ?>
-    <div style="position: absolute;left:36mm;top:36mm;bottom:0;right:0;z-index:1">
-      <h1 style="font-size:16em;transform:rotate(30deg);color:rgba(0, 0, 0, .05)">CASH</h1>
-    </div>
+    <?php if($creditterm == -1){ ?>
+      <div style="position: absolute;right:10mm;top:0;z-index:1;padding:3px;border:solid 2px black;">
+        <h1 style="font-size:14pt;color:rgba(0, 0, 0, 1);font-weight:bold">CASH</h1>
+      </div>
     <?php } ?>
     
     <!-- Row 0 -->

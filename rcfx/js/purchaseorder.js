@@ -37,6 +37,29 @@ function purchaseorder_subtotal(){
 function purchaseorder_total(){
 
   var subtotal = purchaseorder_subtotal();
+  var discountamount = parseFloat($("*[data-name='discountamount']", '.modal').val());
+  var taxamount = parseFloat($("*[data-name='taxamount']", '.modal').val());
+  var freightcharge = parseFloat($("*[data-name='freightcharge']", '.modal').val());
+
+  if(isNaN(freightcharge)) freightcharge = 0;
+
+  var total = subtotal - discountamount + freightcharge;
+  $("*[data-name='total']", '.modal').val(total);
+
+  var total_unittax = 0;
+  $('#inventories tr').each(function(){
+
+    if(this.classList.contains('newrowopt')) return;
+
+    var unittax = $("*[data-name='unittax']", this).val();
+    total_unittax += unittax > 0 ? unittax : 0;
+
+  });
+  $("*[data-name='import_cost']", '.modal').val(total_unittax);
+
+  return total;
+
+  var subtotal = purchaseorder_subtotal();
   var discountamount = parseFloat(ui.textbox_value(ui('%discountamount', ui('.modal'))));
   if(isNaN(discountamount)) discountamount = 0;
   var taxamount = parseFloat(ui.label_value(ui('%taxamount', ui('.modal'))));
@@ -58,7 +81,6 @@ function purchaseorder_discountchange(){
   var discountamount = ui.discount_calc(discount, subtotal);
 
   ui.textbox_setvalue(ui('%discountamount', ui('.modal')), discountamount);
-  purchaseorder_taxchange();
   purchaseorder_total();
 
 }
@@ -66,21 +88,6 @@ function purchaseorder_discountchange(){
 function purchaseorder_discountamountchange(){
 
   ui.textbox_setvalue(ui('%discount', ui('.modal')), '');
-  purchaseorder_taxchange();
-  purchaseorder_total();
-
-}
-
-function purchaseorder_taxchange(){
-
-  var subtotal = purchaseorder_subtotal();
-  var discountamount = parseFloat(ui.textbox_value(ui('%discountamount', ui('.modal'))));
-  if(isNaN(discountamount)) discountamount = 0;
-  var total = subtotal - discountamount;
-  var taxable = ui.checkbox_value(ui('%taxable', ui('.modal')));
-  var taxamount = taxable ? total * .1 : 0;
-
-  ui.label_setvalue(ui('%taxamount', ui('.modal')), taxamount);
   purchaseorder_total();
 
 }
