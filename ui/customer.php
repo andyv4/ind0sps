@@ -520,39 +520,27 @@ function ui_customerexport(){
   $filters = $preset['filters'];
   $filters = m_quickfilter_to_filters($filters, $quickfilters);
 
-  $customers_columnaliases = array(
-    'code'=>'t1.code',
-    'description'=>'t1.description',
-    'city'=>'t1.city',
-    'country'=>'t1.country',
-    'discount'=>'t1.discount',
-    'taxable'=>'t1.taxable',
-    'creditlimit'=>'t1.creditlimit',
-    'creditterm'=>'t1.creditterm',
-    'receivable'=>'t1.receivable',
-    'avgsalesmargin'=>'t1.avgsalesmargin',
-    'phone1'=>'t1.phone1',
-    'phone2'=>'t1.phone2',
-    'fax1'=>'t1.fax1',
-    'fax2'=>'t1.fax2',
-    'contactperson'=>'t1.contactperson',
-    'email'=>'t1.email',
-    'createdon'=>'t1.createdon',
-    'moved'=>'t1.moved',
-    'defaultsalesmanname'=>'t2.name'
-  );
+  if(!is_array($filters)) $filters = [];
 
-  // Generating sql queries
-  $params = array();
-  $columnquery = columnquery_from_columnaliases($columns, $customers_columnaliases);
-  $wherequery = " WHERE t1.defaultsalesmanid = t2.id" . str_replace('WHERE', 'AND', wherequery_from_filters($params, $filters, $customers_columnaliases));
-  $sortquery = sortquery_from_sorts($sorts, $customers_columnaliases);
-  $limitquery = limitquery_from_limitoffset($limits);
-  if(strlen($columnquery) > 0) $columnquery = ', ' . $columnquery; // Add comma if columnquery exists
-  $query = "SELECT 'customer' as `type`, t1.id, t1.defaultsalesmanid $columnquery FROM customer t1, user t2 $wherequery $sortquery $limitquery";
+  // Apply allowed_salesman (_self,*,<name>,<name>)
+  $sales_allowed_salesman = userkeystoreget($_SESSION['user']['id'], 'privilege.sales_allowed_salesman');
+  if(strpos($sales_allowed_salesman, '*') === false){
+    $sales_allowed_salesman = explode(',', $sales_allowed_salesman);
+    $salesman_count = 0;
+    if(count($filters) > 0) $filters[] = [ 'type'=>'and' ];
+    $filters[] = [ 'type'=>'(' ];
+    foreach($sales_allowed_salesman as $salesman){
+      if(empty($salesman)) continue;
+      $salesman = $salesman == '_self' ? $_SESSION['user']['userid'] : $salesman;
+      if($salesman_count > 0) $filters[] = [ 'type'=>'or' ];
+      $filters[] = [ 'name'=>'defaultsalesmanname', 'operator'=>'contains', 'value'=>$salesman ];
+      $salesman_count++;
+    }
+    if(!$salesman_count) $filters[] = [ 'name'=>'defaultsalesmanname', 'operator'=>'contains', 'value'=>$_SESSION['user']['userid'] ];
+    $filters[] = [ 'type'=>')' ];
+  }
 
-  // Fetch data
-  $items = pmrs($query, $params);
+  $items = customerlist($columns, $sorts, $filters);
 
   // Generate header
   $item = $items[0];

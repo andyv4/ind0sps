@@ -1139,22 +1139,28 @@ ui.dropdown_value = function(el){
   return el.getAttribute("data-value");
 }
 ui.dropdown_setvalue = function(el, obj){
-  if(el.getAttribute("data-items").length > 0){
-    var items = eval("(" + html_entity_decode(el.getAttribute("data-items")) + ")");
-    var item = null;
-    for(var i = 0 ; i < items.length ; i++)
-      if(items[i]['value'] == obj){
-        item = items[i];
-        break;
-      }
-    if(item != null){
-      el.setAttribute("data-value", item['value']);
-      el.firstElementChild.innerHTML = item['text'];
-    }
+  if(obj == null){
+    el.setAttribute("data-value", '');
+    el.firstElementChild.innerHTML = '';
   }
   else{
-    el.setAttribute("data-value", obj['value']);
-    el.firstElementChild.innerHTML = obj['text'];
+    if(el.getAttribute("data-items").length > 0){
+      var items = eval("(" + html_entity_decode(el.getAttribute("data-items")) + ")");
+      var item = null;
+      for(var i = 0 ; i < items.length ; i++)
+        if(items[i]['value'] == obj){
+          item = items[i];
+          break;
+        }
+      if(item != null){
+        el.setAttribute("data-value", item['value']);
+        el.firstElementChild.innerHTML = item['text'];
+      }
+    }
+    else{
+      el.setAttribute("data-value", obj['value']);
+      el.firstElementChild.innerHTML = obj['text'];
+    }
   }
 }
 ui.dropdown_setwidth = function(el, width){

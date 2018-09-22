@@ -10,9 +10,6 @@ function purchaseorder_rowtotal(tr){
   var qty = parseFloat(obj['qty']);
   var unitprice = parseFloat(obj['unitprice']);
   var total = qty * unitprice;
-  var discount = obj['unitdiscount'];
-  var discountamount = ui.discount_calc(discount, total);
-  var total = total - discountamount;
 
   ui.label_setvalue(ui('%unittotal', tr), total);
 
@@ -96,13 +93,32 @@ function purchaseorder_ispaid(){
 
   var ispaid = ui.checkbox_value(ui('%ispaid', ui('.modal')));
   if(ispaid){
-    purchaseorder_paymentamount();
-    if($("*[data-name='paymentdate']").val() == '')
-      $("*[data-name='paymentdate']").val(date('Ymd'));
+
+    if($("*[data-name='paymentdate']").val() == '') $("*[data-name='paymentdate']").val(date('Ymd'));
+    if(parseFloat($("*[data-name='paymentamount']").val()) == 0) $("*[data-name='paymentamount']").val(purchaseorder_paymentamount());
+    $('.row-baddebt').show();
+
   }
   else{
-    $("*[data-name='paymentdate']").val('');
-    $("*[data-name='paymentamount']").val(0);
+    $("*[data-name='isbaddebt']").val(0);
+    $("*[data-name='baddebtaccountid']").val('');
+    $("*[data-name='baddebtdate']").val('');
+    $("*[data-name='baddebtamount']").val(0);
+    $("*[data-name='paymentamount']").val(0)
+    $('.row-baddebt').hide();
+  }
+
+}
+function purchaseorder_isbaddebt(){
+
+  var isbaddebt = ui.checkbox_value(ui('%isbaddebt', ui('.modal')));
+  if(isbaddebt){
+    $("*[data-name='baddebtamount']").val($("*[data-name='paymentamount']").val());
+    $("*[data-name='baddebtaccountid']").val(1000);
+  }
+  else{
+    $("*[data-name='baddebtamount']").val(0);
+    $("*[data-name='baddebtaccountid']").val(null);
   }
 
 }
@@ -112,11 +128,7 @@ function purchaseorder_paymentamount(){
   var currencyrate = ui.control_value(ui('%currencyrate', ui('.modal')));
   var total = purchaseorder_total();
   total = total * currencyrate;
-  var handlingfee = ui.control_value(ui('%handlingfeepaymentamount', ui('.modal')));
-  if(isNaN(parseFloat(handlingfee)) || handlingfee <= 0) handlingfee = 0;
-  total = total + handlingfee;
-  ui.control_setvalue(ui('%paymentamount'), total);
-  ui.control_setvalue(ui('%ispaid', ui('.modal'), 1));
+  return total;
 
 }
 
@@ -134,15 +146,6 @@ function purchaseorder_paymentamountchange(){
   var handlingfee = ui.control_value(ui('%handlingfeepaymentamount', ui('.modal')));
   if(isNaN(parseFloat(handlingfee)) || handlingfee <= 0) handlingfee = 0;
   total = total + handlingfee;
-
-  var paymentamount = ui.control_value(ui('%paymentamount'), total);
-
-  if(paymentamount > total){
-    alert('Pelunasan tidak dapat lebih besar dari total order.');
-    ui.control_setvalue(ui('%paymentamount'), total);
-    paymentamount = total;
-  }
-  ui.control_setvalue(ui('%ispaid', ui('.modal')), paymentamount > 0 ? 1 : 0);
 
 }
 
