@@ -16,11 +16,47 @@ function defaultmodule(){
       'columns'=>$columns,
       'presets'=>array(
           array(
-            'text'=>'Detil',
+            'text'=>'Aktif',
             'columns'=>$columns,
             'sorts'=>array(
               array('name'=>'createdon', 'sorttype'=>'desc')
             ),
+            'filters'=>[
+              [ 'name'=>'isinvoiced', 'operator'=>'=', 'value'=>0 ],
+              [ 'name'=>'isbaddebt', 'operator'=>'=', 'value'=>0 ],
+            ],
+            'viewtype'=>'list'
+          ),
+          array(
+            'text'=>'Terfaktur',
+            'columns'=>$columns,
+            'sorts'=>array(
+              array('name'=>'createdon', 'sorttype'=>'desc')
+            ),
+            'filters'=>[
+              [ 'name'=>'isinvoiced', 'operator'=>'=', 'value'=>1 ],
+            ],
+            'viewtype'=>'list'
+          ),
+          array(
+            'text'=>'Bad Debt',
+            'columns'=>$columns,
+            'sorts'=>array(
+              array('name'=>'createdon', 'sorttype'=>'desc')
+            ),
+            'filters'=>[
+              [ 'name'=>'isbaddebt', 'operator'=>'=', 'value'=>1 ],
+            ],
+            'viewtype'=>'list'
+          ),
+          array(
+            'text'=>'Semua Pesanan',
+            'columns'=>$columns,
+            'sorts'=>array(
+              array('name'=>'createdon', 'sorttype'=>'desc')
+            ),
+            'filters'=>[
+            ],
             'viewtype'=>'list'
           ),
       ),
@@ -37,8 +73,9 @@ function datasource($columns = null, $sorts = null, $filters = null, $limits = n
 
   $purchaseorder_columnaliases = array(
     'id'=>'t1.id',
-    'ispaid'=>'t1.ispaid',
-    'isinvoiced'=>'t1.isinvoiced',
+    'ispaid'=>'t1.ispaid!',
+    'isinvoiced'=>'t1.isinvoiced!',
+    'isbaddebt'=>'t1.isbaddebt!',
     'code'=>'t1.code',
     'date'=>'t1.date',
     'supplierdescription'=>'t1.supplierdescription',
@@ -52,10 +89,12 @@ function datasource($columns = null, $sorts = null, $filters = null, $limits = n
     'taxable'=>'t1.taxable',
     'taxamount'=>'t1.taxamount',
     'freightcharge'=>'t1.freightcharge',
-    'handlingfeeaccountname'=>'t4.name',
+    'handlingfeeaccountid'=>'t1.handlingfeeaccountid',
+    'handlingfeeaccountname'=>'(select `name` from chartofaccount where `id` = t1.handlingfeeaccountid)',
     'handlingfeeamount'=>'t1.handlingfeeamount',
     'total'=>'t1.total',
-    'paymentaccountname'=>'t5.name',
+    'paymentaccountid'=>'t1.paymentaccountid',
+    'paymentaccountname'=>'(select `name` from chartofaccount where `id` = t1.paymentaccountid)',
     'paymentaccountdate'=>'t1.paymentaccountdate',
     'paymentaccountamount'=>'t1.paymentaccountamount',
     'note'=>'t1.note',
@@ -73,7 +112,7 @@ function datasource($columns = null, $sorts = null, $filters = null, $limits = n
 
   $params = array();
   $columnquery = columnquery_from_columnaliases($columns, $purchaseorder_columnaliases);
-  $wherequery = 'WHERE t1.id = t2.purchaseorderid AND t1.currencyid = t3.id AND t1.handlingfeeaccountid = t4.id AND t1.paymentaccountid = t5.id' .
+  $wherequery = 'WHERE t1.id = t2.purchaseorderid AND t1.currencyid = t3.id' .
       str_replace('WHERE', 'AND', wherequery_from_filters($params, $filters, $purchaseorder_columnaliases));
   $sortquery = sortquery_from_sorts($sorts, $purchaseorder_columnaliases);
   $limitquery = limitquery_from_limitoffset($limits);
@@ -81,7 +120,7 @@ function datasource($columns = null, $sorts = null, $filters = null, $limits = n
   if(strlen($columnquery) > 0) $columnquery = ', ' . $columnquery;
 
   $query = "SELECT 'purchaseorder' as `type`, t1.supplierid, t1.id, t1.currencyid, t1.handlingfeeaccountid, t1.paymentaccountid, t2.inventoryid $columnquery
-    FROM purchaseorder t1, purchaseorderinventory t2, currency t3, chartofaccount t4, chartofaccount t5 $wherequery $sortquery $limitquery";
+    FROM purchaseorder t1, purchaseorderinventory t2, currency t3 $wherequery $sortquery $limitquery";
   $data = pmrs($query, $params);
   return $data;
 
@@ -119,11 +158,29 @@ function purchaseorderlist_ispaid($obj){
 function purchaseorderlist_isinvoiced($obj){
 
   $c = "<div class='align-center'>";
-  if($obj['isinvoiced']){
-    $c .= "<span class='fa fa-check-circle color-green hover-to-open' onclick=\"ui.async('ui_purchaseinvoicedetail_by_purchaseorderid', [ $obj[id], 'read' ], { waitel:this })\"></span>";
+  if(!ov('isbaddebt', $obj)){
+    if($obj['isinvoiced']){
+      $c .= "<span class='fa fa-check-circle color-green hover-to-open' onclick=\"ui.async('ui_purchaseinvoicedetail_by_purchaseorderid', [ $obj[id], 'read' ], { waitel:this })\"></span>";
+    }
+    else{
+      $c .= "<span class='fa fa-plus color-blue' onclick=\"ui.async('ui_purchaseorder_createinvoice', [" . $obj['id'] . "], { waitel:this })\"></span>";
+    }
   }
-  else{
-    $c .= "<span class='fa fa-plus color-blue' onclick=\"ui.async('ui_purchaseorder_createinvoice', [" . $obj['id'] . "], { waitel:this })\"></span>";
+  $c .= "</div>";
+  return $c;
+
+}
+
+function purchaseorderlist_isbaddebt($obj){
+
+  $c = "<div class='align-center'>";
+  if(isset($obj['isbaddebt'])){
+    if($obj['isbaddebt']){
+      $c .= "<span class='fa fa-check-circle color-green'></span>";
+    }
+    else{
+
+    }
   }
   $c .= "</div>";
   return $c;
@@ -157,7 +214,7 @@ function ui_purchaseorder_createinvoice($id){
     'taxable'=>$purchaseorder['taxable'],
     'taxamount'=>$purchaseorder['taxamount'],
     'total'=>$purchaseorder['total'],
-    'ispaid'=>$purchaseorder['ispaid'],
+    'ispaid'=>0,
     'downpaymentamount'=>$purchaseorder['paymentamount'],
     'downpaymentdate'=>$purchaseorder['paymentdate'],
     'downpaymentaccountid'=>$purchaseorder['paymentaccountid'],
@@ -191,6 +248,18 @@ function purchaseorderlist_inventorydescription($obj){
 function m_griddoubleclick(){
 
   return "ui.async('ui_purchaseorderdetail', [ this.dataset['id'] ], {})";
+
+}
+function grid_journaloption($obj){
+
+  if(!privilege_get('chartofaccount', 'list')) return;
+
+  $id = $obj['id'];
+  return "
+  <div class='align-center'>
+    <span class='padding5 fa fa-folder-open' onclick=\"ui.async('ui_purchaseorderdetail_journal', [ $id ], { waitel:this })\"></span>
+  </div>
+  ";
 
 }
 

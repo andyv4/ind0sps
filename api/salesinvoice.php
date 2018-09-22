@@ -115,7 +115,7 @@ function salesinvoicedetail($columns, $filters){
     $salesinvoice['salesmanname'] = userdetail(null, array('id'=>$salesinvoice['salesmanid']))['name'];
     $salesinvoice['paymentaccountname'] = $paymentaccount ? $paymentaccount['name'] : '';
 
-    $salesinvoice['total'] = floor($salesinvoice['total']); // Always floor total
+    //pm("update salesinvoicegroup set total = ? where `id` = ?", [ $salesinvoice['total'], $salesinvoice['id'] ]);
 
     if(in_array('customer', $columns)){
       $customer = pmr("select `id`, tax_registration_number from customer where `id` = ?", [ $salesinvoice['customerid'] ]);
@@ -142,7 +142,7 @@ function salesinvoicedetail_tax_to_nontax($columns, $filters){
   }
   $salesinvoice['subtotal'] = $subtotal;
   $salesinvoice['discountamount'] = $salesinvoice['discount'] > 0 ? $salesinvoice['discount'] / 100 * $subtotal : $salesinvoice['discountamount'];
-  $salesinvoice['total'] = $subtotal - $salesinvoice['discountamount'];
+  $salesinvoice['total'] = $subtotal - $salesinvoice['discountamount'] + $salesinvoice['deliverycharge'];
   return $salesinvoice;
 
 }
@@ -1120,7 +1120,8 @@ function salesinvoicecalculate($id, $inventory_ischanged = true){
   $taxable = $salesinvoice['taxable'];
   $taxamount = $taxable && !$taxable_excluded ? $total * 0.1 : 0;
   $deliverycharge = $salesinvoice['deliverycharge'];
-  $total += $taxamount + $deliverycharge;
+  $total += floor($taxamount + $deliverycharge);
+  $total = salesinvoice_total($salesinvoice)['total'];
   $paymentamount = $salesinvoice['paymentamount'];
   $paymentaccountid = $salesinvoice['paymentaccountid'];
   $ispaid = abs($paymentamount - $total) < 1 ? 1 : ($paymentamount > 0 ? 2 : 0);
@@ -1259,6 +1260,30 @@ function salesinvoice_process_no_tax_code($progress_callback = null){
  * @param $start_date
  * @param $end_date
  */
+
+function salesinvoice_total($salesinvoice){
+
+  $taxable = $salesinvoice['taxable'];
+  $salesinvoice['taxamount'] = 0;
+  $subtotal = 0;
+  foreach($salesinvoice['inventories'] as $index=>$inventory){
+    $taxable_excluded = ov('taxable_excluded', $inventory, 0, 1);
+    $current_taxable = $taxable && !$taxable_excluded;
+    $salesinvoice['inventories'][$index]['unitprice'] = round($inventory['unitprice'] * ($current_taxable ? 1.1 : 1));
+    $salesinvoice['inventories'][$index]['unittotal'] = $salesinvoice['inventories'][$index]['unitprice'] * $inventory['qty'];
+    $subtotal += $salesinvoice['inventories'][$index]['unittotal'];
+  }
+  $discountamount = $salesinvoice['discount'] > 0 ? $salesinvoice['discount'] / 100 * $subtotal : $salesinvoice['discountamount'];
+  $deliverycharge = ov('deliverycharge', $salesinvoice, 0, 0);
+  $total = $subtotal - $discountamount + $deliverycharge;
+//  if($_SESSION['user']['userid'] == 'andy') exc($total);
+  return [
+    'subtotal'=>$subtotal,
+    'discountamount'=>$discountamount,
+    'total'=>$total,
+  ];
+
+}
 function salesinvoicetaxcodegenerate($start_date, $end_date){
 
   // Retrieve salesinvoices

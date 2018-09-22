@@ -4,6 +4,7 @@ define('RESULT_NORMAL', 1);
 define('RESULT_CLEAN', 2);
 $__DEBUGS = array();
 $__WORDS = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus gravida nisl a neque elementum gravida. Donec commodo maximus nulla, ac fringilla tellus tristique eget. Nullam fermentum, tellus sit amet mattis convallis, leo neque semper nunc, eu finibus nunc tellus vel lectus. Nam tempus felis quis gravida maximus. Nunc efficitur luctus purus, id suscipit sem vulputate eget. Sed lobortis, lacus quis laoreet suscipit, lacus dolor scelerisque orci, sed finibus felis nulla at ipsum. Maecenas nunc libero, aliquam vel accumsan lacinia, iaculis id risus. Nam fermentum, quam vel consequat lacinia, dui mauris pulvinar tellus, eget eleifend augue erat ac arcu. Fusce ut felis orci. Vestibulum malesuada orci sit amet dui luctus, sagittis feugiat turpis dictum.";
+$__APP_DIR = '';
 
 function debug($arr){
   global $__DEBUGS;
@@ -122,6 +123,20 @@ function object_keys($obj, $keys){
     $result[$key] = $obj[$key];
   }
   return $result;
+
+}
+
+function app_dir(){
+
+  global $__APP_DIR;
+  if(!$__APP_DIR) $__APP_DIR = realpath(__DIR__ . '/../../');
+  return $__APP_DIR;
+
+}
+
+function usr_dir(){
+
+  return app_dir() . '/usr/';
 
 }
 
@@ -600,7 +615,6 @@ function ui_async_put(){
 
   //echo json_encode(array('url'=>$url, 'mimetype'=>$mimetype));
 }
-
 function ui_async_post(){
 
   $method = $_GET['_asyncm'];
@@ -628,7 +642,6 @@ function ui_async_post(){
   else
     throw new Exception("Method not exists. [$method]");
 }
-
 function ui_async(){
 
   if(isset($_GET['_async'])){
@@ -2413,122 +2426,126 @@ function module_modify($current, $next, $definition = null){
         $arr1 = $value;
         $arr2 = $next[$key];
 
-        if(isset($definition[$key])){
+        if(false){
+          if(isset($definition[$key])){
 
-          $keys = isset($definition[$key]['keys']) ? $definition[$key]['keys'] : '';
-          $keys = is_string($keys) ? explode(',', $keys) : [];
+            $keys = isset($definition[$key]['keys']) ? $definition[$key]['keys'] : '';
+            $keys = is_string($keys) ? explode(',', $keys) : [];
 
-          if(count($keys) > 0){
+            if(count($keys) > 0){
 
-            $next_value = [];
-            foreach($arr1 as $index1=>$obj1){
-              $obj1_matched = false;
-              foreach($arr2 as $index2=>$obj2){
-                $obj2_matched = true;
-                foreach($keys as $key1){
-                  if($obj1[$key1] != $obj2[$key1]){
-                    $obj2_matched = false;
-                    break;
-                  }
-                }
-                if($obj2_matched){
-                  $obj1_matched = true;
-                  break;
-                }
-              }
-              if($obj1_matched){
-                $is_modified = [];
-                foreach($obj1 as $key1=>$val1){
-                  if(isset($obj2[$key1]) && $obj1[$key1] != $obj2[$key1]){
-                    $is_modified[] = $key1 . ':' . $obj1[$key1] . '-' . $obj2[$key1];
-                  }
-                }
-                if(count($is_modified) > 0){
-                  $obj2['__flag'] = 'modified';
-                  $next_value[] = $obj2;
-                }
-                else{
-                  $obj1['__flag'] = 'unchanged';
-                  $next_value[] = $obj1;
-                }
-              }
-              else{
-                $obj1['__flag'] = 'removed';
-                $next_value[] = $obj1;
-              }
-            }
-            foreach($arr2 as $index2=>$obj2){
-              $obj2_matched = false;
+              $next_value = [];
               foreach($arr1 as $index1=>$obj1){
-                $obj1_matched = true;
-                foreach($keys as $key1){
-                  if($obj2[$key1] != $obj1[$key1]){
-                    $obj1_matched = false;
+                $obj1_matched = false;
+                foreach($arr2 as $index2=>$obj2){
+                  $obj2_matched = true;
+                  foreach($keys as $key1){
+                    if($obj1[$key1] != $obj2[$key1]){
+                      $obj2_matched = false;
+                      break;
+                    }
+                  }
+                  if($obj2_matched){
+                    $obj1_matched = true;
                     break;
                   }
                 }
                 if($obj1_matched){
-                  $obj2_matched = true;
-                  break;
+                  $is_modified = [];
+                  foreach($obj1 as $key1=>$val1){
+                    if(isset($obj2[$key1]) && $obj1[$key1] != $obj2[$key1]){
+                      $is_modified[] = $key1 . ':' . $obj1[$key1] . '-' . $obj2[$key1];
+                    }
+                  }
+                  if(count($is_modified) > 0){
+                    $obj2['__flag'] = 'modified';
+                    $next_value[] = $obj2;
+                  }
+                  else{
+                    $obj1['__flag'] = 'unchanged';
+                    $next_value[] = $obj1;
+                  }
+                }
+                else{
+                  $obj1['__flag'] = 'removed';
+                  $next_value[] = $obj1;
                 }
               }
-              if(!$obj2_matched){
-                $obj2['__flag'] = 'new';
+              foreach($arr2 as $index2=>$obj2){
+                $obj2_matched = false;
+                foreach($arr1 as $index1=>$obj1){
+                  $obj1_matched = true;
+                  foreach($keys as $key1){
+                    if($obj2[$key1] != $obj1[$key1]){
+                      $obj1_matched = false;
+                      break;
+                    }
+                  }
+                  if($obj1_matched){
+                    $obj2_matched = true;
+                    break;
+                  }
+                }
+                if(!$obj2_matched){
+                  $obj2['__flag'] = 'new';
+                  $next_value[] = $obj2;
+                }
+              }
+              if(count($next_value) > 0) $updated[$key] = $next_value;
+
+            }
+            else{
+              $updated[$key] = $arr2;
+            }
+
+          }
+          else{
+
+            $next_value = [];
+            foreach($arr1 as $obj1){
+              $obj1_match = true;
+              foreach($arr2 as $obj2){
+                foreach($obj1 as $key1=>$val1){
+                  if(!isset($obj2[$key1])){
+                    $obj1_match = false;
+                    break;
+                  }
+                  else if($obj2[$key1] != $obj1[$key1]){
+                    $obj1_match = false;
+                    break;
+                  }
+                }
+              }
+              if(!$obj1_match){
+                $obj1['_flag'] = 'remove';
+                $next_value[] = $obj1;
+              }
+            }
+            foreach($arr2 as $obj2){
+              $obj2_match = true;
+              foreach($arr1 as $obj1){
+                foreach($obj2 as $key2=>$val2){
+                  if(!isset($obj1[$key2])){
+                    $obj2_match = false;
+                    break;
+                  }
+                  else if($obj1[$key2] != $obj2[$key2]){
+                    $obj2_match = false;
+                    break;
+                  }
+                }
+              }
+              if(!$obj2_match){
+                $obj2['_flag'] = 'new';
                 $next_value[] = $obj2;
               }
             }
             if(count($next_value) > 0) $updated[$key] = $next_value;
 
           }
-          else{
-            $updated[$key] = $arr2;
-          }
-
         }
-        else{
 
-          $next_value = [];
-          foreach($arr1 as $obj1){
-            $obj1_match = true;
-            foreach($arr2 as $obj2){
-              foreach($obj1 as $key1=>$val1){
-                if(!isset($obj2[$key1])){
-                  $obj1_match = false;
-                  break;
-                }
-                else if($obj2[$key1] != $obj1[$key1]){
-                  $obj1_match = false;
-                  break;
-                }
-              }
-            }
-            if(!$obj1_match){
-              $obj1['_flag'] = 'remove';
-              $next_value[] = $obj1;
-            }
-          }
-          foreach($arr2 as $obj2){
-            $obj2_match = true;
-            foreach($arr1 as $obj1){
-              foreach($obj2 as $key2=>$val2){
-                if(!isset($obj1[$key2])){
-                  $obj2_match = false;
-                  break;
-                }
-                else if($obj1[$key2] != $obj2[$key2]){
-                  $obj2_match = false;
-                  break;
-                }
-              }
-            }
-            if(!$obj2_match){
-              $obj2['_flag'] = 'new';
-              $next_value[] = $obj2;
-            }
-          }
-          if(count($next_value) > 0) $updated[$key] = $next_value;
-
-        }
+        $updated[$key] = $arr2;
 
       }
       else{

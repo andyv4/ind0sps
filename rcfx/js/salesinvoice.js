@@ -37,6 +37,39 @@ function salesinvoicedetail_subtotal(){
 
 function salesinvoicedetail_total(){
 
+  salesinvoicedetail_calculate_discountamount();
+  salesinvoicedetail_calculate_taxamount();
+
+  var discountamount = parseFloat($("*[data-name='discountamount']").val());
+  var discount = parseFloat($("*[data-name='discount']").val());
+  var deliverycharge = parseFloat($("*[data-name='deliverycharge']").val());
+
+  var taxable = ui('#taxable').value == 1 ? true : false;
+  var inventories_el = ui('#grid2');
+  var tbody = inventories_el.querySelector('tbody');
+  var subtotal = 0;
+  for(var i = 0 ; i < tbody.children.length ; i++){
+    var tr = tbody.children[i];
+    var unittotal_el = ui('%unitprice', tr);
+    if(!unittotal_el) continue;
+
+    var taxable_excluded = ui('%taxable_excluded', tr).value == 1 ? true : false;
+    var current_taxable = taxable && !taxable_excluded;
+    var unitprice = parseFloat(ui.textbox_value(unittotal_el));
+    var qty = parseFloat(ui.textbox_value(ui('%qty', tr)));
+    unitprice = Math.round(unitprice * (current_taxable ? 1.1 : 1));
+    var unittotal = unitprice * qty;
+    console.log([ taxable_excluded, unitprice, qty, unittotal ]);
+    subtotal += unittotal;
+  }
+  discountamount = discount > 0 ? subtotal * discount / 100 : discountamount;
+  console.log([ subtotal, discountamount, deliverycharge ]);
+  var total = subtotal - discountamount + deliverycharge;
+  ui.label_setvalue(ui('%total', ui('.modal')), total);
+
+
+  return;
+
   var subtotal = salesinvoicedetail_subtotal();
   salesinvoicedetail_calculate_discountamount();
   salesinvoicedetail_calculate_taxamount();

@@ -4,6 +4,10 @@ require_once dirname(__FILE__) . '/currency.php';
 $chartofaccounts = pmrs("SELECT `id`, `code`, `name` FROM chartofaccount;");
 $chartofaccounts_indexbyid = array_index($chartofaccounts, array('id'), 1);
 
+/**
+ * Get chart of account ui columns, used in grid
+ * @return array
+ */
 function chartofaccount_ui_columns(){
 
   $columns = array(
@@ -21,6 +25,14 @@ function chartofaccount_ui_columns(){
   return $columns;
 
 }
+
+/**
+ * Get a chart of account detail
+ * @param $columns
+ * @param $filters
+ * @return mixed
+ * @throws Exception
+ */
 function chartofaccountdetail($columns, $filters){
  
   if($columns == null) $columns = array('*');
@@ -35,6 +47,16 @@ function chartofaccountdetail($columns, $filters){
   return $chartofaccount;
 
 }
+
+/**
+ * Get chart of account list, used by chart of account ui grid
+ * @param null $columns
+ * @param null $sorts
+ * @param null $filters
+ * @param null $limitoffset
+ * @return array
+ * @throws Exception
+ */
 function chartofaccountlist($columns = null, $sorts = null, $filters = null, $limitoffset = null){
 
   // DB column aliases
@@ -74,6 +96,14 @@ function chartofaccountlist($columns = null, $sorts = null, $filters = null, $li
   return $chartofaccounts;
 
 }
+
+/**
+ * Another type of chart of account list
+ * @param $columns
+ * @param $filters
+ * @return array
+ * @throws Exception
+ */
 function chartofaccountlist2($columns, $filters){
 
   $chartofaccounts = mysql_get_rows('chartofaccount', $columns, $filters);
@@ -93,6 +123,11 @@ function chartofaccountlist2($columns, $filters){
   return $chartofaccounts;
 
 }
+
+/**
+ * Get chart of account account-type
+ * @return array
+ */
 function chartofaccount_accounttype(){
 
   $arr = array(
@@ -103,6 +138,11 @@ function chartofaccount_accounttype(){
   return $arr;
 
 }
+
+/**
+ * Get chart of account type (debit or credit)
+ * @return array
+ */
 function chartofaccount_type(){
 
   return array(
@@ -111,6 +151,14 @@ function chartofaccount_type(){
   );
 
 }
+
+/**
+ * Get chart of account mutation
+ * @param $filters
+ * @param null $sorts
+ * @return array
+ * @throws Exception
+ */
 function chartofaccountmutation($filters, $sorts = null){
 
   $columns = [
@@ -254,11 +302,23 @@ function chartofaccountmutation($filters, $sorts = null){
   return $rows;
 
 }
+
+/**
+ * Check if chart of account exists by id
+ * @param $id
+ * @return bool
+ */
 function chartofaccount_id_exists($id){
   $count = pmc("select count(*) from chartofaccount where `id` = ?", [ $id ]);
   return $count > 0 ? true : false;
 }
 
+/**
+ * Save new chart of account
+ * @param $chartofaccount
+ * @return array
+ * @throws Exception
+ */
 function chartofaccountentry($chartofaccount){
 
   $code = ov('code', $chartofaccount);
@@ -294,6 +354,13 @@ function chartofaccountentry($chartofaccount){
   return $result;
   
 }
+
+/**
+ * Modify a chart of account
+ * @param $chartofaccount
+ * @return array
+ * @throws Exception
+ */
 function chartofaccountmodify($chartofaccount){
 
   $id = ov('id', $chartofaccount, 1);
@@ -333,6 +400,12 @@ function chartofaccountmodify($chartofaccount){
   return $result;
   
 }
+
+/**
+ * Remove a chart of account
+ * @param $filters
+ * @throws Exception
+ */
 function chartofaccountremove($filters){
 
   if(isset($filters['id'])){
@@ -357,6 +430,10 @@ function chartofaccountremove($filters){
 
 }
 
+/**
+ * Calculate chart of account balance
+ * @param $id
+ */
 function chartofaccountrecalculate($id){
 
   $totalamount = pmc("select SUM(t2.debit) - SUM(t2.credit) from journalvoucher t1, journalvoucherdetail t2 
@@ -365,6 +442,10 @@ function chartofaccountrecalculate($id){
   pm($query, array($totalamount, $id));
 
 }
+
+/**
+ * Calculate all chart of accounts balance
+ */
 function chartofaccountrecalculateall(){
 
 	$chartofaccounts = pmrs("

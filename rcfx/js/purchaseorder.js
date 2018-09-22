@@ -10,9 +10,6 @@ function purchaseorder_rowtotal(tr){
   var qty = parseFloat(obj['qty']);
   var unitprice = parseFloat(obj['unitprice']);
   var total = qty * unitprice;
-  var discount = obj['unitdiscount'];
-  var discountamount = ui.discount_calc(discount, total);
-  var total = total - discountamount;
 
   ui.label_setvalue(ui('%unittotal', tr), total);
 
@@ -37,6 +34,29 @@ function purchaseorder_subtotal(){
 function purchaseorder_total(){
 
   var subtotal = purchaseorder_subtotal();
+  var discountamount = parseFloat($("*[data-name='discountamount']", '.modal').val());
+  var taxamount = parseFloat($("*[data-name='taxamount']", '.modal').val());
+  var freightcharge = parseFloat($("*[data-name='freightcharge']", '.modal').val());
+
+  if(isNaN(freightcharge)) freightcharge = 0;
+
+  var total = subtotal - discountamount + freightcharge;
+  $("*[data-name='total']", '.modal').val(total);
+
+  var total_unittax = 0;
+  $('#inventories tr').each(function(){
+
+    if(this.classList.contains('newrowopt')) return;
+
+    var unittax = $("*[data-name='unittax']", this).val();
+    total_unittax += unittax > 0 ? unittax : 0;
+
+  });
+  $("*[data-name='import_cost']", '.modal').val(total_unittax);
+
+  return total;
+
+  var subtotal = purchaseorder_subtotal();
   var discountamount = parseFloat(ui.textbox_value(ui('%discountamount', ui('.modal'))));
   if(isNaN(discountamount)) discountamount = 0;
   var taxamount = parseFloat(ui.label_value(ui('%taxamount', ui('.modal'))));
@@ -58,7 +78,6 @@ function purchaseorder_discountchange(){
   var discountamount = ui.discount_calc(discount, subtotal);
 
   ui.textbox_setvalue(ui('%discountamount', ui('.modal')), discountamount);
-  purchaseorder_taxchange();
   purchaseorder_total();
 
 }
@@ -66,21 +85,6 @@ function purchaseorder_discountchange(){
 function purchaseorder_discountamountchange(){
 
   ui.textbox_setvalue(ui('%discount', ui('.modal')), '');
-  purchaseorder_taxchange();
-  purchaseorder_total();
-
-}
-
-function purchaseorder_taxchange(){
-
-  var subtotal = purchaseorder_subtotal();
-  var discountamount = parseFloat(ui.textbox_value(ui('%discountamount', ui('.modal'))));
-  if(isNaN(discountamount)) discountamount = 0;
-  var total = subtotal - discountamount;
-  var taxable = ui.checkbox_value(ui('%taxable', ui('.modal')));
-  var taxamount = taxable ? total * .1 : 0;
-
-  ui.label_setvalue(ui('%taxamount', ui('.modal')), taxamount);
   purchaseorder_total();
 
 }
@@ -89,13 +93,32 @@ function purchaseorder_ispaid(){
 
   var ispaid = ui.checkbox_value(ui('%ispaid', ui('.modal')));
   if(ispaid){
-    purchaseorder_paymentamount();
-    if($("*[data-name='paymentdate']").val() == '')
-      $("*[data-name='paymentdate']").val(date('Ymd'));
+
+    if($("*[data-name='paymentdate']").val() == '') $("*[data-name='paymentdate']").val(date('Ymd'));
+    if(parseFloat($("*[data-name='paymentamount']").val()) == 0) $("*[data-name='paymentamount']").val(purchaseorder_paymentamount());
+    $('.row-baddebt').show();
+
   }
   else{
-    $("*[data-name='paymentdate']").val('');
-    $("*[data-name='paymentamount']").val(0);
+    $("*[data-name='isbaddebt']").val(0);
+    $("*[data-name='baddebtaccountid']").val('');
+    $("*[data-name='baddebtdate']").val('');
+    $("*[data-name='baddebtamount']").val(0);
+    $("*[data-name='paymentamount']").val(0)
+    $('.row-baddebt').hide();
+  }
+
+}
+function purchaseorder_isbaddebt(){
+
+  var isbaddebt = ui.checkbox_value(ui('%isbaddebt', ui('.modal')));
+  if(isbaddebt){
+    $("*[data-name='baddebtamount']").val($("*[data-name='paymentamount']").val());
+    $("*[data-name='baddebtaccountid']").val(1000);
+  }
+  else{
+    $("*[data-name='baddebtamount']").val(0);
+    $("*[data-name='baddebtaccountid']").val(null);
   }
 
 }
@@ -105,11 +128,7 @@ function purchaseorder_paymentamount(){
   var currencyrate = ui.control_value(ui('%currencyrate', ui('.modal')));
   var total = purchaseorder_total();
   total = total * currencyrate;
-  var handlingfee = ui.control_value(ui('%handlingfeepaymentamount', ui('.modal')));
-  if(isNaN(parseFloat(handlingfee)) || handlingfee <= 0) handlingfee = 0;
-  total = total + handlingfee;
-  ui.control_setvalue(ui('%paymentamount'), total);
-  ui.control_setvalue(ui('%ispaid', ui('.modal'), 1));
+  return total;
 
 }
 
@@ -127,15 +146,6 @@ function purchaseorder_paymentamountchange(){
   var handlingfee = ui.control_value(ui('%handlingfeepaymentamount', ui('.modal')));
   if(isNaN(parseFloat(handlingfee)) || handlingfee <= 0) handlingfee = 0;
   total = total + handlingfee;
-
-  var paymentamount = ui.control_value(ui('%paymentamount'), total);
-
-  if(paymentamount > total){
-    alert('Pelunasan tidak dapat lebih besar dari total order.');
-    ui.control_setvalue(ui('%paymentamount'), total);
-    paymentamount = total;
-  }
-  ui.control_setvalue(ui('%ispaid', ui('.modal')), paymentamount > 0 ? 1 : 0);
 
 }
 

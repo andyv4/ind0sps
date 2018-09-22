@@ -62,3 +62,42 @@ ADD COLUMN `salesinvoicegroup_combinable` INT(1) DEFAULT 0;
 
 update customer set salesinvoicegroup_combinable = 1 where description like '%pt. aeon%'
 or description like '%genki%' or description like '%suncity%' or description like '%inti idola%' or description like '%fishman%';
+
+
+***
+
+alter table purchaseorder
+add column `pph` double(18,3) DEFAULT NULL,
+add column `kso` double(18,3) DEFAULT NULL,
+add column `ski` double(18,3) DEFAULT NULL,
+add column `clearance_fee` double(18,3) DEFAULT NULL,
+add column `taxdate` date DEFAULT NULL,
+add column `taxaccountid` int(10) DEFAULT NULL,
+add column `pphdate` date DEFAULT NULL,
+add column `pphaccountid` int(10) DEFAULT NULL,
+add column `ksodate` date DEFAULT NULL,
+add column `ksoaccountid` int(10) DEFAULT NULL,
+add column `skidate` date DEFAULT NULL,
+add column `skiaccountid` int(10) DEFAULT NULL,
+add column `clearance_fee_date` date DEFAULT NULL,
+add column `clearance_fee_accountid` int(10) DEFAULT NULL,
+add column `import_cost` double(18,3) DEFAULT NULL,
+add column `import_cost_date` date DEFAULT NULL,
+add column `import_cost_accountid` int(10) DEFAULT NULL;
+
+alter table purchaseorderinventory
+add column `unittax` double(16,2) default 0;
+
+
+**
+
+salesinvoice rounding problem:
+
+109310
+109347
+109737
+110107
+110109
+
+105542
+108510

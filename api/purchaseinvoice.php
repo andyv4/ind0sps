@@ -272,6 +272,7 @@ function purchaseinvoicevalidate(&$updated, $original = null){
   $downpaymentamount = ov('downpaymentamount', $original, 0);
   $total_in_currency = $actual_total * $currencyrate;
   $remaining_amount = $total_in_currency - $downpaymentamount;
+  if($remaining_amount < 0) $remaining_amount = 0;
 
   if(isset($updated['code']) && $updated['code'] != ov('code', $original)){
     if(pmc("select count(*) from purchaseinvoice where code = ?", [ $updated['code'] ]) > 0) exc('Nomor faktur sudah dipakai');
@@ -312,7 +313,7 @@ function purchaseinvoicevalidate(&$updated, $original = null){
     if($paymentamount > $remaining_amount) exc("Jumlah pembayaran melebihi total yang harus dibayar.");
     if(!isdate($paymentdate)) exc("Tanggal pelunasan belum diisi.");
     if(!chartofaccount_id_exists($paymentaccountid)) exc("Akun pelunasan belum diisi.");
-    if($paymentdate < $date) exc("Tanggal pelunasan salah.");
+    if($updated['paymentamount'] > 0 && $paymentdate < $date) exc("Tanggal pelunasan salah.");
 
   }
 
@@ -394,7 +395,7 @@ function purchaseinvoicevalidate(&$updated, $original = null){
 
   }
 
-  if(isset($updated['handlingfeepaymentamount']) && $updated['handlingfeepaymentamount'] != ov('handlingfeepaymentamount', $original)){
+  if(isset($updated['handlingfeepaymentamount']) && floatval($updated['handlingfeepaymentamount']) != floatval(ov('handlingfeepaymentamount', $original))){
 
     $handlingfeedate = ova('handlingfeedate', $updated, $original);
     $handlingfeeaccountid = ova('handlingfeeaccountid', $updated, $original);
@@ -411,6 +412,7 @@ function purchaseinvoicevalidate(&$updated, $original = null){
 
     if(!is_array_object($updated['inventories']) || count($updated['inventories']) <= 0) exc("Barang harus diisi");
     $inventory_count = 0;
+
     foreach($updated['inventories'] as $index=>$inventory){
 
       if(isset($inventory['__flag']) && $inventory['__flag'] == 'removed') continue; // Skip removed row
@@ -450,17 +452,13 @@ function purchaseinvoicevalidate(&$updated, $original = null){
 function purchaseinvoiceentry($purchaseinvoice){
 
   $fp = acquire_lock(__FUNCTION__);
-
   purchaseinvoicevalidate($purchaseinvoice);
-
-  $purchaseinvoice['taxable'] = $purchaseinvoice['taxamount'] > 0 ? 1 : 0; // Set taxable parameter
 
   // Check if purchase order id supplied is valid
   if($purchaseinvoice['purchaseorderid'] > 0){
     $purchaseinvoiceexists = intval(pmc("SELECT COUNT(*) FROM purchaseinvoice WHERE purchaseorderid = ?", array($purchaseinvoice['purchaseorderid'])));
     if($purchaseinvoiceexists) throw new Exception('Faktur pembelian untuk pesanan ini sudah ada.');
   }
-
   if(!$purchaseinvoice['purchaseorderid']) $purchaseinvoice['purchaseorderid'] = null; // Set purchaseorderid to null
 
   // Automatically set purchase invoice code to new one if current code already used
@@ -553,15 +551,51 @@ function purchaseinvoicemodify($purchaseinvoice){
   $current = purchaseinvoicedetail(null, array('id'=>$id));
   if(!$current) throw new Exception("Invoice tidak ada.");
 
-  $fp = acquire_lock("purchaseinvoice_modify_$id");
+  $updatedrows = [];
 
-  $updated = module_modify($current, $purchaseinvoice, $purchaseinvoice_columns);
-  purchaseinvoicevalidate($updated, $current);
-  mysql_update_row('purchaseinvoice', $updated, [ 'id'=>$id ]);
+  if(isset($purchaseinvoice['supplierdescription'])){
+    $updatedrows['supplierid'] = supplierdetail(null, array('description'=>$purchaseinvoice['supplierdescription']))['id'];
+    $updatedrows['supplierdescription'] = $purchaseinvoice['supplierdescription'];
+  }
+  if(isset($purchaseinvoice['date']) && $purchaseinvoice['date'] != $current['date']){
+    if(!isdate($purchaseinvoice['date'])) exc('Format tanggal salah');
+    $updatedrows['date'] = ov('date', $purchaseinvoice, 1, array('type'=>'date'));
+  }
+  if(isset($purchaseinvoice['address']) && $purchaseinvoice['address'] != $current['address']){
+    $updatedrows['address'] = $purchaseinvoice['address'];
+  }
+  if(isset($purchaseinvoice['currencyid']) && $purchaseinvoice['currencyid'] != $current['currencyid']){
+    $updatedrows['currencyid'] = $purchaseinvoice['currencyid'];
+  }
+  if(isset($purchaseinvoice['currencyrate']) && $purchaseinvoice['currencyrate'] != $current['currencyrate']){
+    $updatedrows['currencyrate'] = $purchaseinvoice['currencyrate'];
+  }
+  if(isset($purchaseinvoice['discount']) && $purchaseinvoice['discount'] != $current['discount']){
+    $updatedrows['discount'] = $purchaseinvoice['discount'];
+  }
+  if(isset($purchaseinvoice['discountamount']) && $purchaseinvoice['discountamount'] != $current['discountamount']){
+    $updatedrows['discountamount'] = $purchaseinvoice['discountamount'];
+  }
+  if(isset($purchaseinvoice['term']) && $purchaseinvoice['term'] != $current['term']){
+    $updatedrows['term'] = $purchaseinvoice['term'];
+  }
+  if(isset($purchaseinvoice['note']) && $purchaseinvoice['note'] != $current['note']){
+    $updatedrows['note'] = $purchaseinvoice['note'];
+  }
 
-  if(isset($updated['inventories'])){
+  if(isset($purchaseinvoice['paymentamount']) && $purchaseinvoice['paymentamount'] != $current['paymentamount'])
+    $updatedrows['paymentamount'] = $purchaseinvoice['paymentamount'];
 
-    $inventories = $updated['inventories'];
+  if(isset($purchaseinvoice['paymentdate']) && $purchaseinvoice['paymentdate'] != $current['paymentdate'])
+    $updatedrows['paymentdate'] = $purchaseinvoice['paymentdate'];
+
+  if(isset($purchaseinvoice['paymentaccountid']) && $purchaseinvoice['paymentaccountid'] != $current['paymentaccountid'])
+    $updatedrows['paymentaccountid'] = $purchaseinvoice['paymentaccountid'];
+
+  if(isset($purchaseinvoice['inventories'])){
+
+    $inventories = $purchaseinvoice['inventories'];
+    $updatedrows['inventories'] = $inventories; // Add inventories to updated rows, always appear in log
 
     // Group inventory by code and unitprice
     if(systemvarget('purchaseinvoice_item_grouping')){
@@ -609,16 +643,19 @@ function purchaseinvoicemodify($purchaseinvoice){
       pm(implode(';', $queries), $params);
 
   }
+  
+  if(count($updatedrows) > 0){
+    $updatedrows['lastupdatedon'] = date('YmdHis');
+    mysql_update_row('purchaseinvoice', $updatedrows, [ 'id'=>$id ]);
+  }
 
-  if(isset($updated['code'])) code_commit($updated['code'], $current['code']);
+  if(isset($updatedrows['code'])) code_commit($updatedrows['code'], $current['code']);
 
   purchaseinvoicecalculate($id);
 
-  userlog('purchaseinvoicemodify', $current, $updated, $_SESSION['user']['id'], $id);
+  userlog('purchaseinvoicemodify', $current, $updatedrows, $_SESSION['user']['id'], $id);
 
   require_worker();
-
-  release_lock($fp, "purchaseinvoice_modify_$id");
 
   return array('id'=>$id);
 
@@ -682,11 +719,21 @@ function purchaseinvoicecalculate($id){
   $totalpercurrency = round($total * $currencyrate);
   $handlingfeeaccountid = $purchaseinvoice['handlingfeeaccountid'];
   $handlingfeedate = $purchaseinvoice['handlingfeedate'];
+  $handlingfeepaymentamount = $purchaseinvoice['handlingfeepaymentamount'];
 
   $purchaseorderid = ov('purchaseorderid', $purchaseinvoice, 0, null);
   $purchaseorder = purchaseorderdetail(null, array('id'=>$purchaseorderid));
   $purchaseorder_paymentamount = ov('paymentamount', $purchaseorder, 0);
   $downpaymentamount = $purchaseorder_paymentamount;
+
+  $tax_paid = isset($purchaseorder['taxamount']) && $purchaseorder['taxamount'] > 0;
+  $pph_paid = isset($purchaseorder['pph']) && $purchaseorder['pph'] > 0;
+  $kso_paid = isset($purchaseorder['kso']) && $purchaseorder['kso'] > 0;
+  $ski_paid = isset($purchaseorder['ski']) && $purchaseorder['ski'] > 0;
+  $cf_paid = isset($purchaseorder['clearance_fee']) && $purchaseorder['clearance_fee'] > 0;
+  $ic_paid = isset($purchaseorder['import_cost']) && $purchaseorder['import_cost'] > 0;
+  $hf_paid = isset($purchaseorder['handlingfeepaymentamount']) && $purchaseorder['handlingfeepaymentamount'] > 0;
+
 
   /* Calculate cost price */
   /*$currencyrate = floatval($purchaseinvoice['currencyrate']);
@@ -736,33 +783,42 @@ function purchaseinvoicecalculate($id){
    */
   $journalvouchers = [];
   $oweamount = $totalpercurrency - $downpaymentamount;
+  if($oweamount < 0) $oweamount = 0;
   $debtamount = $totalpercurrency - $downpaymentamount - $paymentamount;
+  if($debtamount < 1) $debtamount = 0; // If debtamount < 1, consider as paid
   $paymentamount = $paymentamount > 0 && abs($paymentamount - $downpaymentamount) <= $purchaseinvoice_payment_tolerance ? $oweamount : $paymentamount;
 
   // Default journal
   $details = [];
-  $details[] =  array('coaid'=>$purchaseinvoice_inventoryaccountid, 'debitamount'=>$totalpercurrency, 'creditamount'=>0); // 10: Persediaan Barang Dagang
-  if($downpaymentamount > 0)
-    $details[] =  array('coaid'=>$purchaseinvoice_downpaymentaccountid, 'debitamount'=>0, 'creditamount'=>$downpaymentamount); // 18: Uang Muka Pembelian
-  if($paymentamount > 0){
-    if(date('Ymd', strtotime($paymentdate)) == date('Ymd', strtotime($date))) {
-      $details[] =  array('coaid'=>$paymentaccountid, 'debitamount'=>0, 'creditamount'=>$paymentamount); // As of payment account id
-      if($debtamount > 0) $details[] =  array('coaid'=>$purchaseinvoice_debtaccountid, 'debitamount'=>0, 'creditamount'=>$debtamount); // 5: Hutang
+  if($paymentamount > 0) {
+
+    $details[] = array('coaid' => $purchaseinvoice_inventoryaccountid, 'debitamount' => $totalpercurrency, 'creditamount' => 0); // 10: Persediaan Barang Dagang
+
+    if ($downpaymentamount > 0)
+      $details[] = array('coaid' => $purchaseinvoice_downpaymentaccountid, 'debitamount' => 0, 'creditamount' => $downpaymentamount); // 18: Uang Muka Pembelian
+
+    if($paymentamount > 0){
+      if (date('Ymd', strtotime($paymentdate)) == date('Ymd', strtotime($date))) {
+        $details[] = array('coaid' => $paymentaccountid, 'debitamount' => 0, 'creditamount' => $paymentamount); // As of payment account id
+        if ($debtamount > 0) $details[] = array('coaid' => $purchaseinvoice_debtaccountid, 'debitamount' => 0, 'creditamount' => $debtamount); // 5: Hutang
+      }
+      else
+        $details[] = array('coaid' => $purchaseinvoice_debtaccountid, 'debitamount' => 0, 'creditamount' => $totalpercurrency - $downpaymentamount); // 5: Hutang
     }
-    else
-      $details[] =  array('coaid'=>$purchaseinvoice_debtaccountid, 'debitamount'=>0, 'creditamount'=>$totalpercurrency - $downpaymentamount); // 5: Hutang
+    else if ($totalpercurrency - $downpaymentamount > 0)
+      $details[] = array('coaid' => $purchaseinvoice_debtaccountid, 'debitamount' => 0, 'creditamount' => $totalpercurrency - $downpaymentamount); // 5: Hutang
+
+    $journalvoucher = array(
+      'date' => $date,
+      'description' => $code,
+      'ref' => 'PI',
+      'refid' => $id,
+      'type' => 'A',
+      'details' => $details
+    );
+    $journalvouchers[] = $journalvoucher;
+
   }
-  else if($totalpercurrency - $downpaymentamount > 0)
-    $details[] =  array('coaid'=>$purchaseinvoice_debtaccountid, 'debitamount'=>0, 'creditamount'=>$totalpercurrency - $downpaymentamount); // 5: Hutang
-  $journalvoucher = array(
-    'date'=>$date,
-    'description'=>$code,
-    'ref'=>'PI',
-    'refid'=>$id,
-    'type'=>'A',
-    'details'=>$details
-  );
-  $journalvouchers[] = $journalvoucher;
 
   // Create another journal if payment date different from invoice date
   if($paymentamount > 0 && date('Ymd', strtotime($paymentdate)) != date('Ymd', strtotime($date))){
@@ -782,7 +838,7 @@ function purchaseinvoicecalculate($id){
 
   // Tax
   $taxamount = ov('taxamount', $purchaseinvoice);
-  if($taxamount > 0){
+  if($taxamount > 0 && !$tax_paid){
     $taxdate = ov('taxdate', $purchaseinvoice);
     $taxaccountid = ov('taxaccountid', $purchaseinvoice);
     $taxdebitaccountid = systemvarget('purchaseinvoice_taxaccountid');
@@ -803,7 +859,7 @@ function purchaseinvoicecalculate($id){
 
   // PPh
   $pph = ov('pph', $purchaseinvoice);
-  if($pph > 0){
+  if($pph > 0 && !$pph_paid){
     $pphdate = ov('pphdate', $purchaseinvoice);
     $pphaccountid = ov('pphaccountid', $purchaseinvoice);
     $pphdebitaccountid = systemvarget('purchaseinvoice_pphaccountid');
@@ -824,7 +880,7 @@ function purchaseinvoicecalculate($id){
 
   // KSO
   $kso = ov('kso', $purchaseinvoice);
-  if($kso > 0){
+  if($kso > 0 && !$kso_paid){
     $ksodate = ov('ksodate', $purchaseinvoice);
     $ksoaccountid = ov('ksoaccountid', $purchaseinvoice);
     $ksodebitaccountid = systemvarget('purchaseinvoice_ksoaccountid');
@@ -845,7 +901,7 @@ function purchaseinvoicecalculate($id){
 
   // SKI
   $ski = ov('ski', $purchaseinvoice);
-  if($ski > 0){
+  if($ski > 0 && !$ski_paid){
     $skidate = ov('skidate', $purchaseinvoice);
     $skiaccountid = ov('skiaccountid', $purchaseinvoice);
     $skidebitaccountid = systemvarget('purchaseinvoice_skiaccountid');
@@ -866,7 +922,7 @@ function purchaseinvoicecalculate($id){
 
   // Clearance Fee
   $clearance_fee = ov('clearance_fee', $purchaseinvoice);
-  if($clearance_fee > 0){
+  if($clearance_fee > 0 && !$cf_paid){
     $clearance_fee_date = ov('clearance_fee_date', $purchaseinvoice);
     $clearance_fee_accountid = ov('clearance_fee_accountid', $purchaseinvoice);
     $clearance_fee_debitaccountid = systemvarget('purchaseinvoice_clearance_fee_accountid');
@@ -887,7 +943,7 @@ function purchaseinvoicecalculate($id){
 
   // Import Cost
   $import_cost = ov('import_cost', $purchaseinvoice);
-  if($import_cost > 0){
+  if($import_cost > 0 && !$ic_paid){
     $import_cost_date = ov('import_cost_date', $purchaseinvoice);
     $import_cost_accountid = ov('import_cost_accountid', $purchaseinvoice);
     $import_cost_debitaccountid = systemvarget('purchaseinvoice_import_cost_accountid');
@@ -907,7 +963,7 @@ function purchaseinvoicecalculate($id){
   }
 
   // Create journal for handling fee if any
-  if($handlingfeepaymentamount > 0){
+  if($handlingfeepaymentamount > 0 && !$hf_paid){
 
     $details = [];
     $details[] =  array('coaid'=>40, 'debitamount'=>$handlingfeepaymentamount, 'creditamount'=>0);
@@ -923,7 +979,7 @@ function purchaseinvoicecalculate($id){
     $journalvouchers[] = $journalvoucher;
 
   }
-
+  //exc($journalvouchers);
   if(count($journalvouchers) > 0){
     journalvoucherremove(array('ref'=>'PI', 'refid'=>$id));
     journalvoucherentries($journalvouchers);

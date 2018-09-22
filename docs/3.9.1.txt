@@ -1,0 +1,23 @@
+ALTER TABLE `indosps`.`purchaseorder`
+ADD COLUMN `isbaddebt` INT(1) NOT NULL DEFAULT 0 AFTER `term`,
+ADD COLUMN `baddebtamount` DOUBLE(18,3) NULL AFTER `isbaddebt`,
+ADD COLUMN `baddebtaccountid` INT(10) NULL AFTER `baddebtamount`
+ADD COLUMN `baddebtdate` DATE NULL AFTER `baddebtaccountid`,
+ADD COLUMN `pph` double(18,3) DEFAULT NULL,
+ADD COLUMN `kso` double(18,3) DEFAULT NULL,
+ADD COLUMN `ski` double(18,3) DEFAULT NULL,
+ADD COLUMN `clearance_fee` double(18,3) DEFAULT NULL,
+ADD COLUMN `taxdate` date DEFAULT NULL,
+ADD COLUMN `taxaccountid` int(10) DEFAULT NULL,
+ADD COLUMN `pphdate` date DEFAULT NULL,
+ADD COLUMN `pphaccountid` int(10) DEFAULT NULL,
+ADD COLUMN `ksodate` date DEFAULT NULL,
+ADD COLUMN `ksoaccountid` int(10) DEFAULT NULL,
+ADD COLUMN `skidate` date DEFAULT NULL,
+ADD COLUMN `skiaccountid` int(10) DEFAULT NULL,
+ADD COLUMN `clearance_fee_date` date DEFAULT NULL,
+ADD COLUMN `clearance_fee_accountid` int(10) DEFAULT NULL,
+ADD COLUMN `import_cost` double(18,3) DEFAULT NULL,
+ADD COLUMN `import_cost_date` date DEFAULT NULL,
+ADD COLUMN `import_cost_accountid` int(10) DEFAULT NULL;
+

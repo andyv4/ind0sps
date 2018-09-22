@@ -26,7 +26,8 @@ function defaultmodule(){
       'presetidx'=>0,
       'quickfilterscolumns'=>array(
           array('text'=>'', 'value'=>'code|customerdescription&contains&'),
-          array('text'=>'Catatan:', 'value'=>'note&contains&')
+          array('text'=>'Kode Faktur: ', 'value'=>'itemcode&contains&'),
+          array('text'=>'Catatan: ', 'value'=>'note&contains&')
       ),
       'griddoubleclick'=>"ui.async('ui_salesinvoicegroupdetail', [ id ], { waitel:this })"
   );
@@ -56,7 +57,11 @@ function datasource($columns = null, $sorts = null, $filters = null, $limits = n
 
   $params = array();
   $columnquery = columnquery_from_columnaliases($columns, $salesinvoicegroup_columnaliases);
-  $wherequery = 'WHERE t1.id = t2.salesinvoicegroupid' . str_replace('WHERE', 'AND', wherequery_from_filters($params, $filters, $salesinvoicegroup_columnaliases));
+
+  $wherequery1 = wherequery_from_filters($params, $filters, $salesinvoicegroup_columnaliases);
+  if(substr($wherequery1, 0, 6) == ' WHERE') $wherequery1 = ' AND ' . substr($wherequery1, 6);
+
+  $wherequery = 'WHERE t1.id = t2.salesinvoicegroupid' . $wherequery1;
   $sortquery = sortquery_from_sorts($sorts, $salesinvoicegroup_columnaliases);
   $limitquery = limitquery_from_limitoffset($limits);
 

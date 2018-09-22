@@ -675,6 +675,7 @@ function ui_grid($params){
   $totaldata = count($arr);
   $scrollel = ov('scrollel', $params);
   $cacheds = ov('cacheds', $params);
+  $write_no_add = ov('write_no_add', $params, 0, 0);
   $cacheds_exists = !empty($cacheds) && function_exists($cacheds) ? 1 : 0;
   $initialvalue = ov('initialvalue', $params, 0, 1);
   $maxitemperpage = ov('maxitemperpage', $params, false, $__UIGRID_MAXITEMPERPAGE);
@@ -738,7 +739,7 @@ function ui_grid($params){
     }
   }
 
-  if($mode == 'write' && !$readonly){
+  if($mode == 'write' && !$readonly && !$write_no_add){
     $c .= ui_gridrow(array(), $params, 1, 0);
     $c .= "<tr class='newrowopt'><td colspan='100' align='center' onclick=\"ui.grid_add(ui('#$id'))\"><span class='fa fa-plus-circle color-green'></span><label>Tambah Baris Baru</label></td></tr>";
 
