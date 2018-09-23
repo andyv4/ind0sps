@@ -11,23 +11,34 @@ function defaultmodule(){
 
   $columns = purchaseinvoice_uicolumns();
 
-  // Remove moved column on next database
-  if($_SESSION['dbschema'] == 'indosps2'){
-    $index = -1;
-    for($i = 0 ; $i < count($columns) ; $i++)
-      if($columns[$i]['name'] == 'moved'){
-        $index = $i;
-        break;
-      }
-    array_splice($columns, $index, 1);
-  }
-
   $module = array(
       'title'=>'purchaseinvoice',
       'columns'=>$columns,
       'presets'=>array(
           array(
-            'text'=>'Detil',
+            'text'=>'Belum Lunas',
+            'columns'=>$columns,
+            'sorts'=>array(
+              array('name'=>'createdon', 'sorttype'=>'desc')
+            ),
+            'filters'=>[
+              [ 'name'=>'ispaid', 'operator'=>'=', 'value'=>0 ],
+            ],
+            'viewtype'=>'list'
+          ),
+          array(
+            'text'=>'Lunas',
+            'columns'=>$columns,
+            'sorts'=>array(
+              array('name'=>'createdon', 'sorttype'=>'desc')
+            ),
+            'filters'=>[
+              [ 'name'=>'ispaid', 'operator'=>'=', 'value'=>1 ],
+            ],
+            'viewtype'=>'list'
+          ),
+          array(
+            'text'=>'Semua',
             'columns'=>$columns,
             'sorts'=>array(
               array('name'=>'createdon', 'sorttype'=>'desc')
