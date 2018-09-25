@@ -426,7 +426,7 @@ function purchaseordermodify($purchaseorder){
   }
 
   if(isset($purchaseorder['currencyrate']) && $purchaseorder['currencyrate'] != $current['currencyrate']){
-    if(!$updatedrows['currencyrate']) exc("Nilai tukar salah.");
+    if(!$purchaseorder['currencyrate']) exc("Nilai tukar salah.");
     $updatedrows['currencyrate'] = $purchaseorder['currencyrate'];
   }
 
