@@ -20,56 +20,131 @@ function pdo_close(){
   if($pdo_con) $pdo_con = null;
 }
 function pm($query, $arr = null, $params = null){
-  $pdo_con = pdo_con(true);
-  $pdo_res = $pdo_con->prepare($query);
-  $pdo_res->execute($arr);
+
+  try{
+    $pdo_con = pdo_con(true);
+    $pdo_res = $pdo_con->prepare($query);
+    $pdo_res->execute($arr);
+
+  }
+  catch(Exception $ex){
+
+    file_put_contents(app_dir() . '/usr/system/error-query.log', json_encode([
+        date('Y-m-d H:i:s'),
+        $query,
+        $params,
+        $ex->getMessage()
+      ], JSON_PRETTY_PRINT) . "\n\n", FILE_APPEND);
+    throw $ex;
+
+  }
+
 }
 function pmc($query, $arr = null, $params = null){
-  $pdo_con = pdo_con(true);
-  $pdo_res = $pdo_con->prepare($query);
-  $pdo_res->setFetchMode(PDO::FETCH_ASSOC);
-  $pdo_res->execute($arr);
-  $value = null;
-  while($row = $pdo_res->fetch()){
-    foreach($row as $key=>$val){
-      $value = $val;
-      break;
+
+  try{
+
+    $pdo_con = pdo_con(true);
+    $pdo_res = $pdo_con->prepare($query);
+    $pdo_res->setFetchMode(PDO::FETCH_ASSOC);
+    $pdo_res->execute($arr);
+    $value = null;
+    while($row = $pdo_res->fetch()){
+      foreach($row as $key=>$val){
+        $value = $val;
+        break;
+      }
     }
+    return $value;
+
   }
-  return $value;
+  catch(Exception $ex){
+
+    file_put_contents(app_dir() . '/usr/system/error-query.log', json_encode([
+        date('Y-m-d H:i:s'),
+        $query,
+        $params,
+        $ex->getMessage()
+      ], JSON_PRETTY_PRINT) . "\n\n", FILE_APPEND);
+    throw $ex;
+
+  }
 }
 function pmi($query, $arr = null, $params = null){
-  $pdo_con = pdo_con(true);
-  $pdo_res = $pdo_con->prepare($query);
-  $pdo_res->execute($arr);
-  $id = $pdo_con->lastInsertId();
-  return $id;
+
+  try{
+
+    $pdo_con = pdo_con(true);
+    $pdo_res = $pdo_con->prepare($query);
+    $pdo_res->execute($arr);
+    $id = $pdo_con->lastInsertId();
+    return $id;
+
+  }
+  catch(Exception $ex){
+
+    file_put_contents(app_dir() . '/usr/system/error-query.log', json_encode([
+        date('Y-m-d H:i:s'),
+        $query,
+        $params,
+        $ex->getMessage()
+      ], JSON_PRETTY_PRINT) . "\n\n", FILE_APPEND);
+    throw $ex;
+
+  }
+
 }
 function pmr($query, $arr = null, $params = null){
-  $pdo_con = pdo_con(true);
-  $pdo_res = $pdo_con->prepare($query);
-  $pdo_res->setFetchMode(PDO::FETCH_ASSOC);
-  $pdo_res->execute($arr);
-  while($row = $pdo_res->fetch())
-    return $row;
+
+  try{
+
+    $pdo_con = pdo_con(true);
+    $pdo_res = $pdo_con->prepare($query);
+    $pdo_res->setFetchMode(PDO::FETCH_ASSOC);
+    $pdo_res->execute($arr);
+    while($row = $pdo_res->fetch())
+      return $row;
+
+  }
+  catch(Exception $ex){
+
+    file_put_contents(app_dir() . '/usr/system/error-query.log', json_encode([
+        date('Y-m-d H:i:s'),
+        $query,
+        $params,
+        $ex->getMessage()
+      ], JSON_PRETTY_PRINT) . "\n\n", FILE_APPEND);
+    throw $ex;
+
+  }
+
 }
 function pmrs($query, $arr = null, $params = null){
 
-  $pdo_con = pdo_con(true);
-  $pdo_res = $pdo_con->prepare($query);
-  $pdo_res->setFetchMode(PDO::FETCH_ASSOC);
-  $pdo_res->execute($arr);
-  $items = array();
-  while($row = $pdo_res->fetch()) {
-    array_push($items, $row);
-  }
-  return $items;
-}
-function pmn($query, $arr = null, $params = null){
+  try{
 
-  $rows = pmrs($query, $arr);
-  if($rows != null) return count($rows);
-  return false;
+    $pdo_con = pdo_con(true);
+    $pdo_res = $pdo_con->prepare($query);
+    $pdo_res->setFetchMode(PDO::FETCH_ASSOC);
+    $pdo_res->execute($arr);
+    $items = array();
+    while($row = $pdo_res->fetch()) {
+      array_push($items, $row);
+    }
+    return $items;
+
+  }
+  catch(Exception $ex){
+
+    file_put_contents(app_dir() . '/usr/system/error-query.log', json_encode([
+      date('Y-m-d H:i:s'),
+      $query,
+      $params,
+      $ex->getMessage()
+    ], JSON_PRETTY_PRINT) . "\n\n", FILE_APPEND);
+    throw $ex;
+
+  }
 }
 
 function mysql_createtable($name, $columns){

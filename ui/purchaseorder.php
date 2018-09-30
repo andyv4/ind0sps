@@ -607,7 +607,7 @@ function ui_purchaseorderdetail_journal($id){
     [ 'type'=>')' ],
     [ 'type'=>')' ],
   ]);
-  if(!$jv) exc("ERROR: Tidak ada jurnal untuk faktur ini, tolong hubungi administrator.");
+  if(!$jv) exc("ERROR: Tidak ada jurnal untuk pesanan ini.");
 
   $columns = [
     [ 'active'=>1, 'name'=>'ref', 'text'=>'Tipe', 'width'=>30, 'nodittomark'=>1 ],

@@ -582,12 +582,60 @@ function purchaseinvoicemodify($purchaseinvoice){
 
   if(isset($purchaseinvoice['paymentamount']) && $purchaseinvoice['paymentamount'] != $current['paymentamount'])
     $updatedrows['paymentamount'] = $purchaseinvoice['paymentamount'];
-
   if(isset($purchaseinvoice['paymentdate']) && $purchaseinvoice['paymentdate'] != $current['paymentdate'])
     $updatedrows['paymentdate'] = $purchaseinvoice['paymentdate'];
-
   if(isset($purchaseinvoice['paymentaccountid']) && $purchaseinvoice['paymentaccountid'] != $current['paymentaccountid'])
     $updatedrows['paymentaccountid'] = $purchaseinvoice['paymentaccountid'];
+
+  if(isset($purchaseinvoice['taxamount']) && $purchaseinvoice['taxamount'] != $current['taxamount'])
+    $updatedrows['taxamount'] = $purchaseinvoice['taxamount'];
+  if(isset($purchaseinvoice['taxdate']) && $purchaseinvoice['taxdate'] != $current['taxdate'])
+    $updatedrows['taxdate'] = $purchaseinvoice['taxdate'];
+  if(isset($purchaseinvoice['taxaccountid']) && $purchaseinvoice['taxaccountid'] != $current['taxaccountid'])
+    $updatedrows['taxaccountid'] = $purchaseinvoice['taxaccountid'];
+
+  if(isset($purchaseinvoice['pph']) && $purchaseinvoice['pph'] != $current['pph'])
+    $updatedrows['pph'] = $purchaseinvoice['pph'];
+  if(isset($purchaseinvoice['pphdate']) && $purchaseinvoice['pphdate'] != $current['pphdate'])
+    $updatedrows['pphdate'] = $purchaseinvoice['pphdate'];
+  if(isset($purchaseinvoice['pphaccountid']) && $purchaseinvoice['pphaccountid'] != $current['pphaccountid'])
+    $updatedrows['pphaccountid'] = $purchaseinvoice['pphaccountid'];
+
+  if(isset($purchaseinvoice['kso']) && $purchaseinvoice['kso'] != $current['kso'])
+    $updatedrows['kso'] = $purchaseinvoice['kso'];
+  if(isset($purchaseinvoice['ksodate']) && $purchaseinvoice['ksodate'] != $current['ksodate'])
+    $updatedrows['ksodate'] = $purchaseinvoice['ksodate'];
+  if(isset($purchaseinvoice['ksoaccountid']) && $purchaseinvoice['ksoaccountid'] != $current['ksoaccountid'])
+    $updatedrows['ksoaccountid'] = $purchaseinvoice['ksoaccountid'];
+
+  if(isset($purchaseinvoice['ski']) && $purchaseinvoice['ski'] != $current['ski'])
+    $updatedrows['ski'] = $purchaseinvoice['ski'];
+  if(isset($purchaseinvoice['skidate']) && $purchaseinvoice['skidate'] != $current['skidate'])
+    $updatedrows['skidate'] = $purchaseinvoice['skidate'];
+  if(isset($purchaseinvoice['skiaccountid']) && $purchaseinvoice['skiaccountid'] != $current['skiaccountid'])
+    $updatedrows['skiaccountid'] = $purchaseinvoice['skiaccountid'];
+
+  if(isset($purchaseinvoice['clearance_fee']) && $purchaseinvoice['clearance_fee'] != $current['clearance_fee'])
+    $updatedrows['clearance_fee'] = $purchaseinvoice['clearance_fee'];
+  if(isset($purchaseinvoice['clearance_fee_date']) && $purchaseinvoice['clearance_fee_date'] != $current['clearance_fee_date'])
+    $updatedrows['clearance_fee_date'] = $purchaseinvoice['clearance_fee_date'];
+  if(isset($purchaseinvoice['clearance_fee_accountid']) && $purchaseinvoice['clearance_fee_accountid'] != $current['clearance_fee_accountid'])
+    $updatedrows['clearance_fee_accountid'] = $purchaseinvoice['clearance_fee_accountid'];
+
+  if(isset($purchaseinvoice['import_cost']) && $purchaseinvoice['import_cost'] != $current['import_cost'])
+    $updatedrows['import_cost'] = $purchaseinvoice['import_cost'];
+  if(isset($purchaseinvoice['import_cost_date']) && $purchaseinvoice['import_cost_date'] != $current['import_cost_date'])
+    $updatedrows['import_cost_date'] = $purchaseinvoice['import_cost_date'];
+  if(isset($purchaseinvoice['import_cost_accountid']) && $purchaseinvoice['import_cost_accountid'] != $current['import_cost_accountid'])
+    $updatedrows['import_cost_accountid'] = $purchaseinvoice['import_cost_accountid'];
+
+  if(isset($purchaseinvoice['handlingfeepaymentamount']) && $purchaseinvoice['handlingfeepaymentamount'] != $current['handlingfeepaymentamount'])
+    $updatedrows['handlingfeepaymentamount'] = $purchaseinvoice['handlingfeepaymentamount'];
+  if(isset($purchaseinvoice['handlingfeedate']) && $purchaseinvoice['handlingfeedate'] != $current['handlingfeedate'])
+    $updatedrows['handlingfeedate'] = $purchaseinvoice['handlingfeedate'];
+  if(isset($purchaseinvoice['handlingfeeaccountid']) && $purchaseinvoice['handlingfeeaccountid'] != $current['handlingfeeaccountid'])
+    $updatedrows['handlingfeeaccountid'] = $purchaseinvoice['handlingfeeaccountid'];
+
 
   if(isset($purchaseinvoice['inventories'])){
 

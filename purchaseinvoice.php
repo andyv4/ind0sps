@@ -313,7 +313,7 @@ function ui_purchaseinvoicedetail_journal($purchaseinvoiceid){
     [ 'type'=>')' ],
     [ 'type'=>')' ],
   ]);
-  if(!$jv) exc("ERROR: Tidak ada jurnal untuk faktur ini, tolong hubungi administrator.");
+  if(!$jv) exc("ERROR: Tidak ada jurnal untuk faktur ini");
 
   $columns = [
     [ 'active'=>1, 'name'=>'ref', 'text'=>'Tipe', 'width'=>30, 'nodittomark'=>1 ],
