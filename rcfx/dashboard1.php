@@ -225,11 +225,11 @@ function m_grid($param){
 
   }
   else{
-    $c .= ui_render(ui_grid2(array('columns'=>$columns, 'rows'=>$rows, 'datasource'=>'datasource', 'id'=>'grid1',
+    $c .= ui_render(ui_grid2(array('columns'=>$columns, 'rows'=>$rows, 'datasource'=>'datasource', 'id'=>'grid1', 'gridhead'=>'#gridhead1',
         'scrollel'=>'#row2', 'sorts'=>$sorts, 'filters'=>$filters, 'onrowdoubleclick'=>$onrowdoubleclick)), '#row2');
 
     $c .= "<element exp='#row1'>";
-    $c .= ui_gridhead(array('columns'=>$columns, 'gridexp'=>'#grid1', 'oncolumnresize'=>'m_columnresize',
+    $c .= ui_gridhead(array('columns'=>$columns, 'gridexp'=>'#grid1', 'id'=>'gridhead1', 'oncolumnresize'=>'m_columnresize',
       'oncolumnclick'=>'m_columnclick', 'oncolumnapply'=>'m_columnchange', 'customgridheadcolumns'=>$m_customgridheadcolumns));
     $c .= "</element>";
 

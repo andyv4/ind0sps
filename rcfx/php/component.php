@@ -566,7 +566,7 @@ function ui_gridhead($params){
   $oncolumnresize = ov('oncolumnresize', $params);
   $oncolumnapply = ov('oncolumnapply', $params);
   $uid = uniqid();
-  $class = ov('class', $params,  0, 'grid');
+  $class = ov('class', $params,  0);
   $customgridheadcolumns = ov('customgridheadcolumns', $params);
 
   // If no columns defined, try to get columns from grid
@@ -594,7 +594,7 @@ function ui_gridhead($params){
   }
 
   $c = "
-  <div class='$class'>
+  <div class='$class grid gridhead'>
     <table id='$id' data-gridid='$gridid' data-oncolumnclick=\"$oncolumnclick\" data-oncolumnapply=\"$oncolumnapply\" data-oncolumnresize=\"$oncolumnresize\">
       <thead>
         <tr>";
@@ -689,7 +689,7 @@ function ui_grid($params){
   $cache_partition_count = 0;
 
   $c = "
-  <div id='$id' class='$class' data-type='grid' data-name='$name' data-onremove=\"$onremove\">
+  <div id='$id' class='$class' data-type='grid' data-name='$name' data-onremove=\"$onremove\" onscroll=\"ui.grid_onscroll.apply(this, arguments)\">
     <table>
       <tbody id='tbody_$dataid'>";
   if(is_array($arr)){
@@ -1001,6 +1001,7 @@ function ui_grid2($params){
   $progresscallback = ov('progresscallback', $params);
   $rowperpage = ov('rowperpage', $params, 0, 40); // Default: 40
   $onrowdoubleclick = ov('onrowdoubleclick', $params);
+  $gridhead = ov('gridhead', $params, 0, '');
 
   $rows = ov('rows', $params);
   $rows_exists = function_exists($rows);
@@ -1022,7 +1023,7 @@ function ui_grid2($params){
   // Render
   // - Datasource mode
   $c = "
-  <div id='$id' class='$class' data-type='grid2' data-name='$name'>";
+  <div id='$id' class='$class' data-type='grid2' data-name='$name' data-gridhead=\"$gridhead\" onscroll=\"ui.grid_onscroll.apply(this, arguments)\">";
   if(function_exists($datasource)){
 
     $c .= "<table><tbody id=''>";

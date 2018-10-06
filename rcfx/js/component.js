@@ -1420,6 +1420,13 @@ ui.gridhead_oncolumnapply = function(e, button){
 
 }
 
+ui.grid_onscroll = function(e){
+
+  console.log([ this.getAttribute("data-gridhead"), $(this.getAttribute("data-gridhead")).length ]);
+  $(this.getAttribute("data-gridhead")).parent().scrollLeft($(this).scrollLeft());
+
+}
+
 ui.grid2moredata = {};
 ui.grid2_more = function(id, scrollel){
 
