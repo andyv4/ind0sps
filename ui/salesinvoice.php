@@ -262,21 +262,21 @@ function ui_salesinvoicedetailcol0_completion($param0){
 function ui_salesinvoicedetailcol1($obj, $params){
 
   $readonly = ov('readonly', $params);
-  $c = ui_textbox(array('name'=>'qty', 'width'=>'99%', 'src'=>'', 'value'=>ov('qty', $obj), 'readonly'=>$readonly, 'datatype'=>'number',
+  $c = ui_textbox(array('name'=>'qty', 'class'=>'block', 'src'=>'', 'value'=>ov('qty', $obj), 'readonly'=>$readonly, 'datatype'=>'number',
       'onchange'=>'salesinvoicedetail_calculaterow(this.parentNode.parentNode)', 'ischild'=>1));
   return $c;
 
 }
 function ui_salesinvoicedetailcol2($obj){
 
-  $c = ui_label(array('name'=>'unit', 'width'=>'99%', 'value'=>ov('unit', $obj), 'ischild'=>1));
+  $c = ui_label(array('name'=>'unit', 'class'=>'block', 'value'=>ov('unit', $obj), 'ischild'=>1));
   return $c;
 
 }
 function ui_salesinvoicedetailcol3($obj, $params){
 
   $readonly = ov('readonly', $params);
-  $c = ui_textbox(array('name'=>'unitprice', 'width'=>'99%', 'value'=>ov('unitprice', $obj), 'readonly'=>$readonly, 'datatype'=>'money',
+  $c = ui_textbox(array('name'=>'unitprice', 'class'=>'block', 'value'=>ov('unitprice', $obj), 'readonly'=>$readonly, 'datatype'=>'money',
       'onchange'=>'salesinvoicedetail_calculaterow(this.parentNode.parentNode)', 'ischild'=>1));
   return $c;
 
