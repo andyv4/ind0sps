@@ -203,7 +203,7 @@ function journalvoucherentries($journalvouchers, $options = null){
   //chartofaccountrecalculateall();
 
 }
-function journalvoucherentry($journalvoucher){
+function journalvoucherentry($journalvoucher, $log = false){
 
   // --------------------
   // Extract parameters
@@ -278,13 +278,15 @@ function journalvoucherentry($journalvoucher){
 
   journalvouchercalculate();
 
+  if($log) userlog('journalvoucherentry', $journalvoucher, null, $_SESSION['user']['id'], $id);
+
   fclose($fp);
   unlink($lock_file);
 
   return array('id'=>$id);
   
 }
-function journalvouchermodify($journalvoucher){
+function journalvouchermodify($journalvoucher, $log = false){
 
   $id = ov('id', $journalvoucher, 1);
   $current_journalvoucher = journalvoucherdetail(null, array('id'=>$id));
@@ -304,6 +306,7 @@ function journalvouchermodify($journalvoucher){
     $updatedrow['description'] = $journalvoucher['description'];
   if(isset($journalvoucher['type']) && $journalvoucher['type'] != $current_journalvoucher['type'])
     $updatedrow['type'] = $journalvoucher['type'];
+
   if(count($updatedrow) > 0){
     $updatedrow['lastupdatedon'] = date('YmdHis');
     $updatedrow['lastupdatedby'] = $_SESSION['user']['id'];
@@ -311,6 +314,8 @@ function journalvouchermodify($journalvoucher){
   }
 
   if(isset($journalvoucher['details'])){
+
+    $updatedrow['details'] = $journalvoucher['details'];
 
     // Validation
     // - Check if details is array
@@ -363,6 +368,8 @@ function journalvouchermodify($journalvoucher){
 
   journalvouchercalculate();
 
+  if($log) userlog('journalvouchermodify', $current_journalvoucher, $updatedrow, $_SESSION['user']['id'], $id);
+
   fclose($fp);
   unlink($lock_file);
 
@@ -384,7 +391,7 @@ function journalvoucheritemmodify($condition, $update){
 
 }
 
-function journalvoucherremove($filters){
+function journalvoucherremove($filters, $log = false){
 
   $ids = array();
   if(isset($filters['description'])){
@@ -408,7 +415,8 @@ function journalvoucherremove($filters){
   for($i = 0 ; $i < count($ids) ; $i++){
 
     $id = $ids[$i];
-    if(!pmc("select `id` from journalvoucher where `id` = ?", [ $id ])) continue;
+    $current = journalvoucherdetail('*', [ 'id'=>$id ]);
+    if(!$current) continue;
 
     $lock_file = __DIR__ . "/../usr/system/journalvoucher_remove_" . $id . ".lock";
     $fp = fopen($lock_file, 'w+');
@@ -422,6 +430,8 @@ function journalvoucherremove($filters){
 
     $query = "DELETE FROM journalvoucher WHERE `id` = ?";
     pm($query, array($id));
+
+    if($log) userlog('journalvoucherremove', $current, null, $_SESSION['user']['id'], $id);
 
     fclose($fp);
     unlink($lock_file);

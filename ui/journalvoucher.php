@@ -107,11 +107,11 @@ function ui_journalvoucherdetail_col0_completion($param){
 function ui_journalvoucherdetail_col1($obj, $params){
 
   return ui_textbox(array(
-      'name'=>'debitamount',
-      'value'=>ov('debitamount', $obj),
-      'readonly'=>$params['readonly'],
-      'width'=>'100%',
-      'onchange'=>'journalvoucherdetail_debitamountchange(value, this)',
+    'class'=>'block',
+    'name'=>'debitamount',
+    'value'=>ov('debitamount', $obj),
+    'readonly'=>$params['readonly'],
+    'onchange'=>'journalvoucherdetail_debitamountchange(value, this)',
     'datatype'=>'money'
   ));
 
@@ -120,12 +120,12 @@ function ui_journalvoucherdetail_col1($obj, $params){
 function ui_journalvoucherdetail_col2($obj, $params){
 
   return ui_textbox(array(
-      'name'=>'creditamount',
-      'value'=>ov('creditamount', $obj),
-      'readonly'=>$params['readonly'],
-      'width'=>'100%',
-      'onchange'=>'journalvoucherdetail_creditamountchange(value, this)',
-      'datatype'=>'money'
+    'class'=>'block',
+    'name'=>'creditamount',
+    'value'=>ov('creditamount', $obj),
+    'readonly'=>$params['readonly'],
+    'onchange'=>'journalvoucherdetail_creditamountchange(value, this)',
+    'datatype'=>'money'
   ));
 
 }
@@ -140,14 +140,14 @@ function ui_journalvoucherdetail_col3($obj, $params){
 
 function ui_journalvouchersave($obj){
 
-  isset($obj['id']) && intval($obj['id']) > 0 ? journalvouchermodify($obj) : journalvoucherentry($obj);
+  isset($obj['id']) && intval($obj['id']) > 0 ? journalvouchermodify($obj, true) : journalvoucherentry($obj, true);
   return m_load() . uijs("ui.modal_close(ui('.modal'))");
 
 }
 
 function ui_journalvoucherremove($id){
 
-  journalvoucherremove(array('id'=>$id));
+  journalvoucherremove(array('id'=>$id), true);
   return m_load();
 
 }
