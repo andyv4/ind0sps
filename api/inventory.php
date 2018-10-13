@@ -121,7 +121,7 @@ function inventorylist($columns, $sorts = null, $filters = null, $limits = null,
   if(privilege_get('inventory', 'costprice')) $inventory_columnaliases['avgcostprice'] = 't1.avgcostprice';
 
   if(isset($columns_indexed['unitvolume'])){
-    $inventory_columnaliases['unitvolume'] = "(SELECT m3 FROM inventoryformula WHERE inventoryid = t1.id ORDER BY `date` DESC LIMIT 1) as unitvolume";
+    $inventory_columnaliases['unitvolume'] = "(SELECT m3 FROM inventoryformula WHERE inventoryid = t1.id ORDER BY `date` DESC LIMIT 1)";
   }
 
   $params = array();
