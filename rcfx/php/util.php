@@ -1614,9 +1614,10 @@ function wherequery_from_filters(&$params, $filters, $columnaliases = null, $col
 
     }
   }
+
   $wherequeries = implode(' ', $wherequeries);
   if(count($params) > 0) $wherequeries = " WHERE $wherequeries";
-
+  else $wherequeries = '';
   return $wherequeries;
 
 }
