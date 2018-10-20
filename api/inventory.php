@@ -1253,8 +1253,14 @@ function inventory_warehouse_calc(){
     ON DUPLICATE KEY UPDATE qty = VALUES(qty), total_amount = VALUES(total_amount);";
   $params = [ $date ];
 
-  pm($query0);
-  pm($query1, $params);
+  try{
+    pm($query0);
+    pm($query1, $params);
+  }
+  catch(Exception $ex){
+    // TODO handle this exception
+    // SQLSTATE[40001]: Serialization failure: 1213 Deadlock found when trying to get lock; try restarting transaction
+  }
 
 }
 
