@@ -23,5 +23,6 @@ foreach($inventoryids as $inventoryid){
 }
 
 echo "Completed in " . (microtime(1) - $t1) . "s\n";
+file_put_contents('../usr/system/calc_cp.log', "Completed in " . (microtime(1) - $t1) . "s\n", FILE_APPEND);
 
 ?>
