@@ -519,21 +519,24 @@ function customer_has_due_invoice($id){
 
   $has_due = false;
   $company_creditterm = systemvarget('customer_creditterm');
+  $use_credit_term = systemvarget('use_credit_term');
 
-  $salesinvoices = pmr("select t1.id, t2.code, t1.creditterm, t2.creditterm as salesinvoice_creditterm, t2.date, sum(t2.total) as total from customer t1, salesinvoice t2 
+  if($use_credit_term){
+    $salesinvoices = pmr("select t1.id, t2.code, t1.creditterm, t2.creditterm as salesinvoice_creditterm, t2.date, sum(t2.total) as total from customer t1, salesinvoice t2 
       where t1.id = t2.customerid and t2.customerid = ? and t2.ispaid = 0 group by t1.id order by t2.date limit 1", [ $id ]);
-  $salesinvoicegroups = pmr("select t1.id, t2.code, t1.creditterm, t2.date, sum(t2.total) as total, t3.creditterm as salesinvoice_creditterm from customer t1, salesinvoicegroup t2, salesinvoice t3 
+    $salesinvoicegroups = pmr("select t1.id, t2.code, t1.creditterm, t2.date, sum(t2.total) as total, t3.creditterm as salesinvoice_creditterm from customer t1, salesinvoicegroup t2, salesinvoice t3 
       where t1.id = t3.customerid and t3.customerid = ? and t2.ispaid = 0 and t3.salesinvoicegroupid = t2.id group by t1.id order by t2.date limit 1", [ $id ]);
-  $customer = is_array($salesinvoicegroups) ? $salesinvoicegroups : $salesinvoices;
+    $customer = is_array($salesinvoicegroups) ? $salesinvoicegroups : $salesinvoices;
 
-  if($customer){
-    $creditterm = $customer['salesinvoice_creditterm'] > 0 ? $customer['salesinvoice_creditterm'] : ($customer['creditterm'] > 0 ? $customer['creditterm'] : $company_creditterm);
+    if($customer){
+      $creditterm = $customer['salesinvoice_creditterm'] > 0 ? $customer['salesinvoice_creditterm'] : ($customer['creditterm'] > 0 ? $customer['creditterm'] : $company_creditterm);
 
-    if($creditterm > 0){
-      $salesinvoice_date = $customer['date'];
-      $due_date = date('Y-m-d', mktime(0, 0, 0, date('m', strtotime($salesinvoice_date)), date('j', strtotime($salesinvoice_date)) + $creditterm, date('Y', strtotime($salesinvoice_date))));
-      $code = $customer['code'];
-      if(strtotime($due_date) <= strtotime('now')) exc("Pelanggan ini memiliki invoice yang seharusnya dibayar pada " . date('j M Y', strtotime($due_date)) . ". ($code)");
+      if($creditterm > 0){
+        $salesinvoice_date = $customer['date'];
+        $due_date = date('Y-m-d', mktime(0, 0, 0, date('m', strtotime($salesinvoice_date)), date('j', strtotime($salesinvoice_date)) + $creditterm, date('Y', strtotime($salesinvoice_date))));
+        $code = $customer['code'];
+        if(strtotime($due_date) <= strtotime('now')) exc("Pelanggan ini memiliki invoice yang seharusnya dibayar pada " . date('j M Y', strtotime($due_date)) . ". ($code)");
+      }
     }
   }
   return $has_due;

@@ -11,7 +11,7 @@ ui_async();
 ?>
 <div class="padding10">
 
-  <table cellspacing="10" class="form">
+  <table cellspacing="5" class="form">
     <tr>
       <th class="width240"><h5 class="padding10">Perusahaan</h5></th>
       <td></td>
@@ -32,10 +32,16 @@ ui_async();
 
   <div class="height10" style="border-top: solid 1px #eee"></div>
 
-  <table cellspacing="10" class="form">
+  <table cellspacing="5" class="form">
     <tr>
       <th class="width240"><h5 class="padding10">Pelanggan</h5></th>
       <td></td>
+    </tr>
+    <tr>
+      <th><label>Pakai Batasan Lama Piutang</label></th>
+      <td>
+        <?=ui_checkbox([ 'width'=>'50px', 'value'=>systemvarget('use_credit_term'), 'onchange'=>"ui.async('systemvarset', [ 'use_credit_term', value ])" ])?>
+      </td>
     </tr>
     <tr>
       <th><label>Maksimal Lama Piutang</label></th>
@@ -47,7 +53,7 @@ ui_async();
 
   <div class="height10" style="border-top: solid 1px #eee"></div>
 
-  <table cellspacing="10" class="form">
+  <table cellspacing="5" class="form">
     <tr>
       <th class="width240"><h5 class="padding10">Penjualan</h5></th>
       <td>
@@ -75,7 +81,7 @@ ui_async();
     </tr>
     <tr>
       <th><label>Metode Perhitungan Modal</label></th>
-      <td><?=ui_dropdown([ 'value'=>systemvarget('costprice_method'), 'onchange'=>"ui.async('systemvarset', [ 'costprice_method', value ])", 'items'=>[ [ 'text'=>'Average', 'value'=>'average' ], [ 'text'=>'FIFO', 'value'=>'fifo' ] ] ])?></td>
+      <td><?=ui_dropdown([ 'readonly'=>1, 'value'=>systemvarget('costprice_method'), 'onchange'=>"ui.async('systemvarset', [ 'costprice_method', value ])", 'items'=>[ [ 'text'=>'Average', 'value'=>'average' ], [ 'text'=>'FIFO', 'value'=>'fifo' ] ] ])?></td>
     </tr>
     <tr>
       <th><label>Pakai Harga Jual Terendah</label></th>
@@ -126,7 +132,7 @@ ui_async();
 
   <div class="height10" style="border-top: solid 1px #eee"></div>
 
-  <table cellspacing="10" class="form">
+  <table cellspacing="5" class="form">
     <tr>
       <th class="width240"><h5 class="padding10">Pembelian</h5></th>
       <td>
@@ -137,7 +143,7 @@ ui_async();
 
   <div></div>
 
-  <table cellspacing="10" class="form">
+  <table cellspacing="5" class="form">
     <tr>
       <th class="width240"><label>Format Kode Faktur Pembelian (Pajak)</label></th>
       <td>
@@ -292,7 +298,7 @@ ui_async();
 
   <div class="height10" style="border-top: solid 1px #eee"></div>
 
-  <table cellspacing="10" class="form">
+  <table cellspacing="5" class="form">
     <tr>
       <th class="width240"><h5 class="padding10">Print</h5></th>
       <td></td>
@@ -325,7 +331,7 @@ ui_async();
 
   <div class="height10" style="border-top: solid 1px #eee"></div>
 
-  <table cellspacing="10" class="form">
+  <table cellspacing="5" class="form">
     <tr>
       <th class="width240"><h5 class="padding10">Pajak</h5></th>
       <td></td>
