@@ -45,6 +45,7 @@ function defaultmodule(){
 function datasource($columns = null, $sorts = null, $filters = null, $limits = null){
 
   $salesreceipt_columnaliases = array(
+    'id'=>'t1.id!',
     'ispaid'=>'t1.ispaid',
     'date'=>'t1.date',
     'code'=>'t1.code',
@@ -66,7 +67,6 @@ function datasource($columns = null, $sorts = null, $filters = null, $limits = n
   $wherequery = 'WHERE t1.id = t2.salesreceiptid AND t1.paymentaccountid = t3.id' . str_replace('WHERE', 'AND', wherequery_from_filters($params, $filters, $salesreceipt_columnaliases));
   $sortquery = sortquery_from_sorts($sorts, $salesreceipt_columnaliases);
   $limitquery = limitquery_from_limitoffset($limits);
-
   $query = "SELECT 'salesreceipt' as `type`, t1.id, $columnquery FROM
     salesreceipt t1, salesinvoicegroup t2, chartofaccount t3 $wherequery $sortquery $limitquery";
   $data = pmrs($query, $params);
