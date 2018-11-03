@@ -1,17 +1,47 @@
 <?php
 
-// Prerequisites
-$start_time = microtime(1);
+/*$pdo_con = new PDO('mysql:host=127.0.0.1;dbname=indosps', 'root', 'webapp', array(
+  PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+  PDO::ATTR_EMULATE_PREPARES => false
+));*/
 
 require_once __DIR__ . '/../rcfx/php/pdo.php';
-require_once __DIR__ . '/../rcfx/php/util.php';
-require_once __DIR__ . '/../api/chartofaccount.php';
-require_once __DIR__ . '/../api/inventory.php';
-date_default_timezone_set('Asia/Jakarta');
 
+$mysqlpdo_host = '127.0.0.1';
+$mysqlpdo_database = 'indosps';
+$mysqlpdo_username = 'root';
+$mysqlpdo_password = 'webapp';
 
-echo inventorycostprice_get(410);
-echo PHP_EOL;
+$pdo_con = pdo_con();
+$pdo_con = pdo_con();
 
-echo "COMPLETED in " . (microtime(1) - $start_time) . "s" . PHP_EOL . PHP_EOL;
-?>
+$pdo_con->beginTransaction();
+
+try{
+
+  $query = "insert into purchaseorder(`date`) values (?)";
+  $statement = $pdo_con->prepare($query);
+  $statement->execute([
+    '2018-01-01'
+  ]);
+
+  $id = $pdo_con->lastInsertId();
+
+  $query = "insert into purchaseorderinventory (purchaseorderid) values (?)";
+  $statement = $pdo_con->prepare($query);
+  $statement->execute([
+    $id
+  ]);
+
+  $pdo_con->commit();
+
+  echo "OK";
+
+}
+catch(Exception $e){
+
+  echo $e->getMessage();
+
+  $pdo_con->rollBack();
+
+}

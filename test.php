@@ -1,43 +1,25 @@
-<div class="padding20">
+<?php
 
-  <?php
+ui_async();
 
-  require_once 'api/salesinvoice.php';
+class testA{
 
-  $rows = pmrs("select refid from userlog where action like 'salesinvoice%' and date(`timestamp`) >= 20180825 group by refid");
-  $salesinvoiceids = [];
-  foreach($rows as $row)
-    $salesinvoiceids[] = $row['refid'];
+  public function handle(){
 
-  $salesinvoices = pmrs("select `id`, code, total from salesinvoice where `id` in (" . implode(', ', $salesinvoiceids) . ")");
+    echo '1';
 
-  echo "<table border=1>";
-  foreach($salesinvoices as $salesinvoice){
-
-    $id = $salesinvoice['id'];
-    $code = $salesinvoice['code'];
-    $total = $salesinvoice['total'];
-    $real_total = salesinvoice_total(salesinvoicedetail(null, array('id'=>$id)));
-    $real_total = $real_total['total'];
-
-    if(round($total) != round($real_total)){
-      echo "<tr>";
-      echo "<td>$code</td>";
-      echo "<td>$total</td>";
-      echo "<td>$real_total</td>";
-      echo "<td>" . ($total != $real_total ? 'Not match' : 'Match') . "</td>";
-      echo "</tr>";
-
-      salesinvoicecalculate($id);
-    }
+//    $id = pmi("insert into purchaseorder(`date`) values (?)", [ '2018-01-01' ]);
+//    pm("insert into purchaseorderinventory (purchaseorderid) values (?)", [ $id ]);
 
   }
-  echo "</table>";
+
+}
 
 
-  echo "<br /><br /> Completed in " . (microtime(1) - $time) . "\n";
+$callable = new testA;
+echo serialize($callable);
+$testA = unserialize($callable);
+$testA->handle();
+//pdo_transact();
 
-
-  ?>
-
-</div>
+?>

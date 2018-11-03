@@ -15,6 +15,35 @@ function pdo_con($emulate_prepare = true, $forceinit = false){
   }
   return $pdo_con;
 }
+function pdo_transact($callable){
+
+  $result = null; // Initial result
+
+  $pdo_con = pdo_con();
+
+  $pdo_con->beginTransaction();
+
+  try{
+
+    $result = call_user_func_array($callable, []);
+
+    $pdo_con->commit();
+
+  }
+  catch(Exception $ex){
+
+    file_put_contents(app_dir() . '/usr/system/error-query.log', json_encode([
+        date('Y-m-d H:i:s'),
+        $ex->getMessage()
+      ], JSON_PRETTY_PRINT) . "\n\n", FILE_APPEND);
+
+    $pdo_con->rollBack();
+
+  }
+
+  return $result;
+
+}
 function pdo_close(){
   global $pdo_con;
   if($pdo_con) $pdo_con = null;

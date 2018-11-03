@@ -175,156 +175,152 @@ function purchaseorderlistforinvoice($hint, $supplierdescription){
 
 function purchaseorderentry($purchaseorder){
 
-  $lock_file = __DIR__ . '/../usr/system/purchaseorder_entry.lock';
-  $fp = fopen($lock_file, 'w+');
-  if(!flock($fp, LOCK_EX)) exc('Tidak dapat menyimpan, silakan ulangi beberapa saat lagi.');
+  $id = pdo_transact(function() use ($purchaseorder){
 
-  // Parameter extraction & validation
-  $code = ov('code', $purchaseorder, 1);
-  $supplierdescription = ov('supplierdescription', $purchaseorder, 1);
-  $supplier = supplierdetail(null, array('description'=>$supplierdescription));
-  $supplierid = $supplier['id'];
-  $date = ov('date', $purchaseorder, 1, array('type'=>'date'));
-  $address = ov('address', $purchaseorder);
-  $currencyid = ov('currencyid', $purchaseorder, 0, 1);
-  $currencyrate = floatval(ov('currencyrate', $purchaseorder, 1));
-  $note = ov('note', $purchaseorder);
-  $discount = ov('discount', $purchaseorder, 0, 0);
-  $discountamount = ov('discountamount', $purchaseorder, 0, 0);
-  $taxable = ov('taxable', $purchaseorder, 0, 0);
-  $inventories = ov('inventories', $purchaseorder, 1);
-  $createdon = $lastupdatedon = date('YmdHis');
-  $createdby = $_SESSION['user']['id'];
-  $isinvoiced = 0;
-  $ispaid = ov('ispaid', $purchaseorder);
-  $paymentdate = ov('paymentdate', $purchaseorder);
-  $paymentamount = ov('paymentamount', $purchaseorder, 0, 0);
-  $paymentaccountid = ov('paymentaccountid', $purchaseorder, 0, 2);
-  $freightcharge = ov('freightcharge', $purchaseorder, 0, 0);
-  $handlingfeeamount = ov('handlingfeeamount', $purchaseorder, 0, 0);
-  $handlingfeeaccountname = ov('handlingfeeaccountname', $purchaseorder);
-  $handlingfeeaccountid = ov('handlingfeeaccountid', $purchaseorder);
-  if(!empty($handlingfeeaccountname)){
-    $handlingfeeaccount = chartofaccountdetail(null, array('name'=>$handlingfeeaccountname));
-    $handlingfeeaccountid = isset($handlingfeeaccount['id']) ? $handlingfeeaccount['id'] : $handlingfeeaccountid;
-  }
-  $handlingfeedate = ov('handlingfeedate', $purchaseorder);
-  $handlingfeevolume = ov('handlingfeevolume', $purchaseorder);
-  $handlingfeepaymentamount = ov('handlingfeepaymentamount', $purchaseorder, 0, 0);
-  $refno = ov('refno', $purchaseorder);
-  $eta = ov('eta', $purchaseorder);
-  $term = ov('term', $purchaseorder);
-  $pph = ov('pph', $purchaseorder, 0, 0);
-  $kso = ov('kso', $purchaseorder, 0, 0);
-  $ski = ov('ski', $purchaseorder, 0, 0);
-  $clearance_fee = ov('clearance_fee', $purchaseorder, 0, 0);
-  $taxamount = ov('taxamount', $purchaseorder, 0, 0);
-  $taxdate = ov('taxdate', $purchaseorder, 0, 0);
-  $taxaccountid = ov('taxaccountid', $purchaseorder, 0, 0);
-  $pphdate = ov('pphdate', $purchaseorder, 0, 0);
-  $pphaccountid = ov('pphaccountid', $purchaseorder, 0, 0);
-  $ksodate = ov('ksodate', $purchaseorder, 0, 0);
-  $ksoaccountid = ov('ksoaccountid', $purchaseorder, 0, 0);
-  $skidate = ov('skidate', $purchaseorder, 0, 0);
-  $skiaccountid = ov('skiaccountid', $purchaseorder, 0, 0);
-  $clearance_fee_date = ov('clearance_fee_date', $purchaseorder, 0, 0);
-  $clearance_fee_accountid = ov('clearance_fee_accountid', $purchaseorder, 0, 0);
-  $import_cost = ov('import_cost', $purchaseorder, 0, 0);
-  $import_cost_date = ov('import_cost_date', $purchaseorder, 0, 0);
-  $import_cost_accountid = ov('import_cost_accountid', $purchaseorder, 0, 0);
+    // Parameter extraction & validation
+    $code = ov('code', $purchaseorder, 1);
+    $supplierdescription = ov('supplierdescription', $purchaseorder, 1);
+    $supplier = supplierdetail(null, array('description'=>$supplierdescription));
+    $supplierid = $supplier['id'];
+    $date = ov('date', $purchaseorder, 1, array('type'=>'date'));
+    $address = ov('address', $purchaseorder);
+    $currencyid = ov('currencyid', $purchaseorder, 0, 1);
+    $currencyrate = floatval(ov('currencyrate', $purchaseorder, 1));
+    $note = ov('note', $purchaseorder);
+    $discount = ov('discount', $purchaseorder, 0, 0);
+    $discountamount = ov('discountamount', $purchaseorder, 0, 0);
+    $taxable = ov('taxable', $purchaseorder, 0, 0);
+    $inventories = ov('inventories', $purchaseorder, 1);
+    $createdon = $lastupdatedon = date('YmdHis');
+    $createdby = $_SESSION['user']['id'];
+    $isinvoiced = 0;
+    $ispaid = ov('ispaid', $purchaseorder);
+    $paymentdate = ov('paymentdate', $purchaseorder);
+    $paymentamount = ov('paymentamount', $purchaseorder, 0, 0);
+    $paymentaccountid = ov('paymentaccountid', $purchaseorder, 0, 2);
+    $freightcharge = ov('freightcharge', $purchaseorder, 0, 0);
+    $handlingfeeamount = ov('handlingfeeamount', $purchaseorder, 0, 0);
+    $handlingfeeaccountname = ov('handlingfeeaccountname', $purchaseorder);
+    $handlingfeeaccountid = ov('handlingfeeaccountid', $purchaseorder);
+    if(!empty($handlingfeeaccountname)){
+      $handlingfeeaccount = chartofaccountdetail(null, array('name'=>$handlingfeeaccountname));
+      $handlingfeeaccountid = isset($handlingfeeaccount['id']) ? $handlingfeeaccount['id'] : $handlingfeeaccountid;
+    }
+    $handlingfeedate = ov('handlingfeedate', $purchaseorder);
+    $handlingfeevolume = ov('handlingfeevolume', $purchaseorder);
+    $handlingfeepaymentamount = ov('handlingfeepaymentamount', $purchaseorder, 0, 0);
+    $refno = ov('refno', $purchaseorder);
+    $eta = ov('eta', $purchaseorder);
+    $term = ov('term', $purchaseorder);
+    $pph = ov('pph', $purchaseorder, 0, 0);
+    $kso = ov('kso', $purchaseorder, 0, 0);
+    $ski = ov('ski', $purchaseorder, 0, 0);
+    $clearance_fee = ov('clearance_fee', $purchaseorder, 0, 0);
+    $taxamount = ov('taxamount', $purchaseorder, 0, 0);
+    $taxdate = ov('taxdate', $purchaseorder, 0, 0);
+    $taxaccountid = ov('taxaccountid', $purchaseorder, 0, 0);
+    $pphdate = ov('pphdate', $purchaseorder, 0, 0);
+    $pphaccountid = ov('pphaccountid', $purchaseorder, 0, 0);
+    $ksodate = ov('ksodate', $purchaseorder, 0, 0);
+    $ksoaccountid = ov('ksoaccountid', $purchaseorder, 0, 0);
+    $skidate = ov('skidate', $purchaseorder, 0, 0);
+    $skiaccountid = ov('skiaccountid', $purchaseorder, 0, 0);
+    $clearance_fee_date = ov('clearance_fee_date', $purchaseorder, 0, 0);
+    $clearance_fee_accountid = ov('clearance_fee_accountid', $purchaseorder, 0, 0);
+    $import_cost = ov('import_cost', $purchaseorder, 0, 0);
+    $import_cost_date = ov('import_cost_date', $purchaseorder, 0, 0);
+    $import_cost_accountid = ov('import_cost_accountid', $purchaseorder, 0, 0);
 
-  // Validation
-  if(!isdate($date)) exc('Tanggal harus diisi.');
-  if(pmc("select count(*) from purchaseorder where code = ?", [ $code ]) > 0) exc("Kode pesanan sudah ada.");
-  if(!is_array($inventories) || count($inventories) == 0) throw new Exception('Barang harus diisi.');
-  if($paymentamount > 0){
-    if(!isdate($paymentdate)) exc('Tanggal pelunasan harus diisi.');
-    if(!chartofaccount_id_exists($paymentaccountid)) exc("Akun pelunasan harus diisi.");
-  }
-  if($taxamount > 0){
-    if(!isdate($taxdate)) exc("Tanggal ppn harus diisi.");
-    if(!chartofaccount_id_exists($taxaccountid)) exc("Akun ppn harus diisi.");
-  }
-  if($pph > 0){
-    if(!isdate($pphdate)) exc("Tanggal pph harus diisi.");
-    if(!chartofaccount_id_exists($pphaccountid)) exc("Akun pph harus diisi.");
-  }
-  if($kso > 0){
-    if(!isdate($ksodate)) exc("Tanggal kso harus diisi.");
-    if(!chartofaccount_id_exists($ksoaccountid)) exc("Akun kso harus diisi.");
-  }
-  if($ski > 0){
-    if(!isdate($skidate)) exc("Tanggal ski harus diisi.");
-    if(!chartofaccount_id_exists($skiaccountid)) exc("Akun ski harus diisi.");
-  }
-  if($clearance_fee > 0){
-    if(!isdate($clearance_fee_date)) exc("Tanggal clearance fee harus diisi.");
-    if(!chartofaccount_id_exists($clearance_fee_accountid)) exc("Akun clearance fee harus diisi.");
-  }
-  if($import_cost > 0){
-    if(!isdate($import_cost_date)) exc("Tanggal bea masuk harus diisi.");
-    if(!chartofaccount_id_exists($import_cost_accountid)) exc("Akun bea masuk harus diisi.");
-  }
-  if($handlingfeepaymentamount > 0){
-    if(!isdate($handlingfeedate)) exc("Tanggal handling fee masuk harus diisi.");
-    if(!chartofaccount_id_exists($handlingfeeaccountid)) exc("Akun handling fee masuk harus diisi.");
-  }
-  if($ispaid && $paymentamount <= 0) exc("Nilai pelunasan belum diisi.");
+    // Validation
+    if(!isdate($date)) exc('Tanggal harus diisi.');
+    if(pmc("select count(*) from purchaseorder where code = ?", [ $code ]) > 0) exc("Kode pesanan sudah ada.");
+    if(!is_array($inventories) || count($inventories) == 0) throw new Exception('Barang harus diisi.');
+    if($paymentamount > 0){
+      if(!isdate($paymentdate)) exc('Tanggal pelunasan harus diisi.');
+      if(!chartofaccount_id_exists($paymentaccountid)) exc("Akun pelunasan harus diisi.");
+    }
+    if($taxamount > 0){
+      if(!isdate($taxdate)) exc("Tanggal ppn harus diisi.");
+      if(!chartofaccount_id_exists($taxaccountid)) exc("Akun ppn harus diisi.");
+    }
+    if($pph > 0){
+      if(!isdate($pphdate)) exc("Tanggal pph harus diisi.");
+      if(!chartofaccount_id_exists($pphaccountid)) exc("Akun pph harus diisi.");
+    }
+    if($kso > 0){
+      if(!isdate($ksodate)) exc("Tanggal kso harus diisi.");
+      if(!chartofaccount_id_exists($ksoaccountid)) exc("Akun kso harus diisi.");
+    }
+    if($ski > 0){
+      if(!isdate($skidate)) exc("Tanggal ski harus diisi.");
+      if(!chartofaccount_id_exists($skiaccountid)) exc("Akun ski harus diisi.");
+    }
+    if($clearance_fee > 0){
+      if(!isdate($clearance_fee_date)) exc("Tanggal clearance fee harus diisi.");
+      if(!chartofaccount_id_exists($clearance_fee_accountid)) exc("Akun clearance fee harus diisi.");
+    }
+    if($import_cost > 0){
+      if(!isdate($import_cost_date)) exc("Tanggal bea masuk harus diisi.");
+      if(!chartofaccount_id_exists($import_cost_accountid)) exc("Akun bea masuk harus diisi.");
+    }
+    if($handlingfeepaymentamount > 0){
+      if(!isdate($handlingfeedate)) exc("Tanggal handling fee masuk harus diisi.");
+      if(!chartofaccount_id_exists($handlingfeeaccountid)) exc("Akun handling fee masuk harus diisi.");
+    }
+    if($ispaid && $paymentamount <= 0) exc("Nilai pelunasan belum diisi.");
 
-  $subtotal = 0;
-  foreach($inventories as $index=>$row){
+    $subtotal = 0;
+    foreach($inventories as $index=>$row){
 
-    $inventorycode = ov('inventorycode', $row);
-    if(empty($inventorycode)) continue;
+      $inventorycode = ov('inventorycode', $row);
+      if(empty($inventorycode)) continue;
 
-    $inventory = inventorydetail(null, array('code'=>$inventorycode));
-    if(!$inventory) exc("Barang tidak terdaftar.");
+      $inventory = inventorydetail(null, array('code'=>$inventorycode));
+      if(!$inventory) exc("Barang tidak terdaftar.");
 
-    $qty = ov('qty', $row);
-    if($qty <= 0) exc("Kuantitas barang harus diisi.");
+      $qty = ov('qty', $row);
+      if($qty <= 0) exc("Kuantitas barang harus diisi.");
 
-    $unitprice = ov('unitprice', $row);
-    if($unitprice <= 0) exc("Harga barang harus diisi.");
+      $unitprice = ov('unitprice', $row);
+      if($unitprice <= 0) exc("Harga barang harus diisi.");
 
-    $unittotal = $qty * $unitprice;
-    $unitdiscount = ov('unitdiscount', $row);
-    $unitdiscountamount = intval($unitdiscount) ? $unitdiscount / 100 * $unittotal : 0;
-    $unittotal = $unittotal - $unitdiscountamount;
+      $unittotal = $qty * $unitprice;
+      $unitdiscount = ov('unitdiscount', $row);
+      $unitdiscountamount = intval($unitdiscount) ? $unitdiscount / 100 * $unittotal : 0;
+      $unittotal = $unittotal - $unitdiscountamount;
 
-    $subtotal += $unittotal;
-  }
-  $total = $subtotal - $discountamount + $freightcharge;
+      $subtotal += $unittotal;
+    }
+    $total = $subtotal - $discountamount + $freightcharge;
 
-  // Save to purchase order
-  $query = "
-    INSERT INTO purchaseorder
-    (
-      isinvoiced, code, `date`, supplierid, supplierdescription, currencyid, currencyrate, address, note, ispaid, 
-      paymentaccountid, subtotal, paymentamount, paymentdate, discount, discountamount, total, taxable, createdon, createdby, lastupdatedon, freightcharge, 
-      handlingfeevolume, handlingfeeamount, handlingfeeaccountid, handlingfeedate, handlingfeepaymentamount, refno, eta, term, pph, kso,
-      ski, clearance_fee, taxamount, taxdate, taxaccountid, pphdate, pphaccountid, ksodate, ksoaccountid, skidate, skiaccountid,
-      clearance_fee_date, clearance_fee_accountid, import_cost, import_cost_date, import_cost_accountid
-    )
-    VALUES
-    ( 
-      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
-      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-      ?, ?, ?, ?, ?
-    )
-  ";
-  $id = pmi($query,
-    array(
-      $isinvoiced, $code, $date, $supplierid, $supplierdescription, $currencyid, $currencyrate, $address, $note, $ispaid,
-      $paymentaccountid, $subtotal, $paymentamount, $paymentdate, $discount, $discountamount, $total, $taxable, $createdon, $createdby, $lastupdatedon, $freightcharge,
-      $handlingfeevolume, $handlingfeeamount, $handlingfeeaccountid, $handlingfeedate, $handlingfeepaymentamount, $refno, $eta, $term, $pph, $kso,
-      $ski, $clearance_fee, $taxamount, $taxdate, $taxaccountid, $pphdate, $pphaccountid, $ksodate, $ksoaccountid, $skidate, $skiaccountid,
-      $clearance_fee_date, $clearance_fee_accountid, $import_cost, $import_cost_date, $import_cost_accountid
-    )
-  );
-
-  try{
+    // Save to purchase order
+    $query = "
+      INSERT INTO purchaseorder
+      (
+        isinvoiced, code, `date`, supplierid, supplierdescription, currencyid, currencyrate, address, note, ispaid, 
+        paymentaccountid, subtotal, paymentamount, paymentdate, discount, discountamount, total, taxable, createdon, createdby, lastupdatedon, freightcharge, 
+        handlingfeevolume, handlingfeeamount, handlingfeeaccountid, handlingfeedate, handlingfeepaymentamount, refno, eta, term, pph, kso,
+        ski, clearance_fee, taxamount, taxdate, taxaccountid, pphdate, pphaccountid, ksodate, ksoaccountid, skidate, skiaccountid,
+        clearance_fee_date, clearance_fee_accountid, import_cost, import_cost_date, import_cost_accountid
+      )
+      VALUES
+      ( 
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?
+      )
+    ";
+    $id = pmi($query,
+      array(
+        $isinvoiced, $code, $date, $supplierid, $supplierdescription, $currencyid, $currencyrate, $address, $note, $ispaid,
+        $paymentaccountid, $subtotal, $paymentamount, $paymentdate, $discount, $discountamount, $total, $taxable, $createdon, $createdby, $lastupdatedon, $freightcharge,
+        $handlingfeevolume, $handlingfeeamount, $handlingfeeaccountid, $handlingfeedate, $handlingfeepaymentamount, $refno, $eta, $term, $pph, $kso,
+        $ski, $clearance_fee, $taxamount, $taxdate, $taxaccountid, $pphdate, $pphaccountid, $ksodate, $ksoaccountid, $skidate, $skiaccountid,
+        $clearance_fee_date, $clearance_fee_accountid, $import_cost, $import_cost_date, $import_cost_accountid
+      )
+    );
 
     // Save to purchase order inventory
     $params = array();
@@ -350,7 +346,7 @@ function purchaseorderentry($purchaseorder){
       $unittax = ov('unittax', $row);
 
       array_push($params, $id, $inventoryid, $inventorycode, $inventorydescription, $qty, $unit, $unitprice, $unitdiscount,
-          $unitdiscountamount, $unittotal, $unithandlingfee, $unittax);
+        $unitdiscountamount, $unittotal, $unithandlingfee, $unittax);
       $queries[] = "(?, ?, ?, ?, ?, ?, ?, ?, ? ,?, ?, ?)";
     }
     if(count($queries) > 0){
@@ -359,28 +355,18 @@ function purchaseorderentry($purchaseorder){
       pm($query, $params);
     }
 
-    purchaseordercalculate($id);
-
-    inventory_purchaseorderqty();
-
     userlog('purchaseorderentry', $purchaseorder, '', $_SESSION['user']['id'], $id);
 
-    fclose($fp);
-    unlink($lock_file);
+    return $id;
 
-    return array('id'=>$id);
+  });
 
-  }
-  catch(Exception $ex){
+  queue_add([
+    "purchaseordercalculate($id)",
+    "inventory_purchaseorderqty()",
+  ]);
 
-    purchaseorderremove(array('id'=>$id));
-
-    fclose($fp);
-    unlink($lock_file);
-
-    throw $ex;
-
-  }
+  return [ 'id'=>$id ];
 
 }
 function purchaseordermodify($purchaseorder){
