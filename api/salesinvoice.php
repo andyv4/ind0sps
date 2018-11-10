@@ -634,10 +634,6 @@ function salesinvoice_salesgroupentry($salesinvoiceids){
 
 function salesinvoiceentry($salesinvoice){
 
-  $lock_file = __DIR__ . '/../usr/system/salesinvoice_entry.lock';
-  $fp = fopen($lock_file, 'w+');
-  if(!flock($fp, LOCK_EX)) exc('Tidak dapat menyimpan faktur, silakan ulangi beberapa saat lagi.');
-
   $warnings = [];
   $system_salesminimummargin = systemvarget('salesminimummargin');
 
@@ -748,16 +744,18 @@ function salesinvoiceentry($salesinvoice){
   // Check if taxable invoice contains mixed product variation
   if($taxable && count(array_keys($inventory_taxable_excluded)) > 1) exc('Tidak dapat membuat faktur dari barang pajak & non pajak.');
 
-  $query = "INSERT INTO salesinvoice(`status`, isactive, code, `date`, customerid, customerdescription, address, note, pocode, creditterm, warehouseid,
-      discount, discountamount, taxable, tax_code, ispaid, paymentdate, paymentamount, paymentaccountid, salesorderid, deliverycharge, salesmanid,
-      createdon, createdby, lastupdatedon)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-  $id = pmi($query, array($status, $isactive, $code, $date, $customerid, $customerdescription, $address, $note, $pocode, $creditterm, $warehouseid,
-    $discount, $discountamount, $taxable, $tax_code, $ispaid, $paymentdate, $paymentamount, $paymentaccountid, $salesorderid, $deliverycharge,
-    $salesmanid, $createdon, $createdby, $lastupdatedon));
-
   try{
-  
+
+    pdo_begin_transaction();
+
+    $query = "INSERT INTO salesinvoice(`status`, isactive, code, `date`, customerid, customerdescription, address, note, pocode, creditterm, warehouseid,
+        discount, discountamount, taxable, tax_code, ispaid, paymentdate, paymentamount, paymentaccountid, salesorderid, deliverycharge, salesmanid,
+        createdon, createdby, lastupdatedon)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    $id = pmi($query, array($status, $isactive, $code, $date, $customerid, $customerdescription, $address, $note, $pocode, $creditterm, $warehouseid,
+      $discount, $discountamount, $taxable, $tax_code, $ispaid, $paymentdate, $paymentamount, $paymentaccountid, $salesorderid, $deliverycharge,
+      $salesmanid, $createdon, $createdby, $lastupdatedon));
+
     $params = $paramstr = array();
     for($i = 0 ; $i < count($inventories) ; $i++){
 
@@ -779,24 +777,18 @@ function salesinvoiceentry($salesinvoice){
     pm($query, $params);
 
     salesinvoicecalculate($id);
-    code_commit($code);
 
     userlog('salesinvoiceentry', $salesinvoice, '', $_SESSION['user']['id'], $id);
 
-    fclose($fp);
-    unlink($lock_file);
+    pdo_commit();
 
     $result = array('id'=>$id, 'warnings'=>$warnings);
     return $result;
 
   }
   catch(Exception $ex){
-  
-  	salesinvoiceremove(array('id'=>$id));
 
-    fclose($fp);
-    unlink($lock_file);
-
+    pdo_rollback();
     throw $ex;
   
   }
@@ -807,10 +799,6 @@ function salesinvoicemodify($salesinvoice){
   $id = ov('id', $salesinvoice, 1);
   $current = salesinvoicedetail(null, array('id'=>$id));
   if(!$current) throw new Exception("Invoice tidak ada.");
-
-  $lock_file = __DIR__ . "/../usr/system/salesinvoice_modify_$id.lock";
-  $fp = fopen($lock_file, 'w+');
-  if(!flock($fp, LOCK_EX)) exc('Tidak dapat menyimpan faktur, silakan ulangi beberapa saat lagi.');
 
   // VALIDATION
   if($current['isreconciled']) throw new Exception('Tidak dapat mengubah faktur, sudah rekonsil.'); // Check if already reconciled
@@ -974,68 +962,81 @@ function salesinvoicemodify($salesinvoice){
     $updatedrow['tax_code'] = $salesinvoice['tax_code'];
   }
 
-  if(count($updatedrow) > 0)
-    mysql_update_row('salesinvoice', $updatedrow, array('id'=>$id));
+  try{
 
-  if(isset($updatedrow['code']))
-    code_commit($updatedrow['code'], $current['code']);
+    pdo_begin_transaction();
 
-  if($inventory_modified && isset($salesinvoice['inventories']) && is_array($salesinvoice['inventories']) && count($salesinvoice['inventories']) > 0) {
+    if(count($updatedrow) > 0)
+      mysql_update_row('salesinvoice', $updatedrow, array('id'=>$id));
 
-    $inventories = $salesinvoice['inventories'];
+    if(isset($updatedrow['code']))
+      code_commit($updatedrow['code'], $current['code']);
 
-    // Group inventory by code and unitprice
-    if(systemvarget('salesinvoice_item_grouping')) {
-      $inventories = array_index($inventories, ['inventorycode', 'unitprice']);
-      $temp = [];
-      foreach ($inventories as $inventorycode => $inventorycodes) {
-        foreach ($inventorycodes as $unitprice => $inventoryunits) {
-          $qty = 0;
-          foreach ($inventoryunits as $inventoryunit)
-            $qty += $inventoryunit['qty'];
-          $inventoryunit = $inventoryunits[0];
-          $inventoryunit['qty'] = $qty;
-          $temp[] = $inventoryunit;
+    if($inventory_modified && isset($salesinvoice['inventories']) && is_array($salesinvoice['inventories']) && count($salesinvoice['inventories']) > 0) {
+
+      $inventories = $salesinvoice['inventories'];
+
+      // Group inventory by code and unitprice
+      if(systemvarget('salesinvoice_item_grouping')) {
+        $inventories = array_index($inventories, ['inventorycode', 'unitprice']);
+        $temp = [];
+        foreach ($inventories as $inventorycode => $inventorycodes) {
+          foreach ($inventorycodes as $unitprice => $inventoryunits) {
+            $qty = 0;
+            foreach ($inventoryunits as $inventoryunit)
+              $qty += $inventoryunit['qty'];
+            $inventoryunit = $inventoryunits[0];
+            $inventoryunit['qty'] = $qty;
+            $temp[] = $inventoryunit;
+          }
         }
+        $inventories = $temp;
       }
-      $inventories = $temp;
-    }
 
-    $queries = $params = $paramstr = [];
+      $queries = $params = $paramstr = [];
 
-    $queries[] = "delete from salesinvoiceinventory where salesinvoiceid = ?";
-    array_push($params, $id);
+      $queries[] = "delete from salesinvoiceinventory where salesinvoiceid = ?";
+      array_push($params, $id);
 
-    for($i = 0 ; $i < count($inventories) ; $i++){
-      $row = $inventories[$i];
-      $inventorydescription = $row['inventorydescription'];
-      $inventoryid = $row['id'];
-      $inventorycode = $row['code'];
-      $qty = $row['qty'];
-      $unit = $row['unit'];
-      $unitprice = $row['unitprice'];
-      $unittotal = $qty * $unitprice;
+      for($i = 0 ; $i < count($inventories) ; $i++){
+        $row = $inventories[$i];
+        $inventorydescription = $row['inventorydescription'];
+        $inventoryid = $row['id'];
+        $inventorycode = $row['code'];
+        $qty = $row['qty'];
+        $unit = $row['unit'];
+        $unitprice = $row['unitprice'];
+        $unittotal = $qty * $unitprice;
 
-      $paramstr[] = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-      array_push($params, $id, $inventoryid, $inventorycode, $inventorydescription, $qty, $unit, $unitprice, 0, 0, $unittotal);
-    }
-    if(count($paramstr) > 0)
-      $queries[] = "INSERT INTO salesinvoiceinventory(salesinvoiceid, inventoryid, inventorycode,
+        $paramstr[] = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        array_push($params, $id, $inventoryid, $inventorycode, $inventorydescription, $qty, $unit, $unitprice, 0, 0, $unittotal);
+      }
+      if(count($paramstr) > 0)
+        $queries[] = "INSERT INTO salesinvoiceinventory(salesinvoiceid, inventoryid, inventorycode,
         inventorydescription, qty, unit, unitprice, unitdiscount, unitdiscountamount, unittotal) VALUES " . implode(',', $paramstr);
 
-    // Apply changes to db
-    if(count($queries) > 0)
-      pm(implode(';', $queries), $params);
+      // Apply changes to db
+      if(count($queries) > 0)
+        pm(implode(';', $queries), $params);
 
-    $updatedrow['inventories'] = $salesinvoice['inventories'];
+      $updatedrow['inventories'] = $salesinvoice['inventories'];
+
+    }
+
+    salesinvoicecalculate($id, $inventory_modified);
+
+    userlog('salesinvoicemodify', $current, $updatedrow, $_SESSION['user']['id'], $id);
+
+    pdo_commit();
 
   }
-  salesinvoicecalculate($id, $inventory_modified);
+  catch(Exception $ex){
 
-  userlog('salesinvoicemodify', $current, $updatedrow, $_SESSION['user']['id'], $id);
+    pdo_rollback();
 
-  fclose($fp);
-  unlink($lock_file);
+    throw $ex;
+
+  }
 
   return array('id'=>$id);
 
@@ -1049,26 +1050,32 @@ function salesinvoiceremove($filters){
     $id = $salesinvoice['id'];
     $code = $salesinvoice['code'];
 
-    $lock_file = __DIR__ . "/../usr/system/salesinvoice_remove_$id.lock";
-    $fp = fopen($lock_file, 'w+');
-    if(!flock($fp, LOCK_EX)) exc('Tidak dapat menghapus faktur, silakan ulangi beberapa saat lagi.');
-
     if($salesinvoice['isgroup']) throw new Exception('Tidak dapat menghapus faktur ini, sudah ada grup faktur.');
     if($salesinvoice['isreconciled']) throw new Exception('Tidak dapat menghapus faktur ini, sudah rekonsil.');
     if(intval(pmc("SELECT COUNT(*) FROM salesreturninventory WHERE salesinvoiceinventoryid IN (SELECT t2.id FROM salesinvoice t1, salesinvoiceinventory t2
      WHERE t1.id = t2.salesinvoiceid AND t1.id = ?)", array($id)))) throw new Exception('Tidak dapat menghapus faktur ini, sudah ada retur.'); // Check if sales return exists
 
-    inventorybalanceremove(array('ref'=>'SI', 'refid'=>$id));
-    journalvoucherremove(array('ref'=>'SI', 'refid'=>$id));
-    pm("UPDATE salesorder SET isinvoiced = 0 WHERE `id` = ?", array($salesinvoice['salesorderid']));
-    pm("DELETE FROM salesinvoice WHERE `id` = ?", array($id));
-    code_release($code);
-    taxreservationpool_remove($salesinvoice['tax_code'], 'SI', $id);
+    try{
 
-    userlog('salesinvoiceremove', $salesinvoice, '', $_SESSION['user']['id'], $id);
+      pdo_begin_transaction();
 
-    fclose($fp);
-    unlink($lock_file);
+      inventorybalanceremove(array('ref'=>'SI', 'refid'=>$id));
+      journalvoucherremove(array('ref'=>'SI', 'refid'=>$id));
+      pm("UPDATE salesorder SET isinvoiced = 0 WHERE `id` = ?", array($salesinvoice['salesorderid']));
+      pm("DELETE FROM salesinvoice WHERE `id` = ?", array($id));
+      code_release($code);
+      taxreservationpool_remove($salesinvoice['tax_code'], 'SI', $id);
+      userlog('salesinvoiceremove', $salesinvoice, '', $_SESSION['user']['id'], $id);
+
+      pdo_commit();
+
+    }
+    catch(Exception $ex){
+
+      pdo_rollback();
+      throw $ex;
+
+    }
 
     global $_REQUIRE_WORKER; $_REQUIRE_WORKER = true;
 

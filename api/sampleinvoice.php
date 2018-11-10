@@ -72,10 +72,6 @@ function sampleinvoicedetail($columns, $filters){
 
 function sampleinvoiceentry($sampleinvoice){
 
-  $lock_file = __DIR__ . "/../usr/system/sampleinvoice_entry.lock";
-  $fp = fopen($lock_file, 'w+');
-  if(!flock($fp, LOCK_EX)) exc('Tidak dapat menyimpan, silakan ulangi beberapa saat lagi.');
-
   $code = ov('code', $sampleinvoice);
   $date = ov('date', $sampleinvoice);
   $customerdescription = ov('customerdescription', $sampleinvoice);
@@ -101,34 +97,45 @@ function sampleinvoiceentry($sampleinvoice){
     if(!$obj) throw new Exception('Barang tidak terdaftar.');
   }
 
-  $query = "INSERT INTO sampleinvoice(`date`, code, customerdescription, address, note, warehouseid, createdon, createdby,
+  try{
+
+    pdo_begin_transaction();
+
+    $query = "INSERT INTO sampleinvoice(`date`, code, customerdescription, address, note, warehouseid, createdon, createdby,
     lastupdatedon, lastupdatedby) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-  $id = pmi($query, array($date, $code, $customerdescription, $address, $note, $warehouseid, date('YmdHis'), $userid, date('YmdHis'), $userid));
+    $id = pmi($query, array($date, $code, $customerdescription, $address, $note, $warehouseid, date('YmdHis'), $userid, date('YmdHis'), $userid));
 
-  $queries = $params = array();
-  foreach($inventories as $inventory){
-    if(count($inventory) == 0) continue;
-    if(isset($inventory['qty']) && !$inventory['qty']) continue;
-    $inventoryid = $inventory['inventoryid'];
-    $qty = $inventory['qty'];
-    $unit = $inventory['unit'];
+    $queries = $params = array();
+    foreach($inventories as $inventory){
+      if(count($inventory) == 0) continue;
+      if(isset($inventory['qty']) && !$inventory['qty']) continue;
+      $inventoryid = $inventory['inventoryid'];
+      $qty = $inventory['qty'];
+      $unit = $inventory['unit'];
 
-    $obj = inventorydetail(null, array('id'=>$inventoryid));
-    $inventoryid = $obj['id'];
-    $inventorycode = $obj['code'];
-    $inventorydescription = $obj['description'];
+      $obj = inventorydetail(null, array('id'=>$inventoryid));
+      $inventoryid = $obj['id'];
+      $inventorycode = $obj['code'];
+      $inventorydescription = $obj['description'];
 
-    array_push($params, $id, $inventoryid, $inventorycode, $inventorydescription, $qty, $unit);
-    $queries[] = "(?, ?, ?, ?, ?, ?)";
+      array_push($params, $id, $inventoryid, $inventorycode, $inventorydescription, $qty, $unit);
+      $queries[] = "(?, ?, ?, ?, ?, ?)";
+    }
+    pm("INSERT INTO sampleinvoiceinventory(sampleinvoiceid, inventoryid, inventorycode, inventorydescription, qty, unit) VALUES " . implode(', ', $queries), $params);
+
+    sampleinvoicecalculate($id);
+
+    userlog('sampleinvoiceentry', $sampleinvoice, '', $_SESSION['user']['id'], $id);
+
+    pdo_commit();
+
   }
-  pm("INSERT INTO sampleinvoiceinventory(sampleinvoiceid, inventoryid, inventorycode, inventorydescription, qty, unit) VALUES " . implode(', ', $queries), $params);
+  catch(Exception $ex){
 
-  sampleinvoicecalculate($id);
+    pdo_rollback();
+    throw $ex;
 
-  userlog('sampleinvoiceentry', $sampleinvoice, '', $_SESSION['user']['id'], $id);
-
-  fclose($fp);
-  unlink($lock_file);
+  }
 
 }
 function sampleinvoicemodify($sampleinvoice){
@@ -137,10 +144,6 @@ function sampleinvoicemodify($sampleinvoice){
   $current = sampleinvoicedetail(null, array('id'=>$id));
 
   if(!$current) throw new Exception('Sample invoice tidak ada.');
-
-  $lock_file = __DIR__ . "/../usr/system/sampleinvoice_modify_" . $id . ".lock";
-  $fp = fopen($lock_file, 'w+');
-  if(!flock($fp, LOCK_EX)) exc('Tidak dapat menyimpan, silakan ulangi beberapa saat lagi.');
 
   $updatedcols = array();
 
@@ -164,61 +167,82 @@ function sampleinvoicemodify($sampleinvoice){
   if(isset($sampleinvoice['warehouseid']) && $sampleinvoice['warehouseid'] != $current['warehouseid'])
     $updatedcols['warehouseid'] = $sampleinvoice['warehouseid'];
 
-
-  if(count($updatedcols) > 0){
-    $updatedcols['lastupdatedon'] = date("YmdHis");
-    $updatedcols['lastupdatedby'] = $_SESSION['user']['id'];
-    mysql_update_row('sampleinvoice', $updatedcols, array('id'=>$id));
-  }
-
   if(isset($sampleinvoice['inventories'])){
 
     $inventories = ov('inventories', $sampleinvoice);
 
-    if(!is_array($inventories)) throw new Exception('Invalid inventories parameter, array required.');
-    if(count($inventories) == 0) throw new Exception('Barang harus diisi.');
-    for($i = 0 ; $i < count($inventories) ; $i++){
+    if (!is_array($inventories)) throw new Exception('Invalid inventories parameter, array required.');
+    if (count($inventories) == 0) throw new Exception('Barang harus diisi.');
+
+    $temp = [];
+    for ($i = 0; $i < count($inventories); $i++) {
       $inventory = $inventories[$i];
-      if(count($inventory) == 0) continue;
-      if(isset($inventory['qty']) && !$inventory['qty']) continue;
+      if (count($inventory) == 0) continue;
+      if (isset($inventory['qty']) && !$inventory['qty']) continue;
       $inventoryid = $inventory['inventoryid'];
       $qty = $inventory['qty'];
-      $obj = inventorydetail(null, array('id'=>$inventoryid));
+      $obj = inventorydetail(null, array('id' => $inventoryid));
 
-      if($qty <= 0) throw new Exception('Kts harus lebih besar dari 0.');
-      if(!$obj) throw new Exception('Barang tidak terdaftar.');
+      if ($qty <= 0) throw new Exception('Kts harus lebih besar dari 0.');
+      if (!$obj) throw new Exception('Barang tidak terdaftar.');
+
+      $inventories[$i]['inventory_code'] = $obj['code'];
+      $inventories[$i]['inventory_description'] = $obj['description'];
+
+      $temp[] = $inventories[$i];
     }
+    $inventories = $temp;
 
-    $queries = $params = array();
-    foreach($inventories as $inventory){
-      if(count($inventory) == 0) continue;
-      if(isset($inventory['qty']) && !$inventory['qty']) continue;
-      $inventoryid = $inventory['inventoryid'];
-      $qty = $inventory['qty'];
-      $unit = $inventory['unit'];
-
-      $obj = inventorydetail(null, array('id'=>$inventoryid));
-      $inventoryid = $obj['id'];
-      $inventorycode = $obj['code'];
-      $inventorydescription = $obj['description'];
-
-      array_push($params, $id, $inventoryid, $inventorycode, $inventorydescription, $qty, $unit);
-      $queries[] = "(?, ?, ?, ?, ?, ?)";
-    }
-    if(count($queries) > 0){
-      pm("DELETE FROM sampleinvoiceinventory WHERE sampleinvoiceid = ?", array($id));
-      pm("INSERT INTO sampleinvoiceinventory(sampleinvoiceid, inventoryid, inventorycode, inventorydescription, qty, unit) VALUES " . implode(', ', $queries), $params);
-    }
-
-    $updatedcols['inventories'] = $sampleinvoice['inventories'];
   }
 
-  sampleinvoicecalculate($id);
+  try{
 
-  userlog('sampleinvoicemodify', $current, $updatedcols, $_SESSION['user']['id'], $id);
+    pdo_begin_transaction();
 
-  fclose($fp);
-  unlink($lock_file);
+    if(count($updatedcols) > 0){
+      $updatedcols['lastupdatedon'] = date("YmdHis");
+      $updatedcols['lastupdatedby'] = $_SESSION['user']['id'];
+      mysql_update_row('sampleinvoice', $updatedcols, array('id'=>$id));
+    }
+
+    if(isset($sampleinvoice['inventories'])){
+
+      $queries = $params = array();
+      foreach($inventories as $inventory){
+        if(count($inventory) == 0) continue;
+        if(isset($inventory['qty']) && !$inventory['qty']) continue;
+        $inventoryid = $inventory['inventoryid'];
+        $qty = $inventory['qty'];
+        $unit = $inventory['unit'];
+        $inventorycode = $inventory['inventory_code'];
+        $inventorydescription = $inventory['inventory_description'];
+
+        array_push($params, $id, $inventoryid, $inventorycode, $inventorydescription, $qty, $unit);
+        $queries[] = "(?, ?, ?, ?, ?, ?)";
+      }
+      if(count($queries) > 0){
+        pm("DELETE FROM sampleinvoiceinventory WHERE sampleinvoiceid = ?", array($id));
+        pm("INSERT INTO sampleinvoiceinventory(sampleinvoiceid, inventoryid, inventorycode, inventorydescription, qty, unit) VALUES " . implode(', ', $queries), $params);
+      }
+
+      $updatedcols['inventories'] = $sampleinvoice['inventories'];
+
+    }
+
+    sampleinvoicecalculate($id);
+
+    userlog('sampleinvoicemodify', $current, $updatedcols, $_SESSION['user']['id'], $id);
+
+    pdo_commit();
+
+  }
+  catch(Exception $ex){
+
+    pdo_rollback();
+
+    throw $ex;
+
+  }
 
 }
 function sampleinvoiceremove($filters){
@@ -229,17 +253,25 @@ function sampleinvoiceremove($filters){
 
   $id = $sampleinvoice['id'];
 
-  $lock_file = __DIR__ . "/../usr/system/sampleinvoice_remove_" . $id . ".lock";
-  $fp = fopen($lock_file, 'w+');
-  if(!flock($fp, LOCK_EX)) exc('Tidak dapat menghapus, silakan ulangi beberapa saat lagi.');
+  try{
 
-  pm("DELETE FROM sampleinvoice WHERE `id` = ?", array($id));
-  inventorybalanceremove(array('ref'=>'SJS', 'refid'=>$id));
+    pdo_begin_transaction();
 
-  userlog('sampleinvoiceremove', $sampleinvoice, '', $_SESSION['user']['id'], $id);
+    pm("DELETE FROM sampleinvoice WHERE `id` = ?", array($id));
+    inventorybalanceremove(array('ref'=>'SJS', 'refid'=>$id));
 
-  fclose($fp);
-  unlink($lock_file);
+    userlog('sampleinvoiceremove', $sampleinvoice, '', $_SESSION['user']['id'], $id);
+
+    pdo_commit();
+
+  }
+  catch(Exception $ex){
+
+    pdo_rollback();
+
+    throw $ex;
+
+  }
 
 }
 

@@ -44,6 +44,30 @@ function pdo_transact($callable){
   return $result;
 
 }
+function pdo_begin_transaction(){
+
+  $pdo_con = pdo_con();
+  if($pdo_con->inTransaction()) throw new Exception('Unable to start transaction, other transaction exists.');
+  $pdo_con->beginTransaction();
+  return $pdo_con;
+
+}
+function pdo_commit(){
+
+  $pdo_con = pdo_con();
+  if(!$pdo_con->inTransaction()) throw new Exception('Unable to commit, no transaction exists.');
+  $pdo_con->commit();
+  return $pdo_con;
+
+}
+function pdo_rollback(){
+
+  $pdo_con = pdo_con();
+  if(!$pdo_con->inTransaction()) throw new Exception('Unable to commit, no transaction exists.');
+  $pdo_con->rollBack();
+  return $pdo_con;
+
+}
 function pdo_close(){
   global $pdo_con;
   if($pdo_con) $pdo_con = null;
