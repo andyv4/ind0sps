@@ -41,7 +41,7 @@ function ui_login($obj){
     if(!$user['multilogin']){
 
       // Auto expire session
-      session_auto_expire($user['id']);
+      session_expire($user['id']);
 
       // Check if there is another session
       $latest_session = pmr("select * from `session` where userid = ? order by starttime desc limit 1", [ $user['id'] ]);

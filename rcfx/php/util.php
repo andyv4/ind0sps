@@ -2716,6 +2716,13 @@ function applog($key, $oneliner = '', $type = LOG_INFO, $dest = null){
 
 /**
  * Queue implementation
+ * For:
+ * - purchase order save
+ * Usage:
+ *      queue_add([
+ *        [ 'purchaseinvoicecalculate', [ 1, 2, 3 ] ],
+ *        ...
+ *      ])
  * @param $arr
  */
 function queue_add($arr){

@@ -43,10 +43,17 @@ function session_isopen(){
   $uid = isset($_COOKIE['indosps_uid']) ? $_COOKIE['indosps_uid'] : null;
   if(!$uid) return false;
 
-  $session = pmr("SELECT * FROM session WHERE uid = ? AND isopen = 1", array($uid));
-  if(!$session['isopen']) return false;
+  // Retrieve open session
+  $session = pmr("SELECT * FROM `session` WHERE uid = ? AND isopen = 1", array($uid));
+
+  // Session not available
+  if(!$session) return false;
+
+  // Maximum idle time set to 2 hours (7200s)
+  if(time() - strtotime($session['lastupdatedon']) > 7200) return false;
 
   if(!isset($_SESSION['user'])){
+
     global $mysqlpdo_database;
     $userid = $session['userid'];
     $user = pmr("select `id`, userid, multilogin from user where `id` = ?", [ $userid ]);
@@ -55,6 +62,7 @@ function session_isopen(){
     $_SESSION['dbschema'] = $mysqlpdo_database;
     $_SESSION['user'] = $user;
     $_SESSION['tax_mode'] = $tax_mode ? 1 : 0;
+
   }
 
   return true;
@@ -245,7 +253,11 @@ if(empty($url)){
   if(!file_exists($url . '.php')) $url = 'salesinvoice';
 }
 if(in_array($url, array('logout'))) userkeystoreadd($_SESSION['user']['id'], 'lasturl', $url);
+
+// Update session
 pm("UPDATE `session` SET lasturl = ?, lastupdatedon = ? WHERE uid = ?", array($url, date('YmdHis'), $_COOKIE['indosps_uid']));
+
+// Update user last url
 userkeystoreadd($_SESSION['user']['id'], 'lasturl', $url);
 
 ?>

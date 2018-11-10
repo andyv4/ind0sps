@@ -13,6 +13,9 @@ require_once __DIR__ . '/../api/inventory.php';
 $queue_dir = realpath(__DIR__ . '/../queue');
 if(!file_exists($queue_dir)) die("Queue directory not exists.");
 
+$log_path = realpath(__DIR__ . '/../usr/system/queue.log');
+if(!file_exists($log_path)) file_put_contents($log_path);
+if(!is_writable($log_path)) die("Unable to write log file.");
 
 while(true){
 
@@ -22,7 +25,6 @@ while(true){
     if(is_array($files)) usort($files, "sort_file_by_time_asc");
 
     foreach($files as $file){
-
 
       $t1 = microtime(1);
       $queue = json_decode(file_get_contents($file), true);
@@ -39,10 +41,9 @@ while(true){
   }
   catch(Exception $ex){
 
+    file_put_contents($log_path, $ex->getMessage() . " on " . $ex->getFile() . ":" . $ex->getLine() . "\n", FILE_APPEND);
 
   }
-
-  break;
 
   sleep(50);
 

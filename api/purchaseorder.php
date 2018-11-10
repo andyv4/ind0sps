@@ -361,10 +361,17 @@ function purchaseorderentry($purchaseorder){
 
   });
 
+  purchaseordercalculate($id);
+  inventory_purchaseorderqty();
+
   queue_add([
+    [ 'purchaseordercalculate', [ $id ] ]
+  ]);
+
+  /*queue_add([
     "purchaseordercalculate($id)",
     "inventory_purchaseorderqty()",
-  ]);
+  ]);*/
 
   return [ 'id'=>$id ];
 
