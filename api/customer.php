@@ -487,16 +487,22 @@ function customerreceivablecalculate($customerid){
 }
 function customerreceivablecalculateall(){
 
+  $customerids = [];
+  $rows = pmrs("select `id` from customer");
+  foreach($rows as $row)
+    $customerids[] = $row['id'];
+
 	$salesinvoices = pmrs("SELECT customerid, SUM(total - paymentamount) as receivable FROM salesinvoice WHERE ispaid != 1 GROUP BY customerid");
 	if($salesinvoices){
-		$queries = array();		
-		foreach($salesinvoices as $salesinvoice){
-			$customerid = $salesinvoice['customerid'];
-			$receivable = $salesinvoice['receivable'];
-			
-			$queries[] = "UPDATE customer SET receivable = $receivable WHERE id = $customerid";
-		}
-		mysqli_exec_multiples($queries);	
+
+    $queries = [];
+    $salesinvoices = array_index($salesinvoices, [ 'customerid' ], false);
+    foreach($customerids as $customerid){
+      $receivable = isset($salesinvoices[$customerid][0]['receivable']) ? $salesinvoices[$customerid][0]['receivable'] : 0;
+      $queries[] = "UPDATE customer SET receivable = $receivable WHERE id = $customerid";
+    }
+    mysqli_exec_multiples($queries);
+
 	}
 
 }
