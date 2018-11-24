@@ -126,10 +126,6 @@ function pettycashtotal($type){
 
 function pettycashentry($pettycash){
 
-  $lock_file = __DIR__ . "/../usr/system/pettycash_entry.lock";
-  $fp = fopen($lock_file, 'w+');
-  if(!flock($fp, LOCK_EX)) exc('Tidak dapat menyimpan, silakan ulangi beberapa saat lagi.');
-
   // Extract parameters
   $code = ov('code', $pettycash);
   $description = ov('description', $pettycash);
@@ -163,6 +159,9 @@ function pettycashentry($pettycash){
   $id = pmi($query, array($status, $code, $date, $description, $creditaccountid, $createdon, $createdby));
 
   try{
+
+    pdo_begin_transaction();
+
     $paramstr = $params = array();
     for($i = 0 ; $i < count($debitaccounts) ; $i++){
       $debitaccount = $debitaccounts[$i];
@@ -182,18 +181,15 @@ function pettycashentry($pettycash){
 
     userlog('pettycashentry', $pettycash, '', $_SESSION['user']['id'], $id);
 
-    fclose($fp);
-    unlink($lock_file);
+    pdo_commit();
 
     return array('id'=>$id);
   }
   catch(Exception $ex){
-		pettycashremove(array('id'=>$id));
 
-    fclose($fp);
-    unlink($lock_file);
-
+    pdo_rollback();
     throw $ex;
+
   }
   
 }
@@ -203,10 +199,6 @@ function pettycashmodify($pettycash){
   $is_recalculate = 0;
   $current_pettycash = pettycashdetail(null, array('id'=>$id));
   if(!$current_pettycash) throw new Exception("Terjadi kesalahan, silakan mencoba kembali.");
-
-  $lock_file = __DIR__ . "/../usr/system/pettycash_modify_" . $id . ".lock";
-  $fp = fopen($lock_file, 'w+');
-  if(!flock($fp, LOCK_EX)) exc('Tidak dapat menyimpan, silakan ulangi beberapa saat lagi.');
 
   $updatedrow = array();
 
@@ -233,48 +225,59 @@ function pettycashmodify($pettycash){
     $is_recalculate = 1;
   }
 
-  if(count($updatedrow) > 0) 
-  	mysql_update_row('pettycash', $updatedrow, array('id'=>$id));
+  try{
 
-  if(isset($pettycash['debitaccounts'])){
+    pdo_begin_transaction();
 
-    if(!is_array($pettycash['debitaccounts']) || count($pettycash['debitaccounts']) == 0) throw new Exception(excmsg('pe07'));
-    for($i = 0 ; $i < count($pettycash['debitaccounts']) ; $i++){
-      $debitaccount = $pettycash['debitaccounts'][$i];
-      $debitaccountid = ov('debitaccountid', $debitaccount);
-      $debitamount = ov('amount', $debitaccount);
-      if(!$debitaccountid && !$debitamount) continue;
-      if(empty($debitaccountid)) throw new Exception(excmsg('pe08', array($i + 1)));
-      if(!chartofaccountdetail(null, array('id'=>$debitaccountid))) throw new Exception(excmsg('pe09', array($i + 1)));
-      if(!floatval($debitamount)) throw new Exception(excmsg('pe10', array($i + 1)));
+    if(count($updatedrow) > 0)
+      mysql_update_row('pettycash', $updatedrow, array('id'=>$id));
+
+    if(isset($pettycash['debitaccounts'])){
+
+      if(!is_array($pettycash['debitaccounts']) || count($pettycash['debitaccounts']) == 0) throw new Exception(excmsg('pe07'));
+      for($i = 0 ; $i < count($pettycash['debitaccounts']) ; $i++){
+        $debitaccount = $pettycash['debitaccounts'][$i];
+        $debitaccountid = ov('debitaccountid', $debitaccount);
+        $debitamount = ov('amount', $debitaccount);
+        if(!$debitaccountid && !$debitamount) continue;
+        if(empty($debitaccountid)) throw new Exception(excmsg('pe08', array($i + 1)));
+        if(!chartofaccountdetail(null, array('id'=>$debitaccountid))) throw new Exception(excmsg('pe09', array($i + 1)));
+        if(!floatval($debitamount)) throw new Exception(excmsg('pe10', array($i + 1)));
+      }
+
+      pm("DELETE FROM pettycashdebitaccount WHERE pettycashid = ?", array($id));
+
+      $paramstr = $params = array();
+      for($i = 0 ; $i < count($pettycash['debitaccounts']) ; $i++){
+        $debitaccount = $pettycash['debitaccounts'][$i];
+        $debitaccountid = $debitaccount['debitaccountid'];
+        $debitamount = $debitaccount['amount'];
+        $remark = ov('remark', $debitaccount);
+        if(!$debitaccountid && !$debitamount) continue;
+
+        $paramstr[] = "(?, ?, ?, ?)";
+        array_push($params, $id, $debitaccountid, $debitamount, $remark);
+      }
+      $query = "INSERT INTO pettycashdebitaccount(pettycashid, debitaccountid, amount, remark) VALUES " . implode(',', $paramstr);
+      pm($query, $params);
+
+      $is_recalculate = 1;
+      $updatedrow['debitaccounts'] = $pettycash['debitaccounts'];
     }
 
-    pm("DELETE FROM pettycashdebitaccount WHERE pettycashid = ?", array($id));
+    if($is_recalculate) pettycashrecalculate($id);
 
-    $paramstr = $params = array();
-    for($i = 0 ; $i < count($pettycash['debitaccounts']) ; $i++){
-      $debitaccount = $pettycash['debitaccounts'][$i];
-      $debitaccountid = $debitaccount['debitaccountid'];
-      $debitamount = $debitaccount['amount'];
-      $remark = ov('remark', $debitaccount);
-      if(!$debitaccountid && !$debitamount) continue;
+    userlog('pettycashmodify', $current_pettycash, $updatedrow, $_SESSION['user']['id'], $id);
 
-      $paramstr[] = "(?, ?, ?, ?)";
-      array_push($params, $id, $debitaccountid, $debitamount, $remark);
-    }
-    $query = "INSERT INTO pettycashdebitaccount(pettycashid, debitaccountid, amount, remark) VALUES " . implode(',', $paramstr);
-    pm($query, $params);
+    pdo_commit();
 
-    $is_recalculate = 1;
-    $updatedrow['debitaccounts'] = $pettycash['debitaccounts'];
   }
+  catch(Exception $ex){
 
-  if($is_recalculate) pettycashrecalculate($id);
+    pdo_rollback();
+    throw $ex;
 
-  userlog('pettycashmodify', $current_pettycash, $updatedrow, $_SESSION['user']['id'], $id);
-
-  fclose($fp);
-  unlink($lock_file);
+  }
 
   return array('id'=>$id);
   
@@ -287,18 +290,25 @@ function pettycashremove($filters){
 
     if(!$pettycash) exc('Kas kecil tidak terdaftar.');
 
-    $lock_file = __DIR__ . "/../usr/system/pettycash_remove_" . $id . ".lock";
-    $fp = fopen($lock_file, 'w+');
-    if(!flock($fp, LOCK_EX)) exc('Tidak dapat menghapus, silakan ulangi beberapa saat lagi.');
+    try{
 
-    journalvoucherremove(array('ref'=>'PE', 'refid'=>$id));
-    $query = "DELETE FROM pettycash WHERE `id` = ?";
-    pm($query, array($id));
+      pdo_begin_transaction();
 
-    userlog('pettycashremove', $pettycash, '', $_SESSION['user']['id'], $id);
+      journalvoucherremove(array('ref'=>'PE', 'refid'=>$id));
+      $query = "DELETE FROM pettycash WHERE `id` = ?";
+      pm($query, array($id));
 
-    fclose($fp);
-    unlink($lock_file);
+      userlog('pettycashremove', $pettycash, '', $_SESSION['user']['id'], $id);
+
+      pdo_commit();
+
+    }
+    catch(Exception $ex){
+
+      pdo_rollback();
+      throw $ex;
+
+    }
 
   }
 
