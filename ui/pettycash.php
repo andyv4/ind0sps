@@ -89,7 +89,7 @@ function ui_pettycashdetailaccount_col1($obj, $params){
 
   return ui_textbox(array(
       'name'=>'amount',
-      'width'=>'100%',
+      'class'=>'block',
       'datatype'=>'money',
       'value'=>ov('amount', $obj),
       'readonly'=>$params['readonly'],
@@ -100,7 +100,7 @@ function ui_pettycashdetailaccount_col1($obj, $params){
 
 function ui_pettycashdetailaccount_col2($obj, $params){
 
-  return ui_textbox(array('name'=>'remark', 'width'=>'100%', 'value'=>ov('remark', $obj), 'readonly'=>$params['readonly']));
+  return ui_textbox(array('name'=>'remark', 'class'=>'block', 'value'=>ov('remark', $obj), 'readonly'=>$params['readonly']));
 
 }
 

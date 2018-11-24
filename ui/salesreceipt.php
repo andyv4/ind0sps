@@ -405,10 +405,6 @@ function ui_salesreceipt_salesinvoicegroupselector_apply($salesinvoicegroupids){
 
 function ui_salesreceiptdetail_createfromgroups($salesinvoicegroupids){
 
-  if(is_debugmode()) console_warn("Begin ui_salesreceiptdetail_createfromgroups");
-  if(is_debugmode()) console_warn("Input:");
-  if(is_debugmode()) console_log($salesinvoicegroupids);
-
   // Validation
   // 1. Validate parameter
   if(gettype($salesinvoicegroupids) != 'array' || count($salesinvoicegroupids) <= 0) throw new Exception('Tidak dapat membuat kwitansi, tidak ada faktur dipilih.');
@@ -432,9 +428,6 @@ function ui_salesreceiptdetail_createfromgroups($salesinvoicegroupids){
       'address'=>ov('address', $salesinvoicegroup),
       'items'=>$salesinvoicegroups
   );
-
-  if(is_debugmode()) console_log($salesinvoicegroup);
-  if(is_debugmode()) console_log($obj);
 
   return ui_salesreceiptdetail($obj, 'write');
 
@@ -471,10 +464,9 @@ function ui_salesreceiptexport(){
   $columnquery = columnquery_from_columnaliases($columns, $salesreceipt_columnaliases);
   $wherequery = 'WHERE t1.id = t2.salesreceiptid AND t1.paymentaccountid = t3.id' . str_replace('WHERE', 'AND', wherequery_from_filters($params, $filters, $salesreceipt_columnaliases));
   $sortquery = sortquery_from_sorts($sorts, $salesreceipt_columnaliases);
-  $limitquery = limitquery_from_limitoffset($limits);
 
   $query = "SELECT 'salesreceipt' as `type`, t1.id, $columnquery FROM
-    salesreceipt t1, salesinvoicegroup t2, chartofaccount t3 $wherequery $sortquery $limitquery";
+    salesreceipt t1, salesinvoicegroup t2, chartofaccount t3 $wherequery $sortquery";
   $items = pmrs($query, $params);
 
   // Generate header

@@ -134,7 +134,7 @@ function ui_warehousetransferdetail_col1($obj, $params){
       'name'=>'qty',
       'value'=>ov('qty', $obj),
       'readonly'=>$params['readonly'],
-      'width'=>'100%',
+      'class'=>'block',
       'onchange'=>''
   ));
 
@@ -146,7 +146,7 @@ function ui_warehousetransferdetail_col2($obj, $params){
       'name'=>'remark',
       'value'=>ov('remark', $obj),
       'readonly'=>$params['readonly'],
-      'width'=>'100%',
+      'class'=>'block',
       'onchange'=>'a(value, this)'
   ));
 
