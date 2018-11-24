@@ -173,10 +173,6 @@ function salesinvoicegroup_ispaid($id, $ispaid, $paymentdate, $paymentaccountid)
 
 function salesinvoicegroupentry($salesinvoicegroup){
 
-  $lock_file = __DIR__ . "/../usr/system/salesinvoicegroup_entry.lock";
-  $fp = fopen($lock_file, 'w+');
-  if(!flock($fp, LOCK_EX)) exc('Tidak dapat menyimpan, silakan ulangi beberapa saat lagi.');
-
 	/*
 	code:string
 	date:date
@@ -250,13 +246,16 @@ function salesinvoicegroupentry($salesinvoicegroup){
   if($total <= 0) throw new Exception('Total tidak dapat berisi nilai minus.');
   if(!$paymentaccountid) $paymentaccountid = chartofaccountdetail(null, array('code'=>'000.00'))['id'];
 
- 	// Insert to salesinvoicegroup
-  $query = "INSERT INTO salesinvoicegroup(code, `date`, customerdescription, address, note, total, paymentaccountid, paymentamount, paymentdate, ispaid, isreceipt,
-    createdon, lastupdatedon, createdby) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-  $id = pmi($query, array($code, $date, $customerdescription, $address, $note, $total, $paymentaccountid, $paymentamount, $paymentdate, $ispaid, $isreceipt, $createdon,
-    $lastupdatedon, $createdby));
-
   try{
+
+    pdo_begin_transaction();
+
+    // Insert to salesinvoicegroup
+    $query = "INSERT INTO salesinvoicegroup(code, `date`, customerdescription, address, note, total, paymentaccountid, paymentamount, paymentdate, ispaid, isreceipt,
+    createdon, lastupdatedon, createdby) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    $id = pmi($query, array($code, $date, $customerdescription, $address, $note, $total, $paymentaccountid, $paymentamount, $paymentdate, $ispaid, $isreceipt, $createdon,
+      $lastupdatedon, $createdby));
+
     $queries = $params = $salesinvoices = array();
     for($i = 0 ; $i < count($items) ; $i++){
       $item = $items[$i];
@@ -281,27 +280,22 @@ function salesinvoicegroupentry($salesinvoicegroup){
     }
     pm("INSERT INTO salesinvoicegroupitem (`salesinvoicegroupid`, `type`, `typeid`) VALUES " . implode(', ', $queries), $params);
 
-    foreach($salesinvoices as $salesinvoice)
-      salesinvoicemodify($salesinvoice);
-
     userlog('salesinvoicegroupentry', $salesinvoicegroup, '', $_SESSION['user']['id'], $id);
 
-    fclose($fp);
-    unlink($lock_file);
-
-    return array('id'=>$id);
+    pdo_commit();
 
   }
   catch(Exception $ex){
 
-		salesinvoicegroupremove(array('id'=>$id));
-
-    fclose($fp);
-    unlink($lock_file);
-
+    pdo_rollback();
     throw $ex;
 
   }
+
+  foreach($salesinvoices as $salesinvoice)
+    salesinvoicemodify($salesinvoice);
+
+  return array('id'=>$id);
 
 }
 function salesinvoicegroupmodify($salesinvoicegroup){
@@ -313,10 +307,6 @@ function salesinvoicegroupmodify($salesinvoicegroup){
   // Validation
   if(isset($salesinvoicegroup['items']) && count($salesinvoicegroup['items']) == 0) throw new Exception('Faktur/retur harus diisi.');
   if(isset($salesinvoicegroup['total']) && $salesinvoicegroup['total'] <= 0) throw new Exception('Total tidak dapat berisi nilai minus.');
-
-  $lock_file = __DIR__ . "/../usr/system/salesinvoicegroup_modify_" . $id . ".lock";
-  $fp = fopen($lock_file, 'w+');
-  if(!flock($fp, LOCK_EX)) exc('Tidak dapat menyimpan, silakan ulangi beberapa saat lagi.');
 
   // Get updated cols & update database
   $updatedcols = array();
@@ -350,53 +340,67 @@ function salesinvoicegroupmodify($salesinvoicegroup){
   if(isset($salesinvoicegroup['paymentaccountid']) && $salesinvoicegroup['paymentaccountid'] != $current['paymentaccountid'])
     $updatedcols['paymentaccountid'] = $salesinvoicegroup['paymentaccountid'] ? $salesinvoicegroup['paymentaccountid'] : chartofaccountdetail(null, array('code'=>'000.00'))['id'];
 
-  if(count($updatedcols) > 0){
-    mysql_update_row('salesinvoicegroup', $updatedcols, array('id'=>$id));
-  }
+  $salesinvoices = [];
 
-  // Items update handler
-  if(isset($salesinvoicegroup['items']) && is_array($salesinvoicegroup['items'])){
+  try{
 
-    $current = salesinvoicegroupdetail(null, array('id'=>$id));
-    $items = $salesinvoicegroup['items'];
+    pdo_begin_transaction();
 
-    $queries = $params = $salesinvoices = array();
-    for($i = 0 ; $i < count($items) ; $i++){
-      $item = $items[$i];
-      $type = $item['type'];
-      $typeid = $item['typeid'];
+    if(count($updatedcols) > 0){
+      mysql_update_row('salesinvoicegroup', $updatedcols, array('id'=>$id));
+    }
 
-      $queries[] = "(?, ?, ?)";
-      array_push($params, $id, $type, $typeid);
+    // Items update handler
+    if(isset($salesinvoicegroup['items']) && is_array($salesinvoicegroup['items'])){
 
-      switch($type){
-        case 'SI':
-          $salesinvoices[] = array(
+      $current = salesinvoicegroupdetail(null, array('id'=>$id));
+      $items = $salesinvoicegroup['items'];
+
+      $queries = $params = $salesinvoices = array();
+      for($i = 0 ; $i < count($items) ; $i++){
+        $item = $items[$i];
+        $type = $item['type'];
+        $typeid = $item['typeid'];
+
+        $queries[] = "(?, ?, ?)";
+        array_push($params, $id, $type, $typeid);
+
+        switch($type){
+          case 'SI':
+            $salesinvoices[] = array(
               'id'=>$typeid,
               'isgroup'=>1,
               'salesinvoicegroupid'=>$id,
               'paymentamount'=>$item['paymentamount'],
               'paymentaccountid'=>$current['paymentaccountid'],
               'paymentdate'=>$current['paymentdate']
-          );
-          break;
+            );
+            break;
+        }
       }
+      pm("DELETE FROM salesinvoicegroupitem WHERE salesinvoicegroupid = ?", array($id));
+      pm("INSERT INTO salesinvoicegroupitem (`salesinvoicegroupid`, `type`, `typeid`) VALUES " . implode(', ', $queries), $params);
+
+      $updatedcols['items'] = $salesinvoicegroup['items'];
     }
-    pm("DELETE FROM salesinvoicegroupitem WHERE salesinvoicegroupid = ?", array($id));
-    pm("INSERT INTO salesinvoicegroupitem (`salesinvoicegroupid`, `type`, `typeid`) VALUES " . implode(', ', $queries), $params);
 
-    salesinvoice_salesinvoicegroup_clear($id);
+    userlog('salesinvoicegroupmodify', $current, $updatedcols, $_SESSION['user']['id'], $id);
 
-    foreach($salesinvoices as $salesinvoice)
-      salesinvoicemodify($salesinvoice);
+    pdo_commit();
 
-    $updatedcols['items'] = $salesinvoicegroup['items'];
+  }
+  catch(Exception $ex){
+
+    pdo_rollback();
+
+    throw $ex;
+
   }
 
-  userlog('salesinvoicegroupmodify', $current, $updatedcols, $_SESSION['user']['id'], $id);
-
-  fclose($fp);
-  unlink($lock_file);
+  // TODO: join this
+  salesinvoice_salesinvoicegroup_clear($id);
+  foreach($salesinvoices as $salesinvoice)
+    salesinvoicemodify($salesinvoice);
 
   global $_REQUIRE_WORKER;
   $_REQUIRE_WORKER = true;
@@ -406,30 +410,32 @@ function salesinvoicegroupmodify($salesinvoicegroup){
 }
 function salesinvoicegroupremove($filters){
 
-  if(is_debugmode()) console_warn("Removing salesinvoicegroup...");
-  if(is_debugmode()) console_warn("Input:");
-  if(is_debugmode()) console_log($filters);
-
   $salesinvoicegroup = salesinvoicegroupdetail(null, $filters);
 
   if(!$salesinvoicegroup) exc('Grup faktur tidak terdaftar.');
-
   $id = $salesinvoicegroup['id'];
-
   if($salesinvoicegroup['isreceipt']) throw new Exception('Tidak dapat menhapus, sudah ada kuitansi');
 
-  $lock_file = __DIR__ . "/../usr/system/salesinvoicegroup_remove_" . $id . ".lock";
-  $fp = fopen($lock_file, 'w+');
-  if(!flock($fp, LOCK_EX)) exc('Tidak dapat menghapus, silakan ulangi beberapa saat lagi.');
+  try{
 
-  pm("UPDATE salesinvoice SET isgroup = 0, salesinvoicegroupid = null WHERE salesinvoicegroupid = ?", array($id));
-  pm("UPDATE salesreturn SET isgroup = 0, salesinvoicegroupid = null WHERE salesinvoicegroupid = ?", array($id));
-  pm("DELETE FROM salesinvoicegroup WHERE `id` = ?", array($id));
+    pdo_begin_transaction();
 
-  userlog('salesinvoicegroupremove', $salesinvoicegroup, '', $_SESSION['user']['id'], $id);
+    pm("UPDATE salesinvoice SET isgroup = 0, salesinvoicegroupid = null WHERE salesinvoicegroupid = ?", array($id));
+    pm("UPDATE salesreturn SET isgroup = 0, salesinvoicegroupid = null WHERE salesinvoicegroupid = ?", array($id));
+    pm("DELETE FROM salesinvoicegroup WHERE `id` = ?", array($id));
 
-  fclose($fp);
-  unlink($lock_file);
+    userlog('salesinvoicegroupremove', $salesinvoicegroup, '', $_SESSION['user']['id'], $id);
+
+    pdo_commit();
+
+  }
+  catch(Exception $ex){
+
+    pdo_rollback();
+
+    throw $ex;
+
+  }
 
 }
 

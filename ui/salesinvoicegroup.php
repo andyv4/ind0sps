@@ -387,7 +387,7 @@ function ui_salesinvoicegroupdetail_createfrominvoices($salesinvoiceids){
 function ui_salesinvoicegroupsave($obj){
 
   isset($obj['id']) && intval($obj['id']) > 0 ? salesinvoicegroupmodify($obj) : salesinvoicegroupentry($obj);
-  return uijs("m_load();ui.modal_close(ui('.modal'));");
+  return m_load() . uijs("ui.modal_close(ui('.modal'));");
 
 }
 
