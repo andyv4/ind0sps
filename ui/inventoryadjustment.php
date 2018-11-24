@@ -96,10 +96,16 @@ function ui_inventoryadjustmentdetail_columnresize($name, $width){
 
 function ui_inventoryadjustmentdetail_col0($obj, $params){
 
+  $inventorycode = ov('inventorycode', $obj);
+  $inventorydescription = ov('inventorydescription', $obj);
+  $text = '';
+  if(strlen($inventorycode) > 0)
+    $text = $inventorycode . ' - ' . $inventorydescription;
+
   return ui_autocomplete(array(
       'name'=>'inventoryid',
       'src'=>'ui_inventoryadjustmentdetail_col0_completion',
-      'text'=>ov('inventorycode', $obj) . ' - ' . ov('inventorydescription', $obj),
+      'text'=>$text,
       'value'=>ov('inventoryid', $obj),
       'readonly'=>$params['readonly'],
       'width'=>'98%',
@@ -139,7 +145,7 @@ function ui_inventoryadjustmentdetail_col1($obj, $params){
       'name'=>'qty',
       'value'=>ov('qty', $obj),
       'readonly'=>$params['readonly'],
-      'width'=>'98%',
+      'class'=>'block',
       'onchange'=>'inventoryadjustmentdetail_rowcalculate(this)'
   ));
 
@@ -148,10 +154,10 @@ function ui_inventoryadjustmentdetail_col1($obj, $params){
 function ui_inventoryadjustmentdetail_col2($obj, $params){
 
   return ui_label(array(
-      'name'=>'unit',
-      'value'=>ov('unit', $obj),
-      'readonly'=>$params['readonly'],
-      'width'=>'98%',
+    'name'=>'unit',
+    'value'=>ov('unit', $obj),
+    'readonly'=>$params['readonly'],
+    'class'=>'block',
   ));
 
 }
@@ -162,7 +168,7 @@ function ui_inventoryadjustmentdetail_col3($obj, $params){
     'name'=>'unitprice',
     'value'=>ov('unitprice', $obj),
     'readonly'=>$params['readonly'],
-    'width'=>'98%',
+    'class'=>'block',
     'datatype'=>'money',
     'onchange'=>'inventoryadjustmentdetail_rowcalculate(this)'
   ));
@@ -172,11 +178,11 @@ function ui_inventoryadjustmentdetail_col3($obj, $params){
 function ui_inventoryadjustmentdetail_col4($obj, $params){
 
   return ui_textbox(array(
-      'name'=>'remark',
-      'value'=>ov('remark', $obj),
-      'readonly'=>$params['readonly'],
-      'width'=>'99%',
-      'onchange'=>'inventoryadjustmentdetail_rowcalculate(this)'
+    'name'=>'remark',
+    'value'=>ov('remark', $obj),
+  'readonly'=>$params['readonly'],
+  'class'=>'block',
+    'onchange'=>'inventoryadjustmentdetail_rowcalculate(this)'
   ));
 
 }

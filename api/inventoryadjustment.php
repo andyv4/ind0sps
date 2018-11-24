@@ -128,10 +128,7 @@ function inventoryadjustmententry($obj){
   if(intval(pmc("SELECT COUNT(*) FROM inventoryadjustment WHERE code = ?", array($code))) > 0) throw new Exception('Kode sudah ada.');
   if(!is_array($details) || count($details) == 0) throw new Exception('Barang harus diisi.');
   if(!isdate($date)) exc('Tanggal harus diisi.');
-
-  $lock_file = __DIR__ . "/../usr/system/inventory_adjustment.lock";
-  $fp = fopen($lock_file, 'w+');
-  if(!flock($fp, LOCK_EX)) exc('Tidak dapat menyimpan, silakan ulangi beberapa saat lagi.');
+  if(pmc("select count(*) from warehouse where `id` = ?", [ $warehouseid ]) <= 0) exc("Gudang harus diisi.");
 
   for($i = 0 ; $i < count($details) ; $i++){
     $detail = $details[$i];
@@ -157,38 +154,50 @@ function inventoryadjustmententry($obj){
     $details[$i]['remark'] = $remark;
   }
 
-  // Store to inventoryadjustment table
-  $query = "INSERT INTO inventoryadjustment(`date`, code, warehouseid, description, createdon, lastupdatedon, createdby) VALUES
+  try{
+
+    pdo_begin_transaction();
+
+    // Store to inventoryadjustment table
+    $query = "INSERT INTO inventoryadjustment(`date`, code, warehouseid, description, createdon, lastupdatedon, createdby) VALUES
     (?, ?, ?, ?, ?, ?, ?)";
-  $id = pmi($query, array($date, $code, $warehouseid, $description, $createdon, $lastupdatedon, $createdby));
+    $id = pmi($query, array($date, $code, $warehouseid, $description, $createdon, $lastupdatedon, $createdby));
 
-  // Store to inventoryadjustmentdetail table
-  $params = $paramstr = array();
-  for($i = 0 ; $i < count($details) ; $i++){
-    $detail = $details[$i];
-    $inventoryid = $detail['inventoryid'];
-    $inventorycode = $detail['inventorycode'];
-    $inventorydescription = $detail['inventorydescription'];
-    $unit = $detail['unit'];
-    $qty = $detail['qty'];
-    $unitprice = $detail['unitprice'];
-    $amount = $qty * $unitprice;
-    $remark = $detail['remark'];
-    $inventorybalances[$inventoryid] = $qty;
+    // Store to inventoryadjustmentdetail table
+    $params = $paramstr = array();
+    for($i = 0 ; $i < count($details) ; $i++){
+      $detail = $details[$i];
+      $inventoryid = $detail['inventoryid'];
+      $inventorycode = $detail['inventorycode'];
+      $inventorydescription = $detail['inventorydescription'];
+      $unit = $detail['unit'];
+      $qty = $detail['qty'];
+      $unitprice = $detail['unitprice'];
+      $amount = $qty * $unitprice;
+      $remark = $detail['remark'];
+      $inventorybalances[$inventoryid] = $qty;
 
-    $paramstr[] = "(?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    array_push($params, $id, $inventoryid, $inventorycode, $inventorydescription, $unit, $unitprice, $qty, $amount, $remark);
-  }
-  $query = "INSERT INTO inventoryadjustmentdetail(inventoryadjustmentid, inventoryid, inventorycode, inventorydescription, unit, unitprice, qty, amount, remark)
+      $paramstr[] = "(?, ?, ?, ?, ?, ?, ?, ?, ?)";
+      array_push($params, $id, $inventoryid, $inventorycode, $inventorydescription, $unit, $unitprice, $qty, $amount, $remark);
+    }
+    $query = "INSERT INTO inventoryadjustmentdetail(inventoryadjustmentid, inventoryid, inventorycode, inventorydescription, unit, unitprice, qty, amount, remark)
     VALUES " . implode(',', $paramstr);
-  pm($query, $params);
+    pm($query, $params);
+
+    userlog('inventoryadjustmententry', $obj, '', $_SESSION['user']['id'], $id);
+
+    pdo_commit();
+
+  }
+  catch(Exception $ex){
+
+    pdo_rollback();
+
+    throw $ex;
+
+  }
 
   inventoryadjustmentcalculate($id);
-
-  userlog('inventoryadjustmententry', $obj, '', $_SESSION['user']['id'], $id);
-
-  fclose($fp);
-  unlink($lock_file);
 
   return array('id'=>$id);
 
@@ -198,10 +207,6 @@ function inventoryadjustmentmodify($obj){
   $id = ov('id', $obj, 1);
   $current = inventoryadjustmentdetail(null, array('id'=>$id));
   if(!$current) throw new Exception('Tidak dapat mengubah penyesuaian ini, data tidak terdaftar.');
-
-  $lock_file = __DIR__ . "/../usr/system/inventoryadjustment_modify_" . $id . ".lock";
-  $fp = fopen($lock_file, 'w+');
-  if(!flock($fp, LOCK_EX)) exc('Tidak dapat menyimpan, silakan ulangi beberapa saat lagi.');
 
   $updatedrow = array();
   
@@ -242,42 +247,55 @@ function inventoryadjustmentmodify($obj){
 	  }  
   }
 
-  if(count($updatedrow) > 0)
-  	mysql_update_row('inventoryadjustment', $updatedrow, array('id'=>$id));
+  try{
 
-  if(isset($obj['details']) && count($obj['details']) != $current['details']){
-  
-    pm("DELETE FROM inventoryadjustmentdetail WHERE inventoryadjustmentid = ?", array($id));
-    
-    $params = $paramstr = array();
-	  for($i = 0 ; $i < count($details) ; $i++){
-	    $detail = $details[$i];
-	    $inventoryid = $detail['inventoryid'];
-	    $inventorycode = $detail['inventorycode'];
-	    $inventorydescription = $detail['inventorydescription'];
-	    $unit = $detail['unit'];
-	    $qty = $detail['qty'];
-	    $unitprice = $detail['unitprice'];
-	    $amount = $qty * $unitprice;
-	    $remark = $detail['remark'];
-	    $inventorybalances[$inventoryid] = $qty;
-	
-	    $paramstr[] = "(?, ?, ?, ?, ?, ?, ?, ?, ?)";
-	    array_push($params, $id, $inventoryid, $inventorycode, $inventorydescription, $unit, $unitprice, $qty, $amount, $remark);
-	  }
-	  $query = "INSERT INTO inventoryadjustmentdetail(inventoryadjustmentid, inventoryid, inventorycode, inventorydescription, unit, unitprice, qty, amount, remark)
+    pdo_begin_transaction();
+
+    if(count($updatedrow) > 0)
+      mysql_update_row('inventoryadjustment', $updatedrow, array('id'=>$id));
+
+    if(isset($obj['details']) && count($obj['details']) != $current['details']){
+
+      pm("DELETE FROM inventoryadjustmentdetail WHERE inventoryadjustmentid = ?", array($id));
+
+      $params = $paramstr = array();
+      for($i = 0 ; $i < count($details) ; $i++){
+        $detail = $details[$i];
+        $inventoryid = $detail['inventoryid'];
+        $inventorycode = $detail['inventorycode'];
+        $inventorydescription = $detail['inventorydescription'];
+        $unit = $detail['unit'];
+        $qty = $detail['qty'];
+        $unitprice = $detail['unitprice'];
+        $amount = $qty * $unitprice;
+        $remark = $detail['remark'];
+        $inventorybalances[$inventoryid] = $qty;
+
+        $paramstr[] = "(?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        array_push($params, $id, $inventoryid, $inventorycode, $inventorydescription, $unit, $unitprice, $qty, $amount, $remark);
+      }
+      $query = "INSERT INTO inventoryadjustmentdetail(inventoryadjustmentid, inventoryid, inventorycode, inventorydescription, unit, unitprice, qty, amount, remark)
 	    VALUES " . implode(',', $paramstr);
-	  pm($query, $params);
+      pm($query, $params);
 
-    $updatedrow['details'] = $obj['details'];
-  
+      $updatedrow['details'] = $obj['details'];
+
+      userlog('inventoryadjustmentmodify', $current, $updatedrow, $_SESSION['user']['id'], $id);
+
+    }
+
+    pdo_commit();
+
   }
+  catch(Exception $ex){
+
+    pdo_rollback();
+
+    throw $ex;
+
+  }
+
   inventoryadjustmentcalculate($id);
-
-  userlog('inventoryadjustmentmodify', $current, $updatedrow, $_SESSION['user']['id'], $id);
-
-  fclose($fp);
-  unlink($lock_file);
 
   return array('id'=>$id);
   
@@ -289,19 +307,27 @@ function inventoryadjustmentremove($filters){
     $inventoryadjustment = inventoryadjustmentdetail(null, array('id'=>$id));
     if(!$inventoryadjustment) throw new Exception('Kode tidak terdaftar.');
 
-    $lock_file = __DIR__ . "/../usr/system/inventoryadjustment_remove_" . $id . ".lock";
-    $fp = fopen($lock_file, 'w+');
-    if(!flock($fp, LOCK_EX)) exc('Tidak dapat menghapus, silakan ulangi beberapa saat lagi.');
+    try{
 
-    inventorybalanceremove(array('ref'=>'IA', 'refid'=>$id));
-    journalvoucherremove(array('ref'=>'AJ', 'refid'=>$id));
+      pdo_begin_transaction();
 
-    pm("DELETE FROM inventoryadjustment WHERE `id` = ?", array($id));
+      inventorybalanceremove(array('ref'=>'IA', 'refid'=>$id));
+      journalvoucherremove(array('ref'=>'AJ', 'refid'=>$id));
 
-    userlog('inventoryadjustmentremove', $inventoryadjustment, '', $_SESSION['user']['id'], $id);
+      pm("DELETE FROM inventoryadjustment WHERE `id` = ?", array($id));
 
-    fclose($fp);
-    unlink($lock_file);
+      userlog('inventoryadjustmentremove', $inventoryadjustment, '', $_SESSION['user']['id'], $id);
+
+      pdo_commit();
+
+    }
+    catch(Exception $ex){
+
+      pdo_rollback();
+
+      throw $ex;
+
+    }
 
   }
 
