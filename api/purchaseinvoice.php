@@ -445,7 +445,6 @@ function purchaseinvoicevalidate(&$updated, $original = null){
 
 function purchaseinvoiceentry($purchaseinvoice){
 
-  $fp = acquire_lock(__FUNCTION__);
   purchaseinvoicevalidate($purchaseinvoice);
 
   // Check if purchase order id supplied is valid
@@ -507,36 +506,41 @@ function purchaseinvoiceentry($purchaseinvoice){
     array_push($params, $id, $inventoryid, $inventorycode, $inventorydescription, $qty, $unit, $unitprice, $unitdiscount,
       $unitdiscountamount, $unittotal, $unithandlingfee, $unitcostprice, $unitcostpriceflag, $unittax);
   }
+
   try{
+
+    pdo_begin_transaction();
+
     pm("INSERT INTO purchaseinvoiceinventory(purchaseinvoiceid, inventoryid, inventorycode, inventorydescription, qty, 
       unit, unitprice, unitdiscount, unitdiscountamount, unittotal, unithandlingfee, unitcostprice, unitcostpriceflag, unittax) VALUES " . implode(', ', $values),
       $params);
+
+    // Update purchase order
+    if($purchaseinvoice['purchaseorderid'] > 0) pm("UPDATE purchaseorder SET isinvoiced = 1 WHERE `id` = ?", array($purchaseinvoice['purchaseorderid']));
+
+    // Commit current code
+    code_commit($purchaseinvoice['code']);
+
+    purchaseinvoicecalculate($id);
+
+    // Save user log
+    userlog('purchaseinvoiceentry', $purchaseinvoice, '', $_SESSION['user']['id'], $id);
+
+    pdo_commit();
+
   }
   catch(Exception $ex){
-    purchaseinvoiceremove([ 'id'=>$id ]);
+
+    pdo_rollback();
     throw $ex;
+
   }
 
-  // Update purchase order
-  if($purchaseinvoice['purchaseorderid'] > 0) pm("UPDATE purchaseorder SET isinvoiced = 1 WHERE `id` = ?", array($purchaseinvoice['purchaseorderid']));
-
-  // Commit current code
-  code_commit($purchaseinvoice['code']);
-
-  // Process inventory balance & journal
-  try{ purchaseinvoicecalculate($id); }catch(Exception $ex){ purchaseinvoiceremove([ 'id'=>$id ]); throw $ex; }
-
-  // Save user log
-  userlog('purchaseinvoiceentry', $purchaseinvoice, '', $_SESSION['user']['id'], $id);
-
   require_worker();
-
-  release_lock($fp, __FUNCTION__);
 
   return array('id'=>$id);
   
 }
-
 function purchaseinvoicemodify($purchaseinvoice){
 
   global $purchaseinvoice_columns;
@@ -579,6 +583,11 @@ function purchaseinvoicemodify($purchaseinvoice){
 
   if(isset($purchaseinvoice['ispaid']) && $purchaseinvoice['ispaid'] != $current['ispaid'])
     $updatedrows['ispaid'] = $purchaseinvoice['ispaid'];
+
+  if(isset($purchaseinvoice['subtotal']) && $purchaseinvoice['subtotal'] != $current['subtotal'])
+    $updatedrows['subtotal'] = $purchaseinvoice['subtotal'];
+  if(isset($purchaseinvoice['total']) && $purchaseinvoice['total'] != $current['total'])
+    $updatedrows['total'] = $purchaseinvoice['total'];
 
   if(isset($purchaseinvoice['paymentamount']) && $purchaseinvoice['paymentamount'] != $current['paymentamount'])
     $updatedrows['paymentamount'] = $purchaseinvoice['paymentamount'];
@@ -636,69 +645,83 @@ function purchaseinvoicemodify($purchaseinvoice){
   if(isset($purchaseinvoice['handlingfeeaccountid']) && $purchaseinvoice['handlingfeeaccountid'] != $current['handlingfeeaccountid'])
     $updatedrows['handlingfeeaccountid'] = $purchaseinvoice['handlingfeeaccountid'];
 
+  try{
 
-  if(isset($purchaseinvoice['inventories'])){
+    pdo_begin_transaction();
 
-    $inventories = $purchaseinvoice['inventories'];
-    $updatedrows['inventories'] = $inventories; // Add inventories to updated rows, always appear in log
+    if(count($updatedrows) > 0){
+      $updatedrows['lastupdatedon'] = date('YmdHis');
+      mysql_update_row('purchaseinvoice', $updatedrows, [ 'id'=>$id ]);
+    }
 
-    // Group inventory by code and unitprice
-    if(systemvarget('purchaseinvoice_item_grouping')){
-      $inventories = array_index($inventories, ['inventorycode', 'unitprice']);
-      $temp = [];
-      foreach ($inventories as $inventorycode => $inventorycodes) {
-        foreach ($inventorycodes as $unitprice => $inventoryunits) {
-          $qty = 0;
-          foreach ($inventoryunits as $inventoryunit)
-            $qty += $inventoryunit['qty'];
-          $inventoryunit = $inventoryunits[0];
-          $inventoryunit['qty'] = $qty;
-          $temp[] = $inventoryunit;
+    if(isset($purchaseinvoice['inventories'])){
+
+      $inventories = $purchaseinvoice['inventories'];
+      $updatedrows['inventories'] = $inventories; // Add inventories to updated rows, always appear in log
+
+      // Group inventory by code and unitprice
+      if(systemvarget('purchaseinvoice_item_grouping')){
+        $inventories = array_index($inventories, ['inventorycode', 'unitprice']);
+        $temp = [];
+        foreach ($inventories as $inventorycode => $inventorycodes) {
+          foreach ($inventorycodes as $unitprice => $inventoryunits) {
+            $qty = 0;
+            foreach ($inventoryunits as $inventoryunit)
+              $qty += $inventoryunit['qty'];
+            $inventoryunit = $inventoryunits[0];
+            $inventoryunit['qty'] = $qty;
+            $temp[] = $inventoryunit;
+          }
         }
+        $inventories = $temp;
       }
-      $inventories = $temp;
-    }
 
-    // Insert to database
-    $queries = $params = [];
-    $queries[] = "DELETE FROM purchaseinvoiceinventory WHERE purchaseinvoiceid = ?";
-    $params[] = $id;
-    foreach($inventories as $inventory){
+      // Insert to database
+      $queries = $params = [];
+      $queries[] = "DELETE FROM purchaseinvoiceinventory WHERE purchaseinvoiceid = ?";
+      $params[] = $id;
+      foreach($inventories as $inventory){
 
-      if(isset($inventory['__flag']) && $inventory['__flag'] == 'removed') continue; // Skip removed row
+        if(isset($inventory['__flag']) && $inventory['__flag'] == 'removed') continue; // Skip removed row
 
-      $inventoryid = $inventory['inventoryid'];
-      $inventorycode = $inventory['inventorycode'];
-      $inventorydescription = $inventory['inventorydescription'];
-      $qty = $inventory['qty'];
-      $unit = $inventory['unit'];
-      $unitprice = $inventory['unitprice'];
-      $unittotal = $inventory['unittotal'];
-      $unittax = $inventory['unittax'];
-      $unitcostprice = $inventory['unitcostprice'];
-      $unitcostpriceflag = $inventory['unitcostpriceflag'];
+        $inventoryid = $inventory['inventoryid'];
+        if(!($inventory_data = inventorydetail(null, array('id'=>$inventoryid)))) exc("Barang tidak terdaftar");
+        $inventorycode = $inventory_data['code'];
+        $inventorydescription = $inventory_data['description'];
+        $qty = $inventory['qty'];
+        $unit = $inventory['unit'];
+        $unitprice = $inventory['unitprice'];
+        $unittotal = $inventory['unittotal'];
+        $unittax = $inventory['unittax'];
+        $unitcostprice = $inventory['unitcostprice'];
+        $unitcostpriceflag = $inventory['unitcostpriceflag'];
 
-      $queries[] = "INSERT INTO purchaseinvoiceinventory(`id`, purchaseinvoiceid, inventoryid, inventorycode, inventorydescription, 
+        $queries[] = "INSERT INTO purchaseinvoiceinventory(`id`, purchaseinvoiceid, inventoryid, inventorycode, inventorydescription, 
         qty, unit, unitprice, unittotal, unitcostprice, unitcostpriceflag, unittax) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-      array_push($params, null, $id, $inventoryid, $inventorycode, $inventorydescription,
-        $qty, $unit, $unitprice, $unittotal, $unitcostprice, $unitcostpriceflag, $unittax);
+        array_push($params, null, $id, $inventoryid, $inventorycode, $inventorydescription,
+          $qty, $unit, $unitprice, $unittotal, $unitcostprice, $unitcostpriceflag, $unittax);
+
+      }
+      if(count($queries) > 0)
+        pm(implode(';', $queries), $params);
 
     }
-    if(count($queries) > 0)
-      pm(implode(';', $queries), $params);
+
+    if(isset($updatedrows['code'])) code_commit($updatedrows['code'], $current['code']);
+
+    purchaseinvoicecalculate($id);
+
+    userlog('purchaseinvoicemodify', $current, $updatedrows, $_SESSION['user']['id'], $id);
+
+    pdo_commit();
 
   }
-  
-  if(count($updatedrows) > 0){
-    $updatedrows['lastupdatedon'] = date('YmdHis');
-    mysql_update_row('purchaseinvoice', $updatedrows, [ 'id'=>$id ]);
+  catch(Exception $ex){
+
+    pdo_rollback();
+    throw $ex;
+
   }
-
-  if(isset($updatedrows['code'])) code_commit($updatedrows['code'], $current['code']);
-
-  purchaseinvoicecalculate($id);
-
-  userlog('purchaseinvoicemodify', $current, $updatedrows, $_SESSION['user']['id'], $id);
 
   require_worker();
 
@@ -713,29 +736,36 @@ function purchaseinvoiceremove($filters){
     $code = $purchaseinvoice['code'];
     $taxable = $purchaseinvoice['taxable'];
 
-    $lock_file = __DIR__ . "/../usr/system/purchaseinvoice_remove_$id.lock";
-    $fp = fopen($lock_file, 'w+');
-    if(!flock($fp, LOCK_EX)) exc('Tidak dapat hapus faktur, silakan ulangi beberapa saat lagi.');
+    try{
 
-    journalvoucherremove(array('ref'=>'PI', 'refid'=>$id));
-    inventorybalanceremove(array('ref'=>'PI', 'refid'=>$id));
+      pdo_begin_transaction();
 
-    $query = "DELETE FROM purchaseinvoice WHERE `id` = ?";
-    pm($query, array($id));
+      journalvoucherremove(array('ref'=>'PI', 'refid'=>$id));
+      inventorybalanceremove(array('ref'=>'PI', 'refid'=>$id));
 
-    if($purchaseinvoice['purchaseorderid']){
-      pm("UPDATE purchaseorder SET isinvoiced = 0 WHERE `id` = ?", array($purchaseinvoice['purchaseorderid']));
-      purchaseordercalculate($purchaseinvoice['purchaseorderid']);
+      $query = "DELETE FROM purchaseinvoice WHERE `id` = ?";
+      pm($query, array($id));
+
+      if($purchaseinvoice['purchaseorderid']){
+        pm("UPDATE purchaseorder SET isinvoiced = 0 WHERE `id` = ?", array($purchaseinvoice['purchaseorderid']));
+        purchaseordercalculate($purchaseinvoice['purchaseorderid']);
+      }
+
+      if(!$taxable) code_remove($code); // Remove reservation if sales invoice is non-taxable
+
+      userlog('purchaseinvoiceremove', $purchaseinvoice, '', $_SESSION['user']['id'], $id);
+
+      pdo_commit();
+
+    }
+    catch(Exception $ex){
+
+      pdo_rollback();
+      throw $ex;
+
     }
 
-    if(!$taxable) code_remove($code); // Remove reservation if sales invoice is non-taxable
-
-    userlog('purchaseinvoiceremove', $purchaseinvoice, '', $_SESSION['user']['id'], $id);
-
     require_worker();
-
-    fclose($fp);
-    unlink($lock_file);
 
  	}
  	else
