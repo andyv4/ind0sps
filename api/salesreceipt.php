@@ -141,10 +141,6 @@ function salesreceipt_customerhint($hint){
 
 function salesreceiptentry($salesreceipt){
 
-  $lock_file = __DIR__ . "/../usr/system/salesreceipt_entry.lock";
-  $fp = fopen($lock_file, 'w+');
-  if(!flock($fp, LOCK_EX)) exc('Tidak dapat menyimpan, silakan ulangi beberapa saat lagi.');
-
   $code = ov('code', $salesreceipt, 1);
   $date = ov('date', $salesreceipt, 1, array('type'=>'date'));
   $customerdescription = ov('customerdescription', $salesreceipt, 1);
@@ -174,25 +170,36 @@ function salesreceiptentry($salesreceipt){
   }
   if(!$paymentaccountid) $paymentaccountid = chartofaccountdetail(null, array('code'=>'000.00'))['id'];
 
-  $query = "INSERT INTO salesreceipt(code, `date`, customerdescription, address, total, ispaid, paymentaccountid, paymentamount,
+  try{
+
+    pdo_begin_transaction();
+
+    $query = "INSERT INTO salesreceipt(code, `date`, customerdescription, address, total, ispaid, paymentaccountid, paymentamount,
     paymentdate, beneficiarydetail, createdon, createdby, lastupdatedon)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-  $id = pmi($query, array($code, $date, $customerdescription, $address, $total, $ispaid, $paymentaccountid, $paymentamount,
+    $id = pmi($query, array($code, $date, $customerdescription, $address, $total, $ispaid, $paymentaccountid, $paymentamount,
       $paymentdate, $beneficiarydetail, $createdon, $createdby, $lastupdatedon));
 
-  pm("UPDATE salesinvoicegroup SET isreceipt = 1, salesreceiptid = ? WHERE `id` IN (" . implode(', ', $salesinvoicegroupids) . ")", array($id));
+    pm("UPDATE salesinvoicegroup SET isreceipt = 1, salesreceiptid = ? WHERE `id` IN (" . implode(', ', $salesinvoicegroupids) . ")", array($id));
 
-  for($i = 0 ; $i < count($items) ; $i++){
-    $item = $items[$i];
-    $salesinvoicegroupid = $item['id'];
+    for($i = 0 ; $i < count($items) ; $i++){
+      $item = $items[$i];
+      $salesinvoicegroupid = $item['id'];
 
-    salesinvoicegroup_ispaid($salesinvoicegroupid, $item['paymentamount'] > 0 ? 1 : 0, $paymentdate, $paymentaccountid);
+      salesinvoicegroup_ispaid($salesinvoicegroupid, $item['paymentamount'] > 0 ? 1 : 0, $paymentdate, $paymentaccountid);
+    }
+
+    userlog('salesreceiptentry', $salesreceipt, '', $_SESSION['user']['id'], $id);
+
+    pdo_commit();
+
   }
+  catch(Exception $ex){
 
-  userlog('salesreceiptentry', $salesreceipt, '', $_SESSION['user']['id'], $id);
+    pdo_rollback();
+    throw $ex;
 
-  fclose($fp);
-  unlink($lock_file);
+  }
 
   $result = array('id'=>$id);
   return $result;
@@ -204,10 +211,6 @@ function salesreceiptmodify($salesreceipt){
   $current = salesreceiptdetail(null, array('id'=>$id));
 
   if(!$current) exc('Kwitansi tidak terdaftar.');
-
-  $lock_file = __DIR__ . "/../usr/system/salesreceipt_modify_" . $id . ".lock";
-  $fp = fopen($lock_file, 'w+');
-  if(!flock($fp, LOCK_EX)) exc('Tidak dapat menyimpan, silakan ulangi beberapa saat lagi.');
 
   $updatedrow = array();
   if(isset($salesreceipt['date']) && strtotime($salesreceipt['date']) != strtotime($current['date'])){
@@ -228,34 +231,47 @@ function salesreceiptmodify($salesreceipt){
     $updatedrow['paymentaccountid'] = $salesreceipt['paymentaccountid'] ? $salesreceipt['paymentaccountid'] : chartofaccountdetail(null, array('code'=>'000.00'))['id'];
   if(isset($salesreceipt['beneficiarydetail']) && $current['beneficiarydetail'] != $salesreceipt['beneficiarydetail'])
     $updatedrow['beneficiarydetail'] = $salesreceipt['beneficiarydetail'];
-  if(count($updatedrow) > 0)
-    mysql_update_row('salesreceipt', $updatedrow, array('id'=>$id));
 
-  if(isset($salesreceipt['items']) && is_array($salesreceipt['items']) && count($salesreceipt['items']) > 0){
+  try{
 
-    $items = $salesreceipt['items'];
-    $current = salesreceiptdetail(null, array('id'=>$id));
-    $paymentdate = $current['paymentdate'];
-    $paymentaccountid = $current['paymentaccountid'];
+    pdo_begin_transaction();
 
-    $salesinvoicegroupids = array();
-    for($i = 0 ; $i < count($items) ; $i++){
-      $item = $items[$i];
-      $salesinvoicegroupid = $item['id'];
+    if(count($updatedrow) > 0)
+      mysql_update_row('salesreceipt', $updatedrow, array('id'=>$id));
 
-      $salesinvoicegroupids[] = $salesinvoicegroupid;
-      salesinvoicegroup_ispaid($salesinvoicegroupid, $item['paymentamount'] > 0 ? 1 : 0, $paymentdate, $paymentaccountid);
+    if(isset($salesreceipt['items']) && is_array($salesreceipt['items']) && count($salesreceipt['items']) > 0){
+
+      $items = $salesreceipt['items'];
+      $current = salesreceiptdetail(null, array('id'=>$id));
+      $paymentdate = $current['paymentdate'];
+      $paymentaccountid = $current['paymentaccountid'];
+
+      $salesinvoicegroupids = array();
+      for($i = 0 ; $i < count($items) ; $i++){
+        $item = $items[$i];
+        $salesinvoicegroupid = $item['id'];
+        $salesinvoicegroupids[] = $salesinvoicegroupid;
+        salesinvoicegroup_ispaid($salesinvoicegroupid, $item['paymentamount'] > 0 ? 1 : 0, $paymentdate, $paymentaccountid);
+      }
+      pm("UPDATE salesinvoicegroup SET isreceipt = 0, salesreceiptid = 0 WHERE salesreceiptid = ?", array($id));
+      pm("UPDATE salesinvoicegroup SET isreceipt = 1, salesreceiptid = ? WHERE `id` IN (" . implode(', ', $salesinvoicegroupids) . ")", array($id));
+
+      $updatedrow['items'] = $salesreceipt['items'];
+
     }
-    pm("UPDATE salesinvoicegroup SET isreceipt = 0, salesreceiptid = 0 WHERE salesreceiptid = ?", array($id));
-    pm("UPDATE salesinvoicegroup SET isreceipt = 1, salesreceiptid = ? WHERE `id` IN (" . implode(', ', $salesinvoicegroupids) . ")", array($id));
 
-    $updatedrow['items'] = $salesreceipt['items'];
+    userlog('salesreceiptmodify', $current, $updatedrow, $_SESSION['user']['id'], $id);
+
+    pdo_commit();
+
   }
+  catch(Exception $ex){
 
-  userlog('salesreceiptmodify', $current, $updatedrow, $_SESSION['user']['id'], $id);
+    pdo_rollback();
 
-  fclose($fp);
-  unlink($lock_file);
+    throw $ex;
+
+  }
 
   $result = array('id'=>$id);
   return $result;
@@ -267,10 +283,6 @@ function salesreceiptremove($filters){
 
   if(!$salesreceipt) exc('Kwitansi tidak terdaftar.');
 
-  $lock_file = __DIR__ . "/../usr/system/salesreceipt_remove_" . $id . ".lock";
-  $fp = fopen($lock_file, 'w+');
-  if(!flock($fp, LOCK_EX)) exc('Tidak dapat menghapus, silakan ulangi beberapa saat lagi.');
-
   $id = $salesreceipt['id'];
   $items = $salesreceipt['items'];
   $salesinvoicegroupids = array();
@@ -279,13 +291,23 @@ function salesreceiptremove($filters){
     $salesinvoicegroupids[] = $item['id'];
   }
 
-  pm("UPDATE salesinvoicegroup SET isreceipt = 0, salesreceiptid = null WHERE `id` IN (" . implode(', ', $salesinvoicegroupids) . ")");
-  pm("DELETE FROM salesreceipt WHERE `id` = ?", array($id));
+  try{
 
-  userlog('salesreceiptremove', $salesreceipt, '', $_SESSION['user']['id'], $id);
+    pdo_begin_transaction();
 
-  fclose($fp);
-  unlink($lock_file);
+    pm("UPDATE salesinvoicegroup SET isreceipt = 0, salesreceiptid = null WHERE `id` IN (" . implode(', ', $salesinvoicegroupids) . ")");
+    pm("DELETE FROM salesreceipt WHERE `id` = ?", array($id));
+    userlog('salesreceiptremove', $salesreceipt, '', $_SESSION['user']['id'], $id);
+
+    pdo_commit();
+
+  }
+  catch(Exception $ex){
+
+    pdo_rollback();
+    throw $ex;
+
+  }
 
 }
 

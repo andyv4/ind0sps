@@ -2,6 +2,7 @@
 
 $pdo_con = null;
 $pdo_logs = array();
+$pdo_transaction_counter = 0;
 
 function pdo_con($emulate_prepare = true, $forceinit = false){
   global $pdo_con, $mysqlpdo_database, $mysqlpdo_username, $mysqlpdo_password, $mysqlpdo_host;
@@ -46,13 +47,28 @@ function pdo_transact($callable){
 }
 function pdo_begin_transaction(){
 
+  global $pdo_transaction_counter;
+
   $pdo_con = pdo_con();
-  if($pdo_con->inTransaction()) throw new Exception('Unable to start transaction, other transaction exists.');
+
+  if($pdo_con->inTransaction()){
+    $pdo_transaction_counter++;
+    return;
+  }
+
   $pdo_con->beginTransaction();
+  $pdo_transaction_counter = 0;
   return $pdo_con;
 
 }
 function pdo_commit(){
+
+  global $pdo_transaction_counter;
+
+  if($pdo_transaction_counter > 0){
+    $pdo_transaction_counter--;
+    return;
+  }
 
   $pdo_con = pdo_con();
   if(!$pdo_con->inTransaction()) throw new Exception('Unable to commit, no transaction exists.');
@@ -63,7 +79,7 @@ function pdo_commit(){
 function pdo_rollback(){
 
   $pdo_con = pdo_con();
-  if(!$pdo_con->inTransaction()) throw new Exception('Unable to commit, no transaction exists.');
+  if(!$pdo_con->inTransaction()) throw new Exception('Unable to rollback, no transaction exists.');
   $pdo_con->rollBack();
   return $pdo_con;
 

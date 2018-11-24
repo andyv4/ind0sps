@@ -152,7 +152,6 @@ function salesinvoicegroup_ispaid($id, $ispaid, $paymentdate, $paymentaccountid)
 
   $current = salesinvoicegroupdetail(null, array('id'=>$id));
   $items = $current['items'];
-  if(is_debugmode()) console_log($items);
   for($i = 0 ; $i < count($items) ; $i++){
     $item = $items[$i];
     if($item['type'] == 'SI'){
