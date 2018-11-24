@@ -361,6 +361,11 @@ function purchaseorderentry($purchaseorder){
       pm($query, $params);
     }
 
+    purchaseordercalculate($id);
+    inventory_purchaseorderqty();
+
+    userlog('purchaseorderentry', $purchaseorder, '', $_SESSION['user']['id'], $id);
+
     pdo_commit();
 
   }
@@ -370,11 +375,6 @@ function purchaseorderentry($purchaseorder){
     throw $ex;
 
   }
-
-  userlog('purchaseorderentry', $purchaseorder, '', $_SESSION['user']['id'], $id);
-
-  purchaseordercalculate($id);
-  inventory_purchaseorderqty();
 
   return [ 'id'=>$id ];
 
@@ -656,6 +656,11 @@ function purchaseordermodify($purchaseorder){
       }
 
       $updatedrows['inventories'] = $purchaseorder['inventories'];
+
+      purchaseordercalculate($id);
+
+      userlog('purchaseordermodify', $current, $updatedrows, $_SESSION['user']['id'], $id);
+
     }
 
     pdo_commit();
@@ -667,10 +672,6 @@ function purchaseordermodify($purchaseorder){
     throw $ex;
 
   }
-
-  purchaseordercalculate($id);
-
-  userlog('purchaseordermodify', $current, $updatedrows, $_SESSION['user']['id'], $id);
 
   return array('id'=>$id);
 
