@@ -81,21 +81,22 @@ function sampleinvoiceentry($sampleinvoice){
   $inventories = ov('inventories', $sampleinvoice);
   $userid = $_SESSION['user']['id'];
 
-  if(pmc("SELECT COUNT(*) FROM sampleinvoice WHERE code = ?", array($code)) > 0) throw new Exception('Kode sudah ada.');
+  if(pmc("SELECT COUNT(*) FROM sampleinvoice WHERE code = ?", array($code)) > 0) exc('Kode sudah ada.');
   if(!isdate($date)) exc('Tanggal harus diisi.');
-  if(!is_array($inventories)) throw new Exception('Invalid inventories parameter, array required.');
-  if(count($inventories) == 0) throw new Exception('Barang harus diisi.');
+  if(!is_array($inventories)) exc('Invalid inventories parameter, array required.');
+  if(count($inventories) == 0) exc('Barang harus diisi.');
+  $inventory_exists = false;
   for($i = 0 ; $i < count($inventories) ; $i++){
     $inventory = $inventories[$i];
-    if(count($inventory) == 0) continue;
-    if(isset($inventory['qty']) && !$inventory['qty']) continue;
     $inventoryid = $inventory['inventoryid'];
     $qty = $inventory['qty'];
     $obj = inventorydetail(null, array('id'=>$inventoryid));
 
-    if($qty <= 0) throw new Exception('Kts harus lebih besar dari 0.');
-    if(!$obj) throw new Exception('Barang tidak terdaftar.');
+    if(!$obj) exc('Barang tidak terdaftar.');
+    if($qty <= 0) exc('Kts harus lebih besar dari 0.');
+    $inventory_exists = true;
   }
+  if(!$inventory_exists) exc("Barang harus diisi dengan benar.");
 
   try{
 
@@ -123,8 +124,6 @@ function sampleinvoiceentry($sampleinvoice){
     }
     pm("INSERT INTO sampleinvoiceinventory(sampleinvoiceid, inventoryid, inventorycode, inventorydescription, qty, unit) VALUES " . implode(', ', $queries), $params);
 
-    sampleinvoicecalculate($id);
-
     userlog('sampleinvoiceentry', $sampleinvoice, '', $_SESSION['user']['id'], $id);
 
     pdo_commit();
@@ -137,13 +136,17 @@ function sampleinvoiceentry($sampleinvoice){
 
   }
 
+  sampleinvoicecalculate($id);
+
+  return [ 'id'=>$id ];
+
 }
 function sampleinvoicemodify($sampleinvoice){
 
   $id = ov('id', $sampleinvoice);
   $current = sampleinvoicedetail(null, array('id'=>$id));
 
-  if(!$current) throw new Exception('Sample invoice tidak ada.');
+  if(!$current) exc('Sample invoice tidak ada.');
 
   $updatedcols = array();
 
@@ -171,27 +174,28 @@ function sampleinvoicemodify($sampleinvoice){
 
     $inventories = ov('inventories', $sampleinvoice);
 
-    if (!is_array($inventories)) throw new Exception('Invalid inventories parameter, array required.');
-    if (count($inventories) == 0) throw new Exception('Barang harus diisi.');
+    if (!is_array($inventories)) exc('Invalid inventories parameter, array required.');
+    if (count($inventories) == 0) exc('Barang harus diisi.');
 
     $temp = [];
+    $inventory_exists = false;
     for ($i = 0; $i < count($inventories); $i++) {
       $inventory = $inventories[$i];
-      if (count($inventory) == 0) continue;
-      if (isset($inventory['qty']) && !$inventory['qty']) continue;
       $inventoryid = $inventory['inventoryid'];
       $qty = $inventory['qty'];
       $obj = inventorydetail(null, array('id' => $inventoryid));
 
-      if ($qty <= 0) throw new Exception('Kts harus lebih besar dari 0.');
-      if (!$obj) throw new Exception('Barang tidak terdaftar.');
+      if (!$obj) exc('Barang tidak terdaftar.');
+      if ($qty <= 0) exc('Kts harus lebih besar dari 0.');
 
       $inventories[$i]['inventory_code'] = $obj['code'];
       $inventories[$i]['inventory_description'] = $obj['description'];
 
       $temp[] = $inventories[$i];
+      $inventory_exists = true;
     }
     $inventories = $temp;
+    if(!$inventory_exists) exc("Barang harus diisi dengan benar.");
 
   }
 
@@ -229,8 +233,6 @@ function sampleinvoicemodify($sampleinvoice){
 
     }
 
-    sampleinvoicecalculate($id);
-
     userlog('sampleinvoicemodify', $current, $updatedcols, $_SESSION['user']['id'], $id);
 
     pdo_commit();
@@ -243,6 +245,10 @@ function sampleinvoicemodify($sampleinvoice){
     throw $ex;
 
   }
+
+  sampleinvoicecalculate($id);
+
+  return [ 'id'=>$id ];
 
 }
 function sampleinvoiceremove($filters){
@@ -257,9 +263,9 @@ function sampleinvoiceremove($filters){
 
     pdo_begin_transaction();
 
-    pm("DELETE FROM sampleinvoice WHERE `id` = ?", array($id));
+    journalvoucherremove(array('ref'=>'SJS', 'refid'=>$id));
     inventorybalanceremove(array('ref'=>'SJS', 'refid'=>$id));
-
+    pm("DELETE FROM sampleinvoice WHERE `id` = ?", array($id));
     userlog('sampleinvoiceremove', $sampleinvoice, '', $_SESSION['user']['id'], $id);
 
     pdo_commit();

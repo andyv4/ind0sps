@@ -105,8 +105,14 @@ function ui_sampleinvoicedetail_customerchange($id){
 }
 function ui_sampleinvoicedetailcol0($obj, $params){
 
+  $inventorycode = $obj['inventorycode'];
+  $inventorydescription = $obj['inventorydescription'];
+
+  $text = '';
+  if(strlen($inventorycode) > 0)
+    $text = $inventorycode . ' - ' . $inventorydescription;
+
   $readonly = ov('readonly', $params);
-  $text = $obj['inventorycode'] . ' - ' . $obj['inventorydescription'];
   $value = $obj['inventoryid'];
   $c = ui_autocomplete(array(
       'name'=>'inventoryid',
