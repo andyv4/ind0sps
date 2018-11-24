@@ -295,7 +295,6 @@ function purchaseorderentry($purchaseorder){
   }
   $total = $subtotal - $discountamount + $freightcharge;
 
-  // Perform ACID
   try{
 
     pdo_begin_transaction();
@@ -694,8 +693,7 @@ function purchaseorderremove($filters){
       pdo_begin_transaction();
 
       journalvoucherremove(array('ref'=>'PO', 'refid'=>$id));
-      $query = "DELETE FROM purchaseorder WHERE `id` = ?";
-      pm($query, array($id));
+      pm("DELETE FROM purchaseorder WHERE `id` = ?", array($id));
       userlog('purchaseorderremove', $purchaseorder, '', $_SESSION['user']['id'], $id);
 
       pdo_commit();
