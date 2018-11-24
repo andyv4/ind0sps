@@ -113,10 +113,6 @@ function warehousetransferlist($columns = null, $sorts = null, $filters = null, 
 
 function warehousetransferentry($warehousetransfer){
 
-  $lock_file = __DIR__ . "/../usr/system/warehousetransfer_entry.lock";
-  $fp = fopen($lock_file, 'w+');
-  if(!flock($fp, LOCK_EX)) exc('Tidak dapat menyimpan, silakan ulangi beberapa saat lagi.');
-
   $date = ov('date', $warehousetransfer, 1, array('type'=>'date'));
   $code = ov('code', $warehousetransfer, 1, array('notempty'=>1));
   $description = ov('description', $warehousetransfer, 0, '');
@@ -137,7 +133,9 @@ function warehousetransferentry($warehousetransfer){
   $id = pmi($query, array($date, $code, $description, $fromwarehouseid, $towarehouseid, $createdon, $createdby));
 
   try{
-  
+
+    pdo_begin_transaction();
+
     $totalqty = 0;
     $params = $paramstr = array();
     for($i = 0 ; $i < count($inventories) ; $i++){
@@ -171,18 +169,14 @@ function warehousetransferentry($warehousetransfer){
 
     userlog('warehousetransferentry', $warehousetransfer, '', $_SESSION['user']['id'], $id);
 
-    fclose($fp);
-    unlink($lock_file);
+    pdo_commit();
 
     return array('id'=>$id);
   
   }
   catch(Exception $ex){
-   
-    warehousetransferremove(array('id'=>$id));
 
-    fclose($fp);
-    unlink($lock_file);
+    pdo_rollback();
 
     throw $ex;
   
@@ -195,10 +189,6 @@ function warehousetransfermodify($warehousetransfer){
   $current = warehousetransferdetail(null, array('id'=>$id));
 
   if(!$current) exc('Pindah gudang tidak terdaftar.');
-
-  $lock_file = __DIR__ . "/../usr/system/warehousetransfer_modify_" . $id . ".lock";
-  $fp = fopen($lock_file, 'w+');
-  if(!flock($fp, LOCK_EX)) exc('Tidak dapat menyimpan, silakan ulangi beberapa saat lagi.');
 
   $updatedrow = array();
 
@@ -233,46 +223,57 @@ function warehousetransfermodify($warehousetransfer){
     $updatedrow['towarehouseid'] = $warehousetransfer['towarehouseid'];
   }
 
-  if(count($updatedrow) > 0)
-    mysql_update_row('warehousetransfer', $updatedrow, array('id'=>$id));
+  try{
 
-  if(isset($warehousetransfer['inventories']) && is_array($warehousetransfer['inventories'])){
-    $inventories = $warehousetransfer['inventories'];
+    pdo_begin_transaction();
 
-    $params = $paramstr = array();
-    for($i = 0 ; $i < count($inventories) ; $i++){
-      $inventory = $inventories[$i];
-      $inventorycode = ov('inventorycode', $inventory);
-      $qty = ov('qty', $inventory);
-      $remark = ov('remark', $inventory);
+    if(count($updatedrow) > 0)
+      mysql_update_row('warehousetransfer', $updatedrow, array('id'=>$id));
 
-      if(empty($inventorycode) && empty($qty) && empty($remark)) continue;
-      $inventoryobj = inventorydetail(null, array('code'=>$inventorycode));
-      if(!$inventoryobj) throw new Exception("Barang tidak terdaftar. ($inventorycode)");
-      if(!intval($qty) || $qty <= 0) throw new Exception('Kuantitas harus diisi.');
+    if(isset($warehousetransfer['inventories']) && is_array($warehousetransfer['inventories'])){
+      $inventories = $warehousetransfer['inventories'];
 
-      $inventoryid = $inventoryobj['id'];
+      $params = $paramstr = array();
+      for($i = 0 ; $i < count($inventories) ; $i++){
+        $inventory = $inventories[$i];
+        $inventorycode = ov('inventorycode', $inventory);
+        $qty = ov('qty', $inventory);
+        $remark = ov('remark', $inventory);
 
-      $paramstr[] = "(?, ?, ?, ?)";
-      array_push($params, $id, $inventoryid, $qty, $remark);
-    }
+        if(empty($inventorycode) && empty($qty) && empty($remark)) continue;
+        $inventoryobj = inventorydetail(null, array('code'=>$inventorycode));
+        if(!$inventoryobj) throw new Exception("Barang tidak terdaftar. ($inventorycode)");
+        if(!intval($qty) || $qty <= 0) throw new Exception('Kuantitas harus diisi.');
 
-    pm("DELETE FROM warehousetransferinventory WHERE warehousetransferid = ?", array($id));
-    if(count($paramstr) > 0){
-      $query = "INSERT INTO warehousetransferinventory(warehousetransferid, inventoryid, qty, remark)
+        $inventoryid = $inventoryobj['id'];
+
+        $paramstr[] = "(?, ?, ?, ?)";
+        array_push($params, $id, $inventoryid, $qty, $remark);
+      }
+
+      pm("DELETE FROM warehousetransferinventory WHERE warehousetransferid = ?", array($id));
+      if(count($paramstr) > 0){
+        $query = "INSERT INTO warehousetransferinventory(warehousetransferid, inventoryid, qty, remark)
       VALUES " . implode(', ', $paramstr);
-      pm($query, $params);
+        pm($query, $params);
+      }
+
+      $updatedrow['inventories'] = $warehousetransfer['inventories'];
     }
 
-    $updatedrow['inventories'] = $warehousetransfer['inventories'];
+    warehousetransfercalculate($id);
+
+    userlog('warehousetransfermodify', $current, $updatedrow, $_SESSION['user']['id'], $id);
+
+    pdo_commit();
+
   }
+  catch(Exception $ex){
 
-  warehousetransfercalculate($id);
+    pdo_rollback();
+    throw $ex;
 
-  userlog('warehousetransfermodify', $current, $updatedrow, $_SESSION['user']['id'], $id);
-
-  fclose($fp);
-  unlink($lock_file);
+  }
 
   return array('id'=>$id);
 
@@ -285,19 +286,26 @@ function warehousetransferremove($filters){
 
 	$id = $warehousetransfer['id'];
 
-  $lock_file = __DIR__ . "/../usr/system/warehousetransfer_remove_" . $id . ".lock";
-  $fp = fopen($lock_file, 'w+');
-  if(!flock($fp, LOCK_EX)) exc('Tidak dapat menghapus, silakan ulangi beberapa saat lagi.');
+  try{
 
-  inventorybalanceremove(array('ref'=>'WT', 'refid'=>$filters['id']));
+    pdo_begin_transaction();
 
-  $query = "DELETE FROM warehousetransfer WHERE `id` = ?";
-  pm($query, array($filters['id']));
+    inventorybalanceremove(array('ref'=>'WT', 'refid'=>$filters['id']));
 
-  userlog('warehousetransferremove', $warehousetransfer, '', $_SESSION['user']['id'], $id);
+    $query = "DELETE FROM warehousetransfer WHERE `id` = ?";
+    pm($query, array($filters['id']));
 
-  fclose($fp);
-  unlink($lock_file);
+    userlog('warehousetransferremove', $warehousetransfer, '', $_SESSION['user']['id'], $id);
+
+    pdo_commit();
+
+  }
+  catch(Exception $ex){
+
+    pdo_rollback();
+    throw $ex;
+
+  }
 
 }
 
