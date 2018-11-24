@@ -776,14 +776,9 @@ function salesinvoiceentry($salesinvoice){
       inventorydescription, qty, unit, unitprice, unitdiscount, unitdiscountamount, unittotal) VALUES " . implode(',', $paramstr);
     pm($query, $params);
 
-    salesinvoicecalculate($id);
-
     userlog('salesinvoiceentry', $salesinvoice, '', $_SESSION['user']['id'], $id);
 
     pdo_commit();
-
-    $result = array('id'=>$id, 'warnings'=>$warnings);
-    return $result;
 
   }
   catch(Exception $ex){
@@ -792,6 +787,11 @@ function salesinvoiceentry($salesinvoice){
     throw $ex;
   
   }
+
+  salesinvoicecalculate($id);
+
+  $result = array('id'=>$id, 'warnings'=>$warnings);
+  return $result;
 
 }
 function salesinvoicemodify($salesinvoice){
@@ -1023,8 +1023,6 @@ function salesinvoicemodify($salesinvoice){
 
     }
 
-    salesinvoicecalculate($id, $inventory_modified);
-
     userlog('salesinvoicemodify', $current, $updatedrow, $_SESSION['user']['id'], $id);
 
     pdo_commit();
@@ -1037,6 +1035,8 @@ function salesinvoicemodify($salesinvoice){
     throw $ex;
 
   }
+
+  salesinvoicecalculate($id, $inventory_modified);
 
   return array('id'=>$id);
 
