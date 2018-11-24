@@ -124,6 +124,8 @@ function sampleinvoiceentry($sampleinvoice){
     }
     pm("INSERT INTO sampleinvoiceinventory(sampleinvoiceid, inventoryid, inventorycode, inventorydescription, qty, unit) VALUES " . implode(', ', $queries), $params);
 
+    sampleinvoicecalculate($id);
+
     userlog('sampleinvoiceentry', $sampleinvoice, '', $_SESSION['user']['id'], $id);
 
     pdo_commit();
@@ -135,8 +137,6 @@ function sampleinvoiceentry($sampleinvoice){
     throw $ex;
 
   }
-
-  sampleinvoicecalculate($id);
 
   return [ 'id'=>$id ];
 
@@ -233,6 +233,8 @@ function sampleinvoicemodify($sampleinvoice){
 
     }
 
+    sampleinvoicecalculate($id);
+
     userlog('sampleinvoicemodify', $current, $updatedcols, $_SESSION['user']['id'], $id);
 
     pdo_commit();
@@ -245,8 +247,6 @@ function sampleinvoicemodify($sampleinvoice){
     throw $ex;
 
   }
-
-  sampleinvoicecalculate($id);
 
   return [ 'id'=>$id ];
 
