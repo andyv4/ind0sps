@@ -279,6 +279,9 @@ function salesinvoicegroupentry($salesinvoicegroup){
     }
     pm("INSERT INTO salesinvoicegroupitem (`salesinvoicegroupid`, `type`, `typeid`) VALUES " . implode(', ', $queries), $params);
 
+    foreach($salesinvoices as $salesinvoice)
+      salesinvoicemodify($salesinvoice);
+
     userlog('salesinvoicegroupentry', $salesinvoicegroup, '', $_SESSION['user']['id'], $id);
 
     pdo_commit();
@@ -290,9 +293,6 @@ function salesinvoicegroupentry($salesinvoicegroup){
     throw $ex;
 
   }
-
-  foreach($salesinvoices as $salesinvoice)
-    salesinvoicemodify($salesinvoice);
 
   return array('id'=>$id);
 
@@ -383,6 +383,10 @@ function salesinvoicegroupmodify($salesinvoicegroup){
       $updatedcols['items'] = $salesinvoicegroup['items'];
     }
 
+    salesinvoice_salesinvoicegroup_clear($id);
+    foreach($salesinvoices as $salesinvoice)
+      salesinvoicemodify($salesinvoice);
+
     userlog('salesinvoicegroupmodify', $current, $updatedcols, $_SESSION['user']['id'], $id);
 
     pdo_commit();
@@ -395,11 +399,6 @@ function salesinvoicegroupmodify($salesinvoicegroup){
     throw $ex;
 
   }
-
-  // TODO: join this
-  salesinvoice_salesinvoicegroup_clear($id);
-  foreach($salesinvoices as $salesinvoice)
-    salesinvoicemodify($salesinvoice);
 
   global $_REQUIRE_WORKER;
   $_REQUIRE_WORKER = true;
