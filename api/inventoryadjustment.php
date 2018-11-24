@@ -184,6 +184,8 @@ function inventoryadjustmententry($obj){
     VALUES " . implode(',', $paramstr);
     pm($query, $params);
 
+    inventoryadjustmentcalculate($id);
+
     userlog('inventoryadjustmententry', $obj, '', $_SESSION['user']['id'], $id);
 
     pdo_commit();
@@ -196,8 +198,6 @@ function inventoryadjustmententry($obj){
     throw $ex;
 
   }
-
-  inventoryadjustmentcalculate($id);
 
   return array('id'=>$id);
 
@@ -280,6 +280,8 @@ function inventoryadjustmentmodify($obj){
 
       $updatedrow['details'] = $obj['details'];
 
+      inventoryadjustmentcalculate($id);
+
       userlog('inventoryadjustmentmodify', $current, $updatedrow, $_SESSION['user']['id'], $id);
 
     }
@@ -294,8 +296,6 @@ function inventoryadjustmentmodify($obj){
     throw $ex;
 
   }
-
-  inventoryadjustmentcalculate($id);
 
   return array('id'=>$id);
   
