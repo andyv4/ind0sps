@@ -246,7 +246,7 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
     $detailcolumns[4]['readonly'] = 1;
     $controls['items']['columns'] = $detailcolumns;
 
-    if($purchaseorder['ispaid']){
+    if($purchaseorder['paymentamount'] > 0){
 
       $controls['currencyid']['readonly'] = 1;
       $controls['currencyrate']['readonly'] = 1;
