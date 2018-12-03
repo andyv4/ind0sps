@@ -1,30 +1,49 @@
 <?php
 
-$companyname = systemvarget('companyname');
-$logo = systemvarget('logo');
-$addressline1 = systemvarget('addressline1');
-$addressline2 = systemvarget('addressline2');
-$addressline3 = systemvarget('addressline3');
-$addressline4 = systemvarget('addressline4');
+$customerid = $salesinvoicegroup['customerid'];
+$customer = customerdetail(null, [ 'id'=>$customerid ]);
+
+$taxable = false;
+$salesinvoices = $salesinvoicegroup['items'];
+foreach($salesinvoices as $item){
+  $type = ov('type', $item, 1);
+  $typeid = ov('typeid', $item);
+  $salesinvoice = pmr("SELECT customerid, customerdescription, taxable FROM salesinvoice WHERE `id` = ?", [ $typeid ]);
+  if(!$salesinvoice) throw new Exception('Faktur yang dimasukkan salah.');
+
+  if($salesinvoice['taxable']) $taxable = true;
+}
+
+if($customer['override_sales']){
+  $logo = '';
+  $companyname = $customer['sales_companyname'];
+  $addressline1 = $customer['sales_addressline1'];
+  $addressline2 = $customer['sales_addressline2'];
+  $addressline3 = $customer['sales_addressline3'];
+}
+else if($taxable){
+  $logo = systemvarget('logo');
+  $companyname = systemvarget('companyname');
+  $addressline1 = systemvarget('addressline1');
+  $addressline2 = systemvarget('addressline2');
+  $addressline3 = systemvarget('addressline3');
+}
+else{
+  $logo = '';
+  $companyname = systemvarget('companyname');
+  $companyname = systemvarget('companyname_nontax', $companyname);
+  $addressline1 = systemvarget('salesinvoice_nontax_addressline1');
+  $addressline2 = systemvarget('salesinvoice_nontax_addressline2');
+  $addressline3 = systemvarget('salesinvoice_nontax_addressline3');
+}
 
 $printermargin = systemvarget('printermargin');
 $width = 210 - ($printermargin * 2);
 $height = 297 - ($printermargin * 2);
 $itemflexwidth = $width - (10 + 36 + 40);
 
-console_warn('[1]');
-console_log($salesinvoicegroup);
-
 $rowsperpage = 40;
 $salesinvoices = $salesinvoicegroup['items'];
-
-/*
-$arr = array();
-for($i = 0 ; $i < 31 ; $i++){
-  $arr[] = $salesinvoices[0];
-}
-$salesinvoices = $arr;
-*/
 
 $pages = $totalpages = ceil(count($salesinvoices) / $rowsperpage);
 if($page > 0){ $page = $page - 1; $pages = $page + 1; }
@@ -36,7 +55,9 @@ else $page = 0;
 
     <table cellspacing="0" cellpadding="0" style="position: absolute;left:0mm;top:0mm">
       <tr>
+        <?php if($logo && file_exists(base_path() . '/' . $logo)){ ?>
         <td rowspan="5" width="60mm" style="vertical-align: top"><img width="60mm" height="60mm" src="<?=$logo?>"/></td>
+        <?php } ?>
         <td>&nbsp;</td>
         <td width="100%" style="white-space: nowrap"><h1 style="white-space: nowrap"><?=$companyname?></h1></td>
       </tr>

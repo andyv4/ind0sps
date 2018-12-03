@@ -2,13 +2,37 @@
 $salesreceipt = salesreceiptdetail(null, array('id'=>$id));
 $items = $salesreceipt['items'];
 
-$companyname = systemvarget('companyname');
-$logo = systemvarget('logo');
-$addressline1 = systemvarget('addressline1');
-$addressline2 = systemvarget('addressline2');
-$addressline3 = systemvarget('addressline3');
-$addressline4 = systemvarget('addressline4');
-//$beneficiarydetail = systemvarget('beneficiarydetail');
+$customerid = $salesreceipt['customerid'];
+$customer = customerdetail(null, [ 'id'=>$customerid ]);
+
+$taxable = pmc("select count(*) from salesinvoice where `id` in (
+  select t1.typeid from salesinvoicegroupitem t1, salesinvoicegroup t2 where t1.type = 'SI'
+  and t1.salesinvoicegroupid = t2.id and salesreceiptid = ?
+  ) and taxable = 1", [ $salesreceipt['id'] ]) > 0 ? true : false;
+
+if($customer['override_sales']){
+  $logo = '';
+  $companyname = $customer['sales_companyname'];
+  $addressline1 = $customer['sales_addressline1'];
+  $addressline2 = $customer['sales_addressline2'];
+  $addressline3 = $customer['sales_addressline3'];
+}
+else if($taxable){
+  $logo = systemvarget('logo');
+  $companyname = systemvarget('companyname');
+  $addressline1 = systemvarget('addressline1');
+  $addressline2 = systemvarget('addressline2');
+  $addressline3 = systemvarget('addressline3');
+}
+else{
+  $logo = '';
+  $companyname = systemvarget('companyname');
+  $companyname = systemvarget('companyname_nontax', $companyname);
+  $addressline1 = systemvarget('salesinvoice_nontax_addressline1');
+  $addressline2 = systemvarget('salesinvoice_nontax_addressline2');
+  $addressline3 = systemvarget('salesinvoice_nontax_addressline3');
+}
+
 $beneficiarydetail = $salesreceipt['beneficiarydetail'];
 
 $printermargin = systemvarget('printermargin');
@@ -80,7 +104,9 @@ $invoicefontsize = count($items) >= 20 ? 'font6pt' : (count($items) >= 10 ? 'fon
 
   <table cellspacing="0" cellpadding="0" style="position: absolute;left:0mm;top:0mm">
     <tr>
+      <?php if($logo && file_exists(base_path() . '/' . $logo)){ ?>
       <td rowspan="5" width="60mm" style="vertical-align: top"><img width="60mm" height="60mm" src="<?=$logo?>"/></td>
+      <?php } ?>
       <td>&nbsp;</td>
       <td width="100%" style="white-space: nowrap"><h1 style="white-space: nowrap"><?=$companyname?></h1></td>
     </tr>

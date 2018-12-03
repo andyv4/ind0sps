@@ -71,16 +71,16 @@ function pdo_commit(){
   }
 
   $pdo_con = pdo_con();
-  if(!$pdo_con->inTransaction()) throw new Exception('Unable to commit, no transaction exists.');
-  $pdo_con->commit();
+  if($pdo_con->inTransaction())
+    $pdo_con->commit();
   return $pdo_con;
 
 }
 function pdo_rollback(){
 
   $pdo_con = pdo_con();
-  if(!$pdo_con->inTransaction()) throw new Exception('Unable to rollback, no transaction exists.');
-  $pdo_con->rollBack();
+  if($pdo_con->inTransaction())
+    $pdo_con->rollBack();
   return $pdo_con;
 
 }
