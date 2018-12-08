@@ -425,10 +425,11 @@ function mysql_get_row($name, $filters, $columns, $properties = null, $flag = 0)
     global $mysqlpdo_database;
     $database = isset($properties['database']) ? $properties['database'] : $mysqlpdo_database;
     $columnqueries = array();
-    if($columns == null){
+    if($columns == null || $columns == '*'){
       $columnqueries[] = '*';
     }
     else{
+      if(!is_array($columns)) exc("Invalid columns parameter. " . json_encode([ $name, $filters, $columns ]));
       for($i = 0 ; $i < count($columns) ; $i++){
         if($columns[$i] == '*'){ $columnqueries[] = '*'; break; }
         else

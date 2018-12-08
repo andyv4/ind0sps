@@ -607,6 +607,20 @@ function ui_purchaseorderdetail_journal($id){
     [ 'type'=>')' ],
     [ 'type'=>')' ],
   ]);
+
+  $piid = pmc("select `id` from purchaseinvoice where purchaseorderid = ?", [ $id ]);
+  if($piid > 0){
+    $pi_jv = journalvoucherlist('*', null, [
+      [ 'type'=>'(' ],
+      [ 'type'=>'(' ],
+      [ 'name'=>'ref', 'operator'=>'=', 'value'=>'PI' ],
+      [ 'name'=>'refid', 'operator'=>'=', 'value'=>$piid ],
+      [ 'type'=>')' ],
+      [ 'type'=>')' ],
+    ]);
+    $jv = array_merge($jv, $pi_jv);
+  }
+
   if(!$jv) exc("ERROR: Tidak ada jurnal untuk pesanan ini.");
 
   $columns = [

@@ -417,5 +417,7 @@ function grid_moveoption($obj){
 
 $deletable = privilege_get('salesinvoice', 'delete');
 include 'rcfx/dashboard1.php';
+$logo = systemvarget('logo');
 ?>
 <script type="text/javascript" src="rcfx/js/salesinvoice.js"></script>
+<img src="<?=$logo?>" style="display:none" />

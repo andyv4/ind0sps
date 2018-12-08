@@ -90,12 +90,12 @@ $page = ceil(count($inventories) / $row_per_page);
       <tr>
         <th width="15mm" style="text-align: right;white-space: nowrap">Supplier</th>
         <td>&nbsp;:&nbsp;</td>
-        <td><?=$supplierdescription?></td>
+        <td style="white-space:nowrap;text-overflow:ellipsis;overflow:hidden;font-size:8pt"><?=$supplierdescription?></td>
       </tr>
       <tr>
         <th width="15mm" style="text-align: right;white-space: nowrap"></th>
         <td>&nbsp;&nbsp;</td>
-        <td>
+        <td style="font-size:8pt">
           <?=$address?>
         </td>
       </tr>

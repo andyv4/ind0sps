@@ -96,7 +96,7 @@ function datasource($columns = null, $sorts = null, $filters = null, $limits = n
     'paymentaccountid'=>'t1.paymentaccountid',
     'paymentaccountname'=>'(select `name` from chartofaccount where `id` = t1.paymentaccountid)',
     'paymentaccountdate'=>'t1.paymentaccountdate',
-    'paymentaccountamount'=>'t1.paymentaccountamount',
+    'paymentamount'=>'t1.paymentamount',
     'note'=>'t1.note',
     'inventorycode'=>'t2.inventorycode',
     'inventorydescription'=>'t2.inventorydescription',
@@ -265,5 +265,9 @@ function grid_journaloption($obj){
 
 $deletable = privilege_get('purchaseorder', 'delete');
 include 'rcfx/dashboard1.php';
+
+
+$logo = systemvarget('logo');
 ?>
 <script type="text/javascript" src="rcfx/js/purchaseorder.js"></script>
+<img src="<?=$logo?>" style="display:none" />

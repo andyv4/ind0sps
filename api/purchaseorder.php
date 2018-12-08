@@ -941,4 +941,42 @@ function purchaseordercalculate($id){
 
 }
 
+function purchaseorder_check_journal($fix = false, $callback = null){
+
+  // Check purchase order already paid and already invoiced
+  $chartofaccountid = 18;
+  $offset = 0;
+  $limit = 1000;
+  $total_amount_restored = 0;
+  do{
+
+    $rows = pmrs("select `id` from purchaseorder where ispaid = 1 and isinvoiced = 1 limit $limit offset $offset");
+
+    foreach($rows as $row){
+
+      // Check if down payment already credited
+      $piid = pmc("select `id` from purchaseinvoice where purchaseorderid = ?", [ $row['id'] ]);
+      $amount = pmc("select sum(debit - credit) from journalvoucher t1, journalvoucherdetail t2
+        where t1.id = t2.jvid and ((t1.ref = 'PO' and t1.refid = ?) or (t1.ref = 'PI' and t1.refid = ?))
+        and t2.coaid = ?", [ $row['id'], $piid, $chartofaccountid ]);
+      if($amount > 0){
+        if($fix) purchaseinvoicecalculate($piid);
+        if(is_callable($callback))
+          call_user_func_array($callback, [ $row['id'] . ' ' . number_format($amount) ]);
+        $total_amount_restored += $amount;
+      }
+
+    }
+
+    $offset += $limit;
+
+  }
+  while($rows != null);
+  chartofaccountrecalculate($chartofaccountid);
+  if(is_callable($callback))
+    call_user_func_array($callback, [ "Total amount restored " . number_format($total_amount_restored) ]);
+
+
+}
+
 ?>

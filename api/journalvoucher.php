@@ -132,7 +132,7 @@ function journalvoucherentries($journalvouchers, $options = null){
   for($i = 0 ; $i < count($journalvouchers) ; $i++){
 
     $journalvoucher = $journalvouchers[$i];
-    $date = ov('date', $journalvoucher, 1, array('type'=>'date'));
+    $date = ov('date', $journalvoucher);
     $description = ov('description', $journalvoucher, 1, array('notempty'=>1));
     $ref = ov('ref', $journalvoucher, 0, 'JV');
     $refid = ov('refid', $journalvoucher, 0, 0);
@@ -140,6 +140,8 @@ function journalvoucherentries($journalvouchers, $options = null){
     $type = ov('type', $journalvoucher, 0, 'M');
     $createdon = date('YmdHis');
     $createdby = isset($journalvoucher['createdby']) ? $journalvoucher['createdby'] : (isset($_SESSION['user']['id']) ? $_SESSION['user']['id'] : 0);
+
+    if(!isdate($date)) continue;
 
     // ------------------
     // Validation - Default is omitted, only run when options.dovalidation is set to true

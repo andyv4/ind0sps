@@ -352,7 +352,7 @@ function ov($name, $obj, $required = false, $param1 = ''){
           else
             throw new Exception(ucwords($name) . ' salah.');
         case 'date':
-          if(!isdate($obj[$name])) throw new Exception(ucwords($name) . ' salah.');
+          if(!isdate($obj[$name])) throw new Exception('Parameter ' . $name . ' salah. ' . $obj[$name]);
           $obj[$name] = date('Ymd', strtotime($obj[$name]));
           break;
         case 'decimal':
