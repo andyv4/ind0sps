@@ -334,6 +334,7 @@ function ui_salesinvoiceexport(){
   $preset = $module['presets'][$module['presetidx']];
   $columns = $preset['columns'];
   $sorts = $preset['sorts'];
+  $groups = $preset['groups'];
   $quickfilters = ov('quickfilters', $preset);
   $filters = $preset['filters'];
   $filters = m_quickfilter_to_filters($filters, $quickfilters);
@@ -343,7 +344,15 @@ function ui_salesinvoiceexport(){
     $columns['totalcostprice'] = 't2.totalcostprice';
   }
 
-  $items = datasource($columns, $sorts, $filters, null);
+  if(is_array($groups) && count($groups) > 0){
+
+    $items = datasource_group($columns, $sorts, $filters, $groups);
+  }
+
+  // Normal grid
+  else{
+    $items = datasource($columns, $sorts, $filters, null, $groups);
+  }
 
   // Generate header
   $item = $items[0];

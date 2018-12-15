@@ -1621,6 +1621,72 @@ function ui_groupgridhead($params){
   return $c;
 }
 
+function datasource_group($columns, $sorts, $filters, $groups, $depth = 0){
+
+  if(count($groups) < 1) return [];
+
+  $items = [];
+  $data = datasource($columns, $sorts, $filters, null, $groups);
+
+  $spliced_groups = array_splice($groups, 0, 1);
+  $group = isset($spliced_groups[0]) ? $spliced_groups[0] : [];
+  foreach($data as $index=>$obj){
+
+    $items[] = $obj;
+
+    // Check next depth
+    if(count($groups) > 0){
+
+      $sub_filters = [];
+      foreach($filters as $filter)
+        $sub_filters[] = $filter;
+
+      $group_aggregrate = $group['aggregrate'];
+
+      $group_name_key = '';
+      foreach($group['columns'] as $index=>$group_column)
+        if($group_column['name'] == $group['name']){
+          $group_name_key = 'col-' . $index;
+          break;
+        }
+
+      switch($group_aggregrate){
+        case 'monthly':
+          $sub_filter = [
+            'name'=>"DATE_FORMAT(" . $group['name'] . ", '%b %Y')",
+            'operator' => '=',
+            'value' => date('M Y', strtotime($obj[$group_name_key]))
+          ];
+          break;
+        case 'yearly':
+          if(strlen($obj[$group_name_key]) == 4) $obj[$group_name_key] .= '0101';
+          $sub_filters[] = [
+            'name' => "DATE_FORMAT(" . $group['name'] . ", '%Y')",
+            'operator' => '=',
+            'value' => date('Y', strtotime($obj[$group_name_key]))
+          ];
+          break;
+        default:
+          $sub_filters[] = [
+            'name' => $group['name'],
+            'operator' => '=',
+            'value' => $obj[$group_name_key]
+          ];
+          break;
+      }
+      $sub_filters[] = $sub_filter;
+
+      $sub_items = datasource_group($columns, $sorts, $sub_filters, $groups, $depth + 1);
+      $items = array_merge($items, $sub_items);
+
+    }
+
+  }
+
+  return $items;
+
+}
+
 $ui_groupgrid_caches = [];
 function ui_groupgrid($params){
 

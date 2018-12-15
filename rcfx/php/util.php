@@ -1964,24 +1964,27 @@ function array_replace_rows_with_arrayobject($arr, $arrobj, $key){
 
 function terbilang($x)
 {
+  return terbilang_recurs($x) . ' rupiah';
+}
+function terbilang_recurs($x){
 
   $abil = array("", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan", "sepuluh", "sebelas");
   if ($x < 12)
     return " " . $abil[$x];
   elseif ($x < 20)
-    return Terbilang($x - 10) . "belas";
+    return terbilang_recurs($x - 10) . "belas";
   elseif ($x < 100)
-    return Terbilang($x / 10) . " puluh" . Terbilang($x % 10);
+    return terbilang_recurs($x / 10) . " puluh" . terbilang_recurs($x % 10);
   elseif ($x < 200)
     return " seratus" . Terbilang($x - 100);
   elseif ($x < 1000)
-    return Terbilang($x / 100) . " ratus" . Terbilang($x % 100);
+    return terbilang_recurs($x / 100) . " ratus" . terbilang_recurs($x % 100);
   elseif ($x < 2000)
     return " seribu" . Terbilang($x - 1000);
   elseif ($x < 1000000)
-    return Terbilang($x / 1000) . " ribu" . Terbilang($x % 1000);
+    return terbilang_recurs($x / 1000) . " ribu" . terbilang_recurs($x % 1000);
   elseif ($x < 1000000000)
-    return Terbilang($x / 1000000) . " juta" . Terbilang($x % 1000000);
+    return terbilang_recurs($x / 1000000) . " juta" . terbilang_recurs($x % 1000000);
 }
 
 function datadef_validation($obj, $def, $parent = ''){

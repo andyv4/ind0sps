@@ -1043,10 +1043,8 @@ function purchaseinvoicecalculate($id){
 
   }
 
-
-  //exc($journalvouchers);
+  journalvoucherremove(array('ref'=>'PI', 'refid'=>$id));
   if(count($journalvouchers) > 0){
-    journalvoucherremove(array('ref'=>'PI', 'refid'=>$id));
     journalvoucherentries($journalvouchers);
   }
 

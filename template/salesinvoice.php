@@ -11,7 +11,7 @@ $row0col1left = $row0col0width;
 $row0col2left = $row0col0width + $row0col1width + 5; // was 20
 $row0height = 20;
 
-$row1height = 60;
+$row1height = 52;
 $row1width = $contentwidth;
 $row1top = $row0height + 2;
 $row1col2width = $contentwidth - (8 + 18 + 14 + 14 + 20 + 20);
@@ -69,7 +69,14 @@ $note = $salesinvoice['note'];
 $customer_tax_registration_number = $salesinvoice['customer_tax_registration_number'];
 //$salesmanname = $salesinvoice['salesmanname'];
 
+$temp = [];
+for($i = 0 ; $i < 7 ; $i++)
+  $temp[] = $inventories[0];
+$inventories = $temp;
+
 $page = ceil(count($inventories) / 7);
+
+$payment_label = trim(systemvarget('sales_payment_account1_label'));
 
 ?>
 
@@ -186,7 +193,7 @@ for($a = 0 ; $a < $page ; $a++){
         <table cellspacing="0" cellpadding="0">
           <tr>
             <td colspan="3">
-              <label style="font-style: italic">Say: <?=terbilang($total)?></label>
+              <label style="font-style: italic">Say: <?=terbilang(99999999)?></label>
             </td>
           </tr>
         </table>
@@ -214,6 +221,11 @@ for($a = 0 ; $a < $page ; $a++){
           </td>
         </tr>
       </table>
+      <?php if(strlen($payment_label) > 0){ ?>
+      <div style="height:4mm;position:relative;top:-1mm">
+        <span><?=$payment_label?></span>
+      </div>
+      <?php } ?>
     </div>
     <div style="position: absolute;left: <?=$row2col1left?>mm;top:<?=$row2top?>mm;width:<?=$row2col1width?>mm;height:<?=$row2height?>mm;text-align: right;padding-right:8mm">
       <table cellspacing="4mm" cellpadding="0" style="display: inline-block">

@@ -128,6 +128,24 @@ ui_async();
         <?=ui_textbox([ 'width'=>'360px', 'value'=>systemvarget('salesinvoice_nontax_addressline3'), 'onchange'=>"ui.async('systemvarset', [ 'salesinvoice_nontax_addressline3', value ])" ])?>
       </td>
     </tr>
+    <tr>
+      <th><label>Print Alamat Pajak</label></th>
+      <td>
+        <?=ui_textbox([ 'width'=>'360px', 'value'=>systemvarget('addressline1'), 'onchange'=>"ui.async('systemvarset', [ 'addressline1', value ])" ])?>
+      </td>
+    </tr>
+    <tr>
+      <th><label>Rekening Transfer</label></th>
+      <td>
+        <?=ui_textbox([ 'width'=>'480px', 'value'=>systemvarget('sales_payment_account1_label'), 'onchange'=>"ui.async('systemvarset', [ 'sales_payment_account1_label', value ])" ])?>
+      </td>
+    </tr>
+    <tr>
+      <th><label>Rekening Transfer (SPSP)</label></th>
+      <td>
+        <?=ui_textbox([ 'width'=>'480px', 'value'=>systemvarget('sales_payment_account2_label'), 'onchange'=>"ui.async('systemvarset', [ 'sales_payment_account2_label', value ])" ])?>
+      </td>
+    </tr>
   </table>
 
   <div class="height10" style="border-top: solid 1px #eee"></div>
