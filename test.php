@@ -1,5 +1,10 @@
 <?php
 
+require_once 'api/chartofaccount.php';
+chartofaccountrecalculateall();
+
+echo 123; exit();
+
 ui_async();
 
 class testA{

@@ -184,7 +184,7 @@ for($a = 0 ; $a < $page ; $a++){
         </tr>
         <?php } ?>
       </table>
-      <div><?=$note?></div>
+      <div style="font-size:10pt"><?=$note?></div>
     </div>
 
     <!-- Row 2 -->
@@ -193,7 +193,7 @@ for($a = 0 ; $a < $page ; $a++){
         <table cellspacing="0" cellpadding="0">
           <tr>
             <td colspan="3">
-              <label style="font-style: italic">Say: <?=terbilang(99999999)?></label>
+              <label style="font-style: italic">Say: <?=terbilang($total)?></label>
             </td>
           </tr>
         </table>
