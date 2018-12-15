@@ -11,7 +11,7 @@ $row0col1left = $row0col0width;
 $row0col2left = $row0col0width + $row0col1width + 5; // was 20
 $row0height = 20;
 
-$row1height = 52;
+$row1height = 62;
 $row1width = $contentwidth;
 $row1top = $row0height + 2;
 $row1col2width = $contentwidth - (8 + 18 + 14 + 14 + 20 + 20);
@@ -221,11 +221,6 @@ for($a = 0 ; $a < $page ; $a++){
           </td>
         </tr>
       </table>
-      <?php if(strlen($payment_label) > 0){ ?>
-      <div style="height:4mm;position:relative;top:-1mm">
-        <span><?=$payment_label?></span>
-      </div>
-      <?php } ?>
     </div>
     <div style="position: absolute;left: <?=$row2col1left?>mm;top:<?=$row2top?>mm;width:<?=$row2col1width?>mm;height:<?=$row2height?>mm;text-align: right;padding-right:8mm">
       <table cellspacing="4mm" cellpadding="0" style="display: inline-block">
@@ -267,5 +262,12 @@ for($a = 0 ; $a < $page ; $a++){
       </table>
     </div>
 
+    <div style="position: absolute;left: 0;top:<?=$row2top+37?>mm;">
+      <?php if(strlen($payment_label) > 0){ ?>
+        <div style="height:4mm;position:relative;top:-1mm;">
+          <span style="font-size:11pt"><?=$payment_label?></span>
+        </div>
+      <?php } ?>
+    </div>
   </div>
 <?php  } ?>
