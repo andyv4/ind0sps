@@ -12,36 +12,18 @@ $mysqlpdo_database = 'indosps';
 $mysqlpdo_username = 'root';
 $mysqlpdo_password = 'webapp';
 
-$pdo_con = pdo_con();
-$pdo_con = pdo_con();
 
-$pdo_con->beginTransaction();
+require_once __DIR__ . '/../rcfx/php/pdo.php';
+require_once __DIR__ . '/../rcfx/php/util.php';
+require_once __DIR__ . '/../api/chartofaccount.php';
+require_once __DIR__ . '/../api/code.php';
+require_once __DIR__ . '/../api/inventory.php';
+require_once __DIR__ . '/../api/customer.php';
+require_once __DIR__ . '/../api/supplier.php';
+require_once __DIR__ . '/../api/warehouse.php';
+date_default_timezone_set('Asia/Jakarta');
+ini_set('memory_limit', '256M');
 
-try{
 
-  $query = "insert into purchaseorder(`date`) values (?)";
-  $statement = $pdo_con->prepare($query);
-  $statement->execute([
-    '2018-01-01'
-  ]);
 
-  $id = $pdo_con->lastInsertId();
-
-  $query = "insert into purchaseorderinventory (purchaseorderid) values (?)";
-  $statement = $pdo_con->prepare($query);
-  $statement->execute([
-    $id
-  ]);
-
-  $pdo_con->commit();
-
-  echo "OK";
-
-}
-catch(Exception $e){
-
-  echo $e->getMessage();
-
-  $pdo_con->rollBack();
-
-}
+?>

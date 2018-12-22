@@ -18,18 +18,6 @@ $_INCOME_STATEMENT_GROUPS = [
 
 function incomestatementlist($date1, $date2){
 
-  $purchase_coas = [
-    '600.20', // Pembelian
-    '800.03', // Uang Muka Pembelian,
-    '600.41', // PPn Pembelian
-    '600.42', // PPh Pembelian
-    '600.32', // Biaya Pembuatan Dokumen
-    '600.40', // SKI
-    '600.43', // Clearance Fee
-    '600.44', // Bea Masuk
-    '600.18', // Handling Fee
-  ];
-
   $sales = pmc("select sum(total) from salesinvoice where `date` between ? and ?", [ $date1, $date2 ]);
   $sales_tax = pmc("select sum(total) from salesinvoice where `date` between ? and ? and taxable = 1", [ $date1, $date2 ]);
   $sales_non_tax = pmc("select sum(total) from salesinvoice where `date` between ? and ? and taxable = 0", [ $date1, $date2 ]);
@@ -52,10 +40,10 @@ function incomestatementlist($date1, $date2){
   $cost = pmc("SELECT sum(debit - credit) FROM journalvoucher t1, journalvoucherdetail t2
     where t1.id = t2.jvid and
     t1.date between ? and ? and
-    t2.coaid in (select `id` from chartofaccount where code like '600.%' and code not in ('" . implode("','", $purchase_coas) . "'));", [ $date1, $date2 ]);
+    t2.coaid in (select `id` from chartofaccount where code like '600.%');", [ $date1, $date2 ]);
 
   $coas = [];
-  $coaids = pmrs("select `id`, `name` from chartofaccount where code like '600.%' and code not in ('" . implode("','", $purchase_coas) . "')");
+  $coaids = pmrs("select `id`, `name` from chartofaccount where code like '600.%'");
   foreach($coaids as $coa){
     $coas[$coa['name']] = pmc("SELECT sum(debit - credit) FROM journalvoucher t1, journalvoucherdetail t2 
     where t1.id = t2.jvid and
@@ -72,27 +60,27 @@ function incomestatementlist($date1, $date2){
   $incomestatement = [];
 
   $incomestatement['sales'] = [
-    '_total'=>number_format($sales),
-    'SPSP'=>number_format($sales_tax),
-    'SPS'=>number_format($sales_non_tax),
-    'receivable'=>number_format($sales_receivable)
+    '_total'=>number_format($sales, 0, ',', '.'),
+    'SPSP'=>number_format($sales_tax, 0, ',', '.'),
+    'SPS'=>number_format($sales_non_tax, 0, ',', '.'),
+    'receivable'=>number_format($sales_receivable, 0, ',', '.')
   ];
   $incomestatement['purchase'] = [
-    '_total'=>number_format($purchase),
-    'local'=>number_format($purchase_local),
-    'import'=>number_format($purchase_import),
+    '_total'=>number_format($purchase, 0, ',', '.'),
+    'local'=>number_format($purchase_local, 0, ',', '.'),
+    'import'=>number_format($purchase_import, 0, ',', '.'),
     'payable'=>$purchase_payable
   ];
   $incomestatement['cost'] = [
     '_total'=>number_format($cost),
   ];
   foreach($coas as $coa_name=>$coa_value)
-    $incomestatement['cost'][$coa_name] = number_format($coa_value);
+    $incomestatement['cost'][$coa_name] = number_format($coa_value, 0, ',', '.');
 
   $incomestatement['revenue'] = [
-    'gross'=>number_format($sales - $purchase),
-    'net'=>number_format($sales - $purchase - $cost),
-    'profit_share'=>number_format($profit_share)
+    'gross'=>number_format($sales - $purchase, 0, ',', '.'),
+    'net'=>number_format($sales - $purchase - $cost, 0, ',', '.'),
+    'profit_share'=>number_format($profit_share, 0, ',', '.')
   ];
 
   return $incomestatement;
