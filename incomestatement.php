@@ -11,69 +11,119 @@ function m_loads($params){
 
   $report = incomestatementlist($start_date, $end_date);
 
-  $report['sales_items'] = number_format_auto($report['sales_items'], 0);
-  $report['sales_discounts'] = number_format_auto($report['sales_discounts'], 0);
-  $report['sales_cost_prices'] = number_format_auto($report['sales_cost_prices'], 0);
-  $report['handling_fee'] = number_format_auto($report['handling_fee'], 0);
-  $report['gross_profit'] = number_format_auto($report['gross_profit'], 0);
-  $report['operating_expenses'] = number_format_auto($report['operating_expenses'], 0);
-  $report['net_profit'] = number_format_auto($report['net_profit'], 0);
+  /*$c = [];
+  $c[] = "<element exp='#row2'>";
+  $c[] = "<pre>" . print_r($report, 1) . "</pre>";
+  $c[] = "</element>";
+  return implode('', $c);*/
 
   $c = [];
   $c[] = "<element exp='#row2'>";
-  $c[] = "<div class='ict'>";
+  $c[] = "<div  class='ict'>";
   $c[] = "<table>";
-  $c[] = "<tr><td colspan='2' width='480'><b>Penjualan</b></td><td></td></tr>";
-  $c[] = "<tr><td></td><td>Penjualan Barang</td><td>$report[sales_items]</td></tr>";
-  $c[] = "<tr><td></td><td>Diskon Penjualan</td><td>$report[sales_discounts]</td></tr>";
-  $c[] = "<tr><td></td><td>Harga Modal</td><td>$report[sales_cost_prices]</td></tr>";
-  $c[] = "<tr><td></td><td>Handling Fee</td><td>$report[handling_fee]</td></tr>";
-  $c[] = "<tr><td colspan='5' class='line'></td></tr>";
-  $c[] = "<tr><td colspan='2' width='200'><b>Laba Kotor</b></td><td>$report[gross_profit]</td></tr>";
-  $c[] = "<tr><td colspan='5'><div class='height10'></div></td></tr>";
-  $c[] = "<tr><td colspan='2' width='200'><b>Beban</b></td><td></td></tr>";
 
-  global $_INCOME_STATEMENT_GROUPS;
-  foreach($_INCOME_STATEMENT_GROUPS as $index=>$income_statement_group){
-    $report['operating_expenses_cost' . $index] = number_format_auto($report['operating_expenses_cost' . $index], 0);
-    $c[] = "<tr><td></td><td>$income_statement_group[0]</td><td>" . $report['operating_expenses_cost' . $index] . "</td></tr>";
+  $c[] = "<tr><td colspan='2'><b>Penjualan</b></td><td><b>" . $report['sales']['_total'] . "</b></td></tr>";
+  $c[] = "<tr><td></td><td>SPS</td><td>" . $report['sales']['SPS'] . "</td></tr>";
+  $c[] = "<tr><td></td><td>SPSP</td><td>" . $report['sales']['SPSP'] . "</td></tr>";
+  $c[] = "<tr class='gray'><td></td><td>Piutang</td><td>" . $report['sales']['receivable'] . "</td></tr>";
+
+  $c[] = "<tr><td colspan='2'><b>Pembelian</b></td><td><b>" . $report['purchase']['_total'] . "</b></td></tr>";
+  $c[] = "<tr><td></td><td>Lokal</td><td>" . $report['purchase']['local'] . "</td></tr>";
+  $c[] = "<tr><td></td><td>Import</td><td>" . $report['purchase']['import'] . "</td></tr>";
+  $c[] = "<tr class='gray'><td></td><td>Hutang</td><td>" . (strlen(implode("<br />", $report['purchase']['payable'])) > 0 ? implode("<br />", $report['purchase']['payable']) : 0) . "</td></tr>";
+
+  $c[] = "<tr class='row-line'><td colspan='2'><b>LABA KOTOR</b></td><td><b>" . $report['revenue']['gross'] . "</b></td></tr>";
+  $c[] = "<tr class='row-line'><td colspan='3'></td></tr>";
+
+  $c[] = "<tr><td colspan='2'><b>Biaya</b></td><td><b>" . $report['cost']['_total'] . "</b></td></tr>";
+  foreach($report['cost'] as $key=>$value){
+    if($key == '_total') continue;
+    $c[] = "<tr><td></td><td>$key</td><td>$value</td></tr>";
   }
-  $c[] = "<tr><td colspan='5' class='line'></td></tr>";
-  $c[] = "<tr><td colspan='2' width='200'><b>Total Beban</b></td><td>$report[operating_expenses]</td></tr>";
 
-  $c[] = "<tr><td colspan='5'><div class='height10'></div></td></tr>";
-  $c[] = "<tr><td colspan='5' class='line'></td></tr>";
-  $c[] = "<tr><td colspan='2' width='200'><b>Laba Bersih</b></td><td>$report[net_profit]</td></tr>";
-  $c[] = "<tr><td colspan='5' class='line'></td></tr>";
+  $c[] = "<tr class='row-line'><td colspan='2'><b>LABA BERSIH</b></td><td><b>" . $report['revenue']['net'] . "</b></td></tr>";
+  $c[] = "<tr class='row-line'><td colspan='3'></td></tr>";
 
   $c[] = "</table>";
   $c[] = "</div>";
   $c[] = "</element>";
-
   return implode('', $c);
+
+}
+
+function m_print($params){
+
+  $start_date = $params['start_date'];
+  $end_date = $params['end_date'];
+
+  $report = incomestatementlist($start_date, $end_date);
+
+  $c = [];
+  $c[] = "<element exp='.printarea'>";
+  $c[] = "<div  class='ict'>";
+  $c[] = "<div style='text-align:center'>";
+  $c[] = "<h1>Laba Rugi</h1>";
+  $c[] = date('j M Y', strtotime($start_date)) . ' s/d ' . date('j M Y', strtotime($end_date));
+  $c[] = "</div>";
+  $c[] = "<br /><br /><br />";
+  $c[] = "<table>";
+
+  $c[] = "<tr class='row-line'><td colspan='2'><b>Penjualan</b></td><td><b>" . $report['sales']['_total'] . "</b></td></tr>";
+  $c[] = "<tr><td></td><td>SPS</td><td>" . $report['sales']['SPS'] . "</td></tr>";
+  $c[] = "<tr><td></td><td>SPSP</td><td>" . $report['sales']['SPSP'] . "</td></tr>";
+  $c[] = "<tr class='gray'><td></td><td>Piutang</td><td>" . $report['sales']['receivable'] . "</td></tr>";
+
+  $c[] = "<tr><td colspan='2'><b>Pembelian</b></td><td><b>" . $report['purchase']['_total'] . "</b></td></tr>";
+  $c[] = "<tr><td></td><td>Lokal</td><td>" . $report['purchase']['local'] . "</td></tr>";
+  $c[] = "<tr><td></td><td>Import</td><td>" . $report['purchase']['import'] . "</td></tr>";
+  $c[] = "<tr class='gray'><td></td><td>Hutang</td><td>" . (strlen(implode("<br />", $report['purchase']['payable'])) > 0 ? implode("<br />", $report['purchase']['payable']) : 0) . "</td></tr>";
+
+  $c[] = "<tr class='row-line'><td colspan='2'><b>LABA KOTOR</b></td><td><b>" . $report['revenue']['gross'] . "</b></td></tr>";
+  $c[] = "<tr class='row-line'><td colspan='3'></td></tr>";
+
+  $c[] = "<tr><td colspan='2'><b>Biaya</b></td><td><b>" . $report['cost']['_total'] . "</b></td></tr>";
+  foreach($report['cost'] as $key=>$value){
+    if($key == '_total') continue;
+    $c[] = "<tr><td></td><td>$key</td><td>$value</td></tr>";
+  }
+
+  $c[] = "<tr class='row-line'><td colspan='2'><b>LABA BERSIH</b></td><td><b>" . $report['revenue']['net'] . "</b></td></tr>";
+  $c[] = "<tr class='row-line'><td colspan='3'></td></tr>";
+
+  $c[] = "</table>";
+  $c[] = "</div>";
+  $c[] = "</element>";
+  return implode('', $c) . "<script>window.print();</script>";
 
 }
 
 ui_async();
 ?>
 <style>
-  .ict{ background:#fff; padding:20px; display:inline-block; }
-  .ict table { border-collapse: collapse; }
-  .ict tr:nth-child(2n){ background:#f5f5f5; }
-  .ict td{ padding:10px; }
-  .ict tr td:last-child{ text-align: right; }
+  .ict{ background:#fff; display:inline-block;max-width:600px;padding:20px; }
+  .ict table { border-collapse: collapse;width:100%; }
+  .ict td{ padding:4px; }
+  .ict tr td:nth-child(1){ min-width:20px; }
+  .ict tr td:nth-child(2){ width: 100%; }
+  .ict tr td:last-child{ text-align: right;min-width:150px; }
   .ict .line{ height:1px; background:#000; padding:0; }
+  .ict .row-line td{ border-top: solid 1px #000; border-bottom; solid 1px #000; }
+  .ict .gray, .ict .gray *{ color: #ccc; }
 </style>
 <div class="padding10">
 
   <div id="row0">
-    <table cellspacing='5'>
-      <tr>
-        <td><?=ui_datepicker([ 'id'=>'start_date', 'width'=>'160px', 'value'=>'20180101' ])?></td>
-        <td><?=ui_datepicker([ 'id'=>'end_date', 'width'=>'160px', 'value'=>'20180228' ])?></td>
-        <td><button id="view_report_btn" class="blue"><label>Lihat Laporan</label></button></td>
-      </tr>
-    </table>
+    <div style="max-width:655px">
+      <table cellspacing='5'>
+        <tr>
+          <td><?=ui_datepicker([ 'id'=>'start_date', 'width'=>'100px', 'value'=>date('Y') . '0101' ])?></td>
+          <td><?=ui_datepicker([ 'id'=>'end_date', 'width'=>'100px', 'value'=>date('Y') . '1231' ])?></td>
+          <td style="width:180px"></td>
+          <td><button id="view_report_btn" class="blue" style="width:100px"><label>Lihat Laporan</label></button></td>
+          <td><button id="view_report_btn2" class="green" style="width:100px"><label>Cetak</label></button></td>
+        </tr>
+      </table>
+    </div>
   </div>
 
   <div id="row1"></div>
@@ -104,6 +154,17 @@ ui_async();
     function m_init(){
 
       $('#view_report_btn').click(function(){ m_load(); });
+      $('#view_report_btn2').click(function(){
+
+        var start_date = ui.datepicker_value(ui('#start_date'));
+        var end_date = ui.datepicker_value(ui('#end_date'));
+        var params = {
+          start_date:start_date,
+          end_date:end_date
+        }
+        ui.async('m_print', [ params ], {  });
+
+      });
       m_resize();
       $(window).resize(function(){ m_resize(); });
 

@@ -18,7 +18,84 @@ $_INCOME_STATEMENT_GROUPS = [
 
 function incomestatementlist($date1, $date2){
 
+  $purchase_coas = [
+    '600.20', // Pembelian
+    '800.03', // Uang Muka Pembelian,
+    '600.41', // PPn Pembelian
+    '600.42', // PPh Pembelian
+    '600.32', // Biaya Pembuatan Dokumen
+    '600.40', // SKI
+    '600.43', // Clearance Fee
+    '600.44', // Bea Masuk
+    '600.18', // Handling Fee
+  ];
+
+  $sales = pmc("select sum(total) from salesinvoice where `date` between ? and ?", [ $date1, $date2 ]);
+  $sales_tax = pmc("select sum(total) from salesinvoice where `date` between ? and ? and taxable = 1", [ $date1, $date2 ]);
+  $sales_non_tax = pmc("select sum(total) from salesinvoice where `date` between ? and ? and taxable = 0", [ $date1, $date2 ]);
+  $sales_receivable = pmc("select sum(total - paymentamount) from salesinvoice where `date` between ? and ? and taxable = 0", [ $date1, $date2 ]);
+
+  $purchase = pmc("select sum(paymentamount) from purchaseinvoice where `date` between ? and ?", [ $date1, $date2 ]) +
+    pmc("select sum(paymentamount) from purchaseorder where `date` between ? and ?", [ $date1, $date2 ]);
+  $purchase_local = pmc("select sum(paymentamount) from purchaseinvoice where `date` between ? and ? and currencyrate = 1", [ $date1, $date2 ]) +
+    pmc("select sum(paymentamount) from purchaseorder where `date` between ? and ? and currencyrate = 1", [ $date1, $date2 ]);
+  $purchase_import = pmc("select sum(paymentamount) from purchaseinvoice where `date` between ? and ? and currencyrate > 1", [ $date1, $date2 ]) +
+    pmc("select sum(paymentamount) from purchaseorder where `date` between ? and ? and currencyrate > 1", [ $date1, $date2 ]);
+
+  $purchase_payable = [];
+  $rows = pmrs("select t2.code, sum(t1.total) as total from purchaseinvoice t1, currency t2 
+    where t1.currencyid = t2.id and t1.`date` between ? and ? and t1.ispaid = 0 group by t1.currencyid", [ $date1, $date2 ]);
+  foreach($rows as $row)
+    $purchase_payable[] = $row['code'] . ' ' . number_format($row['total']);
+
+
+  $cost = pmc("SELECT sum(debit - credit) FROM journalvoucher t1, journalvoucherdetail t2
+    where t1.id = t2.jvid and
+    t1.date between ? and ? and
+    t2.coaid in (select `id` from chartofaccount where code like '600.%' and code not in ('" . implode("','", $purchase_coas) . "'));", [ $date1, $date2 ]);
+
+  $coas = [];
+  $coaids = pmrs("select `id`, `name` from chartofaccount where code like '600.%' and code not in ('" . implode("','", $purchase_coas) . "')");
+  foreach($coaids as $coa){
+    $coas[$coa['name']] = pmc("SELECT sum(debit - credit) FROM journalvoucher t1, journalvoucherdetail t2 
+    where t1.id = t2.jvid and
+    t1.date between ? and ? and
+    t2.coaid = ?;", [ $date1, $date2, $coa['id'] ]);
+  }
+  arsort($coas);
+
+  $profit_share = pmc("SELECT sum(debit - credit) FROM journalvoucher t1, journalvoucherdetail t2
+    where t1.id = t2.jvid and
+    t1.date between ? and ? and
+    t2.coaid in (select `id` from chartofaccount where code like '800.05')", [ $date1, $date2 ]);
+
   $incomestatement = [];
+
+  $incomestatement['sales'] = [
+    '_total'=>number_format($sales),
+    'SPSP'=>number_format($sales_tax),
+    'SPS'=>number_format($sales_non_tax),
+    'receivable'=>number_format($sales_receivable)
+  ];
+  $incomestatement['purchase'] = [
+    '_total'=>number_format($purchase),
+    'local'=>number_format($purchase_local),
+    'import'=>number_format($purchase_import),
+    'payable'=>$purchase_payable
+  ];
+  $incomestatement['cost'] = [
+    '_total'=>number_format($cost),
+  ];
+  foreach($coas as $coa_name=>$coa_value)
+    $incomestatement['cost'][$coa_name] = number_format($coa_value);
+
+  $incomestatement['revenue'] = [
+    'gross'=>number_format($sales - $purchase),
+    'net'=>number_format($sales - $purchase - $cost),
+    'profit_share'=>number_format($profit_share)
+  ];
+
+  return $incomestatement;
 
   $incomestatement['sales_items'] = incomestatement_sales_items($date1, $date2);
   $incomestatement['sales_discounts'] = incomestatement_sales_discounts($date1, $date2);
