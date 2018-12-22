@@ -69,14 +69,14 @@ $note = $salesinvoice['note'];
 $customer_tax_registration_number = $salesinvoice['customer_tax_registration_number'];
 //$salesmanname = $salesinvoice['salesmanname'];
 
-$temp = [];
+/*$temp = [];
 for($i = 0 ; $i < 7 ; $i++)
   $temp[] = $inventories[0];
-$inventories = $temp;
+$inventories = $temp;*/
 
 $page = ceil(count($inventories) / 7);
 
-$payment_label = trim(systemvarget('sales_payment_account1_label'));
+$payment_label = trim(strpos($code, 'SPSP') !== false ? systemvarget('sales_payment_account2_label') : systemvarget('sales_payment_account1_label'));
 
 ?>
 
