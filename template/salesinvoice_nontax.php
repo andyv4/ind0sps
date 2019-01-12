@@ -49,6 +49,9 @@ $note = $salesinvoice['note'];
 //$salesmanname = $salesinvoice['salesmanname'];
 
 $page = ceil(count($inventories) / 7);
+
+$payment_label = trim(strpos($code, 'SPSP') !== false ? systemvarget('sales_payment_account2_label') : systemvarget('sales_payment_account1_label'));
+
 ?>
 
 <?php
@@ -214,7 +217,7 @@ for($a = 0 ; $a < $page ; $a++){
         <tr><td><div style="height:7mm">&nbsp;</div></td></tr>
         <tr>
           <th style="text-align: right;white-space: nowrap"></th>
-          <td></td>
+          <td></td>`
           <td style="font-size:.8em;width:40mm;text-align: right">
             <?=$salesinvoice['salesmanname']?>
             <br /><br /><br />
@@ -222,6 +225,14 @@ for($a = 0 ; $a < $page ; $a++){
           </td>
         </tr>
       </table>
+    </div>
+
+    <div style="position: absolute;left: 0;top:<?=$row2top+37?>mm;">
+      <?php if(strlen($payment_label) > 0){ ?>
+        <div style="height:4mm;position:relative;top:-1mm;">
+          <span style="font-size:11pt"><?=$payment_label?></span>
+        </div>
+      <?php } ?>
     </div>
 
   </div>

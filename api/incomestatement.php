@@ -22,20 +22,37 @@ function incomestatementlist($date1, $date2){
   $sales_tax = pmc("select sum(total) from salesinvoice where `date` between ? and ? and taxable = 1", [ $date1, $date2 ]);
   $sales_non_tax = pmc("select sum(total) from salesinvoice where `date` between ? and ? and taxable = 0", [ $date1, $date2 ]);
   $sales_receivable = pmc("select sum(total - paymentamount) from salesinvoice where `date` between ? and ? and taxable = 0", [ $date1, $date2 ]);
+  $sales_tax_amount = pmc("select sum(taxamount) from salesinvoice where `date` between ? and ? and taxamount > 0", [ $date1, $date2 ]);
+  $sales = $sales - $sales_tax_amount;
 
   $purchase = pmc("select sum(paymentamount) from purchaseinvoice where `date` between ? and ?", [ $date1, $date2 ]) +
     pmc("select sum(paymentamount) from purchaseorder where `date` between ? and ?", [ $date1, $date2 ]);
-  $purchase_local = pmc("select sum(paymentamount) from purchaseinvoice where `date` between ? and ? and currencyrate = 1", [ $date1, $date2 ]) +
-    pmc("select sum(paymentamount) from purchaseorder where `date` between ? and ? and currencyrate = 1", [ $date1, $date2 ]);
-  $purchase_import = pmc("select sum(paymentamount) from purchaseinvoice where `date` between ? and ? and currencyrate > 1", [ $date1, $date2 ]) +
-    pmc("select sum(paymentamount) from purchaseorder where `date` between ? and ? and currencyrate > 1", [ $date1, $date2 ]);
+  $purchase_local = pmc("select sum(paymentamount) from purchaseinvoice where `date` between ? and ? and currencyid = 1", [ $date1, $date2 ]) +
+    pmc("select sum(paymentamount) from purchaseorder where `date` between ? and ? and currencyid = 1", [ $date1, $date2 ]);
+  $purchase_import = pmc("select sum(paymentamount) from purchaseinvoice where `date` between ? and ? and currencyid > 1", [ $date1, $date2 ]) +
+    pmc("select sum(paymentamount) from purchaseorder where `date` between ? and ? and currencyid > 1", [ $date1, $date2 ]);
+
+  $purchase_ppn = pmc("SELECT sum(debit - credit) FROM journalvoucher t1, journalvoucherdetail t2  where t1.id = t2.jvid and
+    t1.date between ? and ? and t2.coaid = ?;", [ $date1, $date2, 1004 ]);
+  $purchase_pph = pmc("SELECT sum(debit - credit) FROM journalvoucher t1, journalvoucherdetail t2  where t1.id = t2.jvid and
+    t1.date between ? and ? and t2.coaid = ?;", [ $date1, $date2, 1005 ]);
+  $purchase_kso = pmc("SELECT sum(debit - credit) FROM journalvoucher t1, journalvoucherdetail t2  where t1.id = t2.jvid and
+    t1.date between ? and ? and t2.coaid = ?;", [ $date1, $date2, 55 ]);
+  $purchase_ski = pmc("SELECT sum(debit - credit) FROM journalvoucher t1, journalvoucherdetail t2  where t1.id = t2.jvid and
+    t1.date between ? and ? and t2.coaid = ?;", [ $date1, $date2, 1003 ]);
+  $purchase_clearance_fee = pmc("SELECT sum(debit - credit) FROM journalvoucher t1, journalvoucherdetail t2  where t1.id = t2.jvid and
+    t1.date between ? and ? and t2.coaid = ?;", [ $date1, $date2, 1006 ]);
+  $purchase_import_cost = pmc("SELECT sum(debit - credit) FROM journalvoucher t1, journalvoucherdetail t2  where t1.id = t2.jvid and
+    t1.date between ? and ? and t2.coaid = ?;", [ $date1, $date2, 1007 ]);
+  $purchase_handling_fee = pmc("SELECT sum(debit - credit) FROM journalvoucher t1, journalvoucherdetail t2  where t1.id = t2.jvid and
+    t1.date between ? and ? and t2.coaid = ?;", [ $date1, $date2, 40 ]);
+  $purchase = $purchase + ($purchase_ppn + $purchase_pph + $purchase_kso + $purchase_ski + $purchase_clearance_fee + $purchase_import_cost + $purchase_handling_fee);
 
   $purchase_payable = [];
   $rows = pmrs("select t2.code, sum(t1.total) as total from purchaseinvoice t1, currency t2 
     where t1.currencyid = t2.id and t1.`date` between ? and ? and t1.ispaid = 0 group by t1.currencyid", [ $date1, $date2 ]);
   foreach($rows as $row)
     $purchase_payable[] = $row['code'] . ' ' . number_format($row['total']);
-
 
   $cost = pmc("SELECT sum(debit - credit) FROM journalvoucher t1, journalvoucherdetail t2
     where t1.id = t2.jvid and
@@ -63,13 +80,21 @@ function incomestatementlist($date1, $date2){
     '_total'=>number_format($sales, 0, ',', '.'),
     'SPSP'=>number_format($sales_tax, 0, ',', '.'),
     'SPS'=>number_format($sales_non_tax, 0, ',', '.'),
-    'receivable'=>number_format($sales_receivable, 0, ',', '.')
+    'receivable'=>number_format($sales_receivable, 0, ',', '.'),
+    'tax_amount'=>number_format($sales_tax_amount, 0, ',', '.'),
   ];
   $incomestatement['purchase'] = [
     '_total'=>number_format($purchase, 0, ',', '.'),
     'local'=>number_format($purchase_local, 0, ',', '.'),
     'import'=>number_format($purchase_import, 0, ',', '.'),
-    'payable'=>$purchase_payable
+    'payable'=>number_format($purchase_payable, 0, ',', '.'),
+    'ppn'=>number_format($purchase_ppn, 0, ',', '.'),
+    'pph'=>number_format($purchase_pph, 0, ',', '.'),
+    'kso'=>number_format($purchase_kso, 0, ',', '.'),
+    'ski'=>number_format($purchase_ski, 0, ',', '.'),
+    'clearance_fee'=>number_format($purchase_clearance_fee, 0, ',', '.'),
+    'import_cost'=>number_format($purchase_import_cost, 0, ',', '.'),
+    'handling_fee'=>number_format($purchase_handling_fee, 0, ',', '.')
   ];
   $incomestatement['cost'] = [
     '_total'=>number_format($cost),
@@ -85,43 +110,119 @@ function incomestatementlist($date1, $date2){
 
   return $incomestatement;
 
-  $incomestatement['sales_items'] = incomestatement_sales_items($date1, $date2);
-  $incomestatement['sales_discounts'] = incomestatement_sales_discounts($date1, $date2);
-  $incomestatement['sales_cost_prices'] = incomestatement_sales_cost_prices($date1, $date2);
-  $incomestatement['handling_fee'] = incomestatement_handling_fee($date1, $date2);
-  $incomestatement['gross_profit'] = $incomestatement['sales_items'] - ($incomestatement['sales_discounts'] + $incomestatement['sales_handling_fee'] + $incomestatement['sales_cost_prices']);
+}
 
-  global $_INCOME_STATEMENT_GROUPS;
-  $operating_expenses = 0;
-  foreach($_INCOME_STATEMENT_GROUPS as $index=>$income_statement_group){
-    $incomestatement['operating_expenses_cost' . $index] = incomestatement_operating_expenses_cost($index, $date1, $date2);
-    $operating_expenses += $incomestatement['operating_expenses_cost' . $index];
+function incomestatement_purchase($date1, $date2){
+
+  $items = pmrs("
+    select t1.code as pi_code, (select code from purchaseorder where `id` = t1.purchaseorderid) as po_code, t1.supplierdescription, t2.code as currency_code, t1.currencyrate, t1.total, 
+    t1.paymentamount, t1.purchaseorderid as po_id
+    from purchaseinvoice t1, currency t2 
+    where t1.currencyid = t2.id and t1.`date` between ? and ?  
+    ",
+    [ $date1, $date2 ]);
+
+  $purchaseorderids = [];
+  foreach($items as $item)
+    if($item['po_id'] > 0)
+      $purchaseorderids[$item['po_id']] = 1;
+  $purchaseorderids = array_keys($purchaseorderids);
+  $po_items = pmrs("select '-' as pi_code, t1.code as po_code, t1.supplierdescription, t2.code as currency_code, t1.currencyrate, t1.total, t1.paymentamount, t1.id as po_id
+    from purchaseorder t1, currency t2 
+    where t1.currencyid = t2.id and t1.id in (" . implode(', ', $purchaseorderids) . ")");
+  $po_items = array_index($po_items, [ 'po_id' ]);
+
+  $temp = [];
+  foreach($items as $item){
+
+    $purchaseorderid = $item['po_id'];
+    unset($item['po_id']);
+    $temp[] = $item;
+
+    if(isset($po_items[$purchaseorderid])){
+      $po = $po_items[$purchaseorderid][0];
+      unset($po['po_id']);
+      $temp[] = $po;
+    }
+
   }
-  $incomestatement['operating_expenses'] = $operating_expenses;
 
-  $incomestatement['net_profit'] = $incomestatement['gross_profit'] - $incomestatement['operating_expenses'];
+  $filepath = "usr/incomestatement_purchase-{$date1}-{$date2}.xlsx";
+  array_to_excel($temp, $filepath);
 
-  return $incomestatement;
+  return $filepath;
 
-  $incomestatement['sales'] = floatval(pmc("SELECT SUM(`credit`) FROM journalvoucher p1, journalvoucherdetail p2 WHERE p1.id = p2.jvid
-    AND p1.date BETWEEN ? AND ? AND p2.coaid = 6 AND p1.ref = 'SI';", array($date1, $date2)));
+}
+function incomestatement_purchase_local($date1, $date2){
 
-  $incomestatement['cogs'] = floatval(pmc("SELECT SUM(`debit`) FROM journalvoucher p1, journalvoucherdetail p2 WHERE p1.id = p2.jvid
-    AND p1.date BETWEEN ? AND ? AND p2.coaid = 11", array($date1, $date2)));
+  $po_items = pmrs("select '-' as pi_code, t1.code as po_code, t1.supplierdescription, t2.code as currency_code, t1.currencyrate, t1.total, t1.paymentamount, t1.id as po_id
+    from purchaseorder t1, currency t2 
+    where t1.currencyid = t2.id and t1.`date` between ? and ? and t1.currencyid = 1", [ $date1, $date2 ]);
+  $po_items = array_index($po_items, [ 'po_id' ]);
 
-  $incomestatement['grossrevenue'] = $incomestatement['sales'] - $incomestatement['cogs'];
+  $items = pmrs("
+    select t1.code as pi_code, (select code from purchaseorder where `id` = t1.purchaseorderid) as po_code, t1.supplierdescription, t2.code as currency_code, t1.currencyrate, t1.total, 
+    t1.paymentamount, t1.purchaseorderid as po_id
+    from purchaseinvoice t1, currency t2 
+    where t1.currencyid = t2.id and t1.`date` between ? and ? and t1.currencyid = 1  
+    ",
+    [ $date1, $date2 ]);
 
-  $rows = pmrs("SELECT `id` FROM chartofaccount WHERE accounttype = 'Expense'");
-  $expenseids = array();
-  for($i = 0 ; $i < count($rows) ; $i++)
-    $expenseids[] = $rows[$i]['id'];
+  $temp = [];
+  foreach($items as $item){
 
-  $incomestatement['expense'] = floatval(pmc("SELECT SUM(`debit`) FROM journalvoucher p1, journalvoucherdetail p2 WHERE p1.id = p2.jvid
-    AND p1.date BETWEEN ? AND ? AND p2.coaid IN (" . implode(', ', $expenseids) . ")", array($date1, $date2)));
+    $purchaseorderid = $item['po_id'];
+    unset($item['po_id']);
+    $temp[] = $item;
 
-  $incomestatement['netrevenue'] = $incomestatement['grossrevenue'] - $incomestatement['expense'];
+    if(isset($po_items[$purchaseorderid])){
+      $po = $po_items[$purchaseorderid][0];
+      unset($po['po_id']);
+      $temp[] = $po;
+    }
 
-  return $incomestatement;
+  }
+
+  $filepath = "usr/incomestatement_purchase_local-{$date1}-{$date2}.xlsx";
+  array_to_excel($temp, $filepath);
+
+  return $filepath;
+
+}
+function incomestatement_purchase_import($date1, $date2){
+
+  $po_items = pmrs("select '-' as pi_code, t1.code as po_code, t1.supplierdescription, t2.code as currency_code, t1.currencyrate, t1.total, t1.paymentamount, t1.id as po_id
+    from purchaseorder t1, currency t2 
+    where t1.currencyid = t2.id and t1.`date` between ? and ? and t1.currencyid > 1", [ $date1, $date2 ]);
+  $po_items = array_index($po_items, [ 'po_id' ]);
+
+  $items = pmrs("
+    select t1.code as pi_code, (select code from purchaseorder where `id` = t1.purchaseorderid) as po_code, t1.supplierdescription, t2.code as currency_code, t1.currencyrate, t1.total, 
+    t1.paymentamount, t1.purchaseorderid as po_id
+    from purchaseinvoice t1, currency t2 
+    where t1.currencyid = t2.id and t1.`date` between ? and ? and t1.currencyid > 1  
+    ",
+    [ $date1, $date2 ]);
+
+  $temp = [];
+  foreach($items as $item){
+
+    $purchaseorderid = $item['po_id'];
+    unset($item['po_id']);
+    $temp[] = $item;
+
+    if(isset($po_items[$purchaseorderid])){
+      $po = $po_items[$purchaseorderid][0];
+      unset($po['po_id']);
+      $temp[] = $po;
+    }
+
+  }
+
+  $filepath = "usr/incomestatement_purchase_import-{$date1}-{$date2}.xlsx";
+  array_to_excel($temp, $filepath);
+
+  return $filepath;
 
 }
 

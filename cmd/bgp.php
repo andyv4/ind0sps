@@ -173,6 +173,7 @@ function run_bgp(){
     }
   echo "salesinvoicemodify " . (microtime(1) - $t1) . PHP_EOL;
 
+  customer_suspended_calc();
 
   // Check code
   $code_exists = pmc("select count(*) from code where `year` = ?", [ system_date('Y') ]);

@@ -24,6 +24,9 @@ require_once __DIR__ . '/../api/warehouse.php';
 date_default_timezone_set('Asia/Jakarta');
 ini_set('memory_limit', '256M');
 
-
+$t1 = microtime(1);
+//chartofaccountrecalculate(5);
+customer_suspended_calc();
+echo "customercalculateall " . (microtime(1) - $t1) . PHP_EOL;
 
 ?>

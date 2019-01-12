@@ -42,9 +42,7 @@ function notification_generate(){
 
 function notification_list(){
 
-  //notification_generate();
-
-  return [];
+  notification_generate();
 
   $rows = pmrs("select * from notification", [ date('Ymd') ]);
 

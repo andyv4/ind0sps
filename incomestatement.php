@@ -22,14 +22,22 @@ function m_loads($params){
   $c[] = "<div  class='ict'>";
   $c[] = "<table>";
 
-  $c[] = "<tr><td colspan='2'><b>Penjualan</b></td><td><b>" . $report['sales']['_total'] . "</b></td></tr>";
-  $c[] = "<tr><td></td><td>SPS</td><td>" . $report['sales']['SPS'] . "</td></tr>";
-  $c[] = "<tr><td></td><td>SPSP</td><td>" . $report['sales']['SPSP'] . "</td></tr>";
+  $c[] = "<tr><td colspan='2'><b>Penjualan</b></td><td><a href='#'><b>" . $report['sales']['_total'] . "</b></a></td></tr>";
+  $c[] = "<tr><td></td><td>SPS</td><td><a href='#'>" . $report['sales']['SPS'] . "</a></td></tr>";
+  $c[] = "<tr><td></td><td>SPSP</td><td><a href='#'>" . $report['sales']['SPSP'] . "</a></td></tr>";
+  $c[] = "<tr><td></td><td>(Tax)</td><td><a href='#'>(" . $report['sales']['tax_amount'] . ")</a></td></tr>";
   $c[] = "<tr class='gray'><td></td><td>Piutang</td><td>" . $report['sales']['receivable'] . "</td></tr>";
 
-  $c[] = "<tr><td colspan='2'><b>Pembelian</b></td><td><b>" . $report['purchase']['_total'] . "</b></td></tr>";
-  $c[] = "<tr><td></td><td>Lokal</td><td>" . $report['purchase']['local'] . "</td></tr>";
-  $c[] = "<tr><td></td><td>Import</td><td>" . $report['purchase']['import'] . "</td></tr>";
+  $c[] = "<tr><td colspan='2'><b>Pembelian</b></td><td><a href='javascript:m_open(5)'><b>" . $report['purchase']['_total'] . "</b></a></td></tr>";
+  $c[] = "<tr><td></td><td>Lokal</td><td><a href='javascript:m_open(6)'>" . $report['purchase']['local'] . "</a></td></tr>";
+  $c[] = "<tr><td></td><td>Import</td><td><a href='javascript:m_open(7)'>" . $report['purchase']['import'] . "</a></td></tr>";
+  $c[] = "<tr><td></td><td>PPn Pembelian</td><td><a href=''>" . $report['purchase']['ppn'] . "</a></td></tr>";
+  $c[] = "<tr><td></td><td>PPh Pembelian</td><td><a href=''>" . $report['purchase']['pph'] . "</a></td></tr>";
+  $c[] = "<tr><td></td><td>KSO</td><td><a href=''>" . $report['purchase']['kso'] . "</a></td></tr>";
+  $c[] = "<tr><td></td><td>SKI</td><td><a href=''>" . $report['purchase']['ski'] . "</a></td></tr>";
+  $c[] = "<tr><td></td><td>Clearance Fee</td><td><a href=''>" . $report['purchase']['clearance_fee'] . "</a></td></tr>";
+  $c[] = "<tr><td></td><td>Bea Masuk</td><td><a href=''>" . $report['purchase']['import_cost'] . "</a></td></tr>";
+  $c[] = "<tr><td></td><td>Handling Fee</td><td><a href=''>" . $report['purchase']['handling_fee'] . "</a></td></tr>";
   $c[] = "<tr class='gray'><td></td><td>Hutang</td><td>" . (strlen(implode("<br />", $report['purchase']['payable'])) > 0 ? implode("<br />", $report['purchase']['payable']) : 0) . "</td></tr>";
 
   $c[] = "<tr class='row-line'><td colspan='2'><b>LABA KOTOR</b></td><td><b>" . $report['revenue']['gross'] . "</b></td></tr>";
@@ -48,6 +56,29 @@ function m_loads($params){
   $c[] = "</div>";
   $c[] = "</element>";
   return implode('', $c);
+
+}
+
+function m_detail($params){
+
+  $start_date = $params['start_date'];
+  $end_date = $params['end_date'];
+  $id = $params['id'];
+
+  switch($id){
+    case 5:
+      $filepath = incomestatement_purchase($start_date, $end_date);
+      echo uijs("ui('#downloader').href = '$filepath';ui('#downloader').click();ui.modal_close(ui('.modal'));");
+      break;
+    case 6:
+      $filepath = incomestatement_purchase_local($start_date, $end_date);
+      echo uijs("ui('#downloader').href = '$filepath';ui('#downloader').click();ui.modal_close(ui('.modal'));");
+      break;
+    case 7:
+      $filepath = incomestatement_purchase_import($start_date, $end_date);
+      echo uijs("ui('#downloader').href = '$filepath';ui('#downloader').click();ui.modal_close(ui('.modal'));");
+      break;
+  }
 
 }
 
@@ -141,6 +172,19 @@ ui_async();
         end_date:end_date
       }
       ui.async('m_loads', [ params ], {  });
+
+    }
+
+    function m_open(id){
+
+      var start_date = ui.datepicker_value(ui('#start_date'));
+      var end_date = ui.datepicker_value(ui('#end_date'));
+      var params = {
+        start_date:start_date,
+        end_date:end_date,
+        id:id
+      }
+      ui.async('m_detail', [ params ], {  });
 
     }
 

@@ -91,22 +91,6 @@ function purchaseorder_discountamountchange(){
 
 function purchaseorder_ispaid(){
 
-  var ispaid = ui.checkbox_value(ui('%ispaid', ui('.modal')));
-  if(ispaid){
-
-    if($("*[data-name='paymentdate']").val() == '') $("*[data-name='paymentdate']").val(date('Ymd'));
-    if(parseFloat($("*[data-name='paymentamount']").val()) == 0) $("*[data-name='paymentamount']").val(purchaseorder_paymentamount());
-    $('.row-baddebt').show();
-
-  }
-  else{
-    $("*[data-name='isbaddebt']").val(0);
-    $("*[data-name='baddebtaccountid']").val('');
-    $("*[data-name='baddebtdate']").val('');
-    $("*[data-name='baddebtamount']").val(0);
-    $("*[data-name='paymentamount']").val(0)
-    $('.row-baddebt').hide();
-  }
 
 }
 function purchaseorder_isbaddebt(){
@@ -140,12 +124,61 @@ function purchaseorder_onhandlingfeechange(){
 
 function purchaseorder_paymentamountchange(){
 
-  var total = purchaseorder_total();
-  var currencyrate = ui.control_value(ui('%currencyrate', ui('.modal')));
-  total = total * currencyrate;
-  var handlingfee = ui.control_value(ui('%handlingfeepaymentamount', ui('.modal')));
-  if(isNaN(parseFloat(handlingfee)) || handlingfee <= 0) handlingfee = 0;
-  total = total + handlingfee;
+  var payments = ui.container_value(ui('.payment-section'));
+
+  var total = ui.label_value(ui('%total'));
+  var total_payment_idr = 0;
+  var total_payment = 0;
+  for(var i = 0 ; i < 5 ; i++){
+
+    var n_paymentamount = payments['paymentamount-' + i];
+    var n_paymentcurrencyrate = payments['paymentcurrencyrate-' + i];
+    var n_paymentdate = payments['paymentdate-' + i];
+    var n_paymentaccountid = payments['paymentaccountid-' + i];
+
+    if(/^\d{8}$/.test(n_paymentdate) && parseInt(n_paymentaccountid) > 0){
+      total_payment += n_paymentamount;
+      total_payment_idr += n_paymentamount * n_paymentcurrencyrate;
+    }
+
+  }
+
+  if(total_payment > total){
+    alert("Pembayaran melebihi total.");
+    total_payment_idr = 0;
+  }
+  else
+    ui.checkbox_setvalue(ui('%ispaid'), (total_payment >= total ? 1 : 0));
+
+  ui.textbox_setvalue(ui('%paymentamount'), total_payment_idr);
+
+}
+
+function purchaseorder_paymentadd(){
+
+  var completed = false;
+  $('tr', '.payment-section').each(function(){
+
+    if(completed) return;
+    if($(this).hasClass('off')){
+      $(this).removeClass('off');
+      completed = true;
+    }
+
+  })
+  purchaseorder_paymentamountchange();
+
+}
+
+function purchaseorder_paymentremove(button){
+
+  var tr = $(button).closest('tr')[0];
+  ui.textbox_setvalue(ui('.paymentamount', tr), 0);
+  ui.textbox_setvalue(ui('.paymentcurrencyrate', tr), 0);
+  ui.textbox_setvalue(ui('.paymentdate', tr), '');
+  ui.textbox_setvalue(ui('.paymentaccountid', tr), '');
+  $(tr).addClass('off');
+  purchaseorder_paymentamountchange();
 
 }
 

@@ -32,7 +32,8 @@ function defaultcolumns(){
     array('active'=>0, 'name'=>'createdon', 'text'=>'Dibuat Pada', 'width'=>100, 'datatype'=>'date')
   );
 
-  if($_SESSION['user']['id'] == 1004){
+  if(in_array($_SESSION['user']['id'], [ 1004, 1010 ])){
+    array_splice($columns, 0, 1);
     array_splice($columns, 2, 1);
     array_splice($columns, 7, 8);
   }
@@ -140,6 +141,14 @@ function datasource($columns = null, $sorts = null, $filters = null, $limits = n
       'name'=>'taxable',
       'operator'=>'=',
       'value'=>'0'
+    ];
+  }
+  else if($_SESSION['user']['id'] == 1010){
+    if(!isset($filters) || !is_array($filters)) $filters = [];
+    $filters[] = [
+      'name'=>'code',
+      'operator'=>'contains',
+      'value'=>'KOB'
     ];
   }
 
@@ -415,7 +424,7 @@ function m_loadstate_ex($reset = false){
   // Check if added
   // ****
 
-  if($_SESSION['user']['id'] == 1004); // Exclude gfculinary
+  if(in_array($_SESSION['user']['id'], [ 1004, 1010 ])); // Exclude gfculinary
   else{
     for ($i = 0; $i < count($warehouses); $i++) {
       $warehouse = $warehouses[$i];

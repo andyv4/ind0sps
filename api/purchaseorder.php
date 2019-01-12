@@ -96,6 +96,13 @@ function purchaseorderdetail($columns, $filters){
     $purchaseorder['currencyname'] = currencydetail(null, array('id'=>$purchaseorder['currencyid']))['name'];
     $purchaseorder['paymentaccountname'] = chartofaccountdetail(null, array('id'=>$purchaseorder['paymentaccountid']))['name'];
     $purchaseorder['handlingfeeaccountname'] = isset($handlingfeepaymentaccount['name']) ? $handlingfeepaymentaccount['name'] : '';
+
+    $payments = pmrs("select 
+        `id`, `date` as paymentdate, amount as paymentamount, currencyrate as paymentcurrencyrate,
+        totalamount as paymenttotalamount, chartofaccountid as paymentaccountid
+      from purchaseorderpayment where purchaseorderid = ?", [ $purchaseorder['id'] ]);
+    $purchaseorder['payments'] = $payments;
+
   }
 
   return $purchaseorder;
@@ -185,7 +192,7 @@ function purchaseorderentry($purchaseorder){
   $date = ov('date', $purchaseorder, 1, array('type'=>'date'));
   $address = ov('address', $purchaseorder);
   $currencyid = ov('currencyid', $purchaseorder, 0, 1);
-  $currencyrate = floatval(ov('currencyrate', $purchaseorder, 1));
+  $currencyrate = 1;
   $note = ov('note', $purchaseorder);
   $discount = ov('discount', $purchaseorder, 0, 0);
   $discountamount = ov('discountamount', $purchaseorder, 0, 0);
@@ -195,9 +202,6 @@ function purchaseorderentry($purchaseorder){
   $createdby = $_SESSION['user']['id'];
   $isinvoiced = 0;
   $ispaid = ov('ispaid', $purchaseorder);
-  $paymentdate = ov('paymentdate', $purchaseorder);
-  $paymentamount = ov('paymentamount', $purchaseorder, 0, 0);
-  $paymentaccountid = ov('paymentaccountid', $purchaseorder, 0, 2);
   $freightcharge = ov('freightcharge', $purchaseorder, 0, 0);
   $handlingfeeamount = ov('handlingfeeamount', $purchaseorder, 0, 0);
   $handlingfeeaccountname = ov('handlingfeeaccountname', $purchaseorder);
@@ -237,10 +241,6 @@ function purchaseorderentry($purchaseorder){
   if(!isdate($date)) exc('Tanggal harus diisi.');
   if(pmc("select count(*) from purchaseorder where code = ?", [ $code ]) > 0) exc("Kode pesanan sudah ada.");
   if(!is_array($inventories) || count($inventories) == 0) throw new Exception('Barang harus diisi.');
-  if($paymentamount > 0){
-    if(!isdate($paymentdate)) exc('Tanggal pelunasan harus diisi.');
-    if(!chartofaccount_id_exists($paymentaccountid)) exc("Akun pelunasan harus diisi.");
-  }
   if($taxamount > 0){
     if(!isdate($taxdate)) exc("Tanggal ppn harus diisi.");
     if(!chartofaccount_id_exists($taxaccountid)) exc("Akun ppn harus diisi.");
@@ -269,7 +269,6 @@ function purchaseorderentry($purchaseorder){
     if(!isdate($handlingfeedate)) exc("Tanggal handling fee masuk harus diisi.");
     if(!chartofaccount_id_exists($handlingfeeaccountid)) exc("Akun handling fee masuk harus diisi.");
   }
-  if($ispaid && $paymentamount <= 0) exc("Nilai pelunasan belum diisi.");
 
   $subtotal = 0;
   foreach($inventories as $index=>$row){
@@ -294,6 +293,41 @@ function purchaseorderentry($purchaseorder){
     $subtotal += $unittotal;
   }
   $total = $subtotal - $discountamount + $freightcharge;
+
+  // Validate payment
+  $paymentdate = null;
+  $paymentamount = 0;
+  $paymentaccountid = 0;
+  $payments = [];
+  $payment_amount_in_currency = 0;
+  for($i = 0 ; $i < 5 ; $i++){
+
+    $n_paymentamount = ov("paymentamount-$i", $purchaseorder);
+    $n_paymentcurrencyrate = ov("paymentcurrencyrate-$i", $purchaseorder);
+    $n_paymentdate = ov("paymentdate-$i", $purchaseorder);
+    $n_paymentaccountid = ov("paymentaccountid-$i", $purchaseorder);
+    $n_totalamount = $n_paymentcurrencyrate * $n_paymentamount;
+
+    if(!$n_paymentamount) continue;
+
+    if(!$n_paymentdate) exc("Tanggal pembayaran belum diisi");
+    if(!$n_paymentaccountid) exc("Akun pembayaran belum diisi");
+    if(!$n_totalamount) exc("Total pembayaran belum diisi ");
+
+    $payments[] = [
+      'amount'=>$n_paymentamount,
+      'currencyrate'=>$n_paymentcurrencyrate,
+      'date'=>$n_paymentdate,
+      'chartofaccountid'=>$n_paymentaccountid,
+      'totalamount'=>$n_totalamount,
+    ];
+
+    $paymentamount += $n_totalamount;
+    $payment_amount_in_currency += $n_paymentamount;
+    if(!$paymentdate) $paymentdate = $n_paymentdate;
+    if(!$paymentaccountid) $paymentaccountid = $n_paymentaccountid;
+
+  }
 
   try{
 
@@ -361,8 +395,21 @@ function purchaseorderentry($purchaseorder){
       pm($query, $params);
     }
 
-    purchaseordercalculate($id);
-    inventory_purchaseorderqty();
+    pm("delete from purchaseorderpayment where purchaseorderid = ?", [ $id ]);
+    foreach($payments as $payment){
+
+      pm("insert into purchaseorderpayment (purchaseorderid, `type`, `date`, amount, chartofaccountid, currencyrate, totalamount)
+        values (?, ?, ?, ?, ? ,?, ?)", [
+          $id,
+          1,
+          $payment['date'],
+          $payment['amount'],
+          $payment['chartofaccountid'],
+          $payment['currencyrate'],
+          $payment['totalamount']
+      ]);
+
+    }
 
     userlog('purchaseorderentry', $purchaseorder, '', $_SESSION['user']['id'], $id);
 
@@ -375,6 +422,9 @@ function purchaseorderentry($purchaseorder){
     throw $ex;
 
   }
+
+  purchaseordercalculate($id);
+  inventory_purchaseorderqty();
 
   return [ 'id'=>$id ];
 
@@ -478,29 +528,6 @@ function purchaseordermodify($purchaseorder){
     $paymentamount = ov('paymentamount', $purchaseorder);
     if($paymentamount <= 0) exc("Nilai pelunasan belum diisi.");
     $updatedrows['ispaid'] = $purchaseorder['ispaid'];
-  }
-
-  if(isset($purchaseorder['paymentamount']) && $purchaseorder['paymentamount'] != $current['paymentamount']){
-    if($purchaseorder['paymentamount'] > 0){  // If has payment amount, require 2 more fields
-      $paymentdate = ov('paymentdate', $purchaseorder, 1);
-      $paymentaccountid = ov('paymentaccountid', $purchaseorder, 1);
-      if(!isdate($paymentdate)) exc("Tanggal pelunasan salah.");
-      if(!chartofaccount_id_exists($paymentaccountid)) exc("Akun pelunasan salah.");
-    }
-    $updatedrows['paymentamount'] = $purchaseorder['paymentamount'];
-  }
-
-  if(isset($purchaseorder['paymentdate']) &&
-    date('Ymd', strtotime($purchaseorder['paymentdate'])) >= date('Ymd', strtotime($current['date'])) &&
-    date('Ymd', strtotime($purchaseorder['paymentdate'])) != date('Ymd', strtotime($current['paymentdate']))){
-    $updatedrows['paymentdate'] = date('Ymd', strtotime($purchaseorder['paymentdate']));
-  }
-
-  if(isset($purchaseorder['paymentaccountid']) &&
-    $purchaseorder['paymentaccountid'] != $current['paymentaccountid']
-  ){
-    if(!chartofaccount_id_exists($purchaseorder['paymentaccountid'])) exc("Akun pelunasan belum diisi.");
-    $updatedrows['paymentaccountid'] = $purchaseorder['paymentaccountid'];
   }
 
   if(isset($purchaseorder['freightcharge']) && $purchaseorder['freightcharge'] != $current['freightcharge'])
@@ -609,6 +636,44 @@ function purchaseordermodify($purchaseorder){
     $updatedrows['total'] = $total;
   }
 
+  // Validate payment
+  $paymentdate = null;
+  $paymentamount = 0;
+  $payment_amount_in_currency = 0;
+  $paymentaccountid = 0;
+  $payments = [];
+  for($i = 0 ; $i < 5 ; $i++){
+
+    $n_paymentamount = ov("paymentamount-$i", $purchaseorder);
+    $n_paymentcurrencyrate = ov("paymentcurrencyrate-$i", $purchaseorder);
+    $n_paymentdate = ov("paymentdate-$i", $purchaseorder);
+    $n_paymentaccountid = ov("paymentaccountid-$i", $purchaseorder);
+    $n_totalamount = $n_paymentcurrencyrate * $n_paymentamount;
+
+    if(!$n_paymentamount) continue;
+
+    if(!$n_paymentdate) exc("Tanggal pembayaran belum diisi");
+    if(!$n_paymentaccountid) exc("Akun pembayaran belum diisi");
+    if(!$n_totalamount) exc("Total pembayaran belum diisi ");
+
+    $payments[] = [
+      'amount'=>$n_paymentamount,
+      'currencyrate'=>$n_paymentcurrencyrate,
+      'date'=>$n_paymentdate,
+      'chartofaccountid'=>$n_paymentaccountid,
+      'totalamount'=>$n_totalamount,
+    ];
+
+    $paymentamount += $n_totalamount;
+    $payment_amount_in_currency += $n_paymentamount;
+    if(!$paymentdate) $paymentdate = $n_paymentdate;
+    if(!$paymentaccountid) $paymentaccountid = $n_paymentaccountid;
+
+  }
+  $updatedrows['paymentamount'] = $paymentamount;
+  $updatedrows['paymentdate'] = $paymentdate;
+  $updatedrows['paymentaccountid'] = $paymentaccountid;
+
   try{
 
     pdo_begin_transaction();
@@ -655,13 +720,27 @@ function purchaseordermodify($purchaseorder){
         pm($query, $params);
       }
 
-      $updatedrows['inventories'] = $purchaseorder['inventories'];
+    }
+    $updatedrows['inventories'] = $purchaseorder['inventories'];
 
-      purchaseordercalculate($id);
+    pm("delete from purchaseorderpayment where purchaseorderid = ?", [ $id ]);
+    foreach($payments as $payment){
 
-      userlog('purchaseordermodify', $current, $updatedrows, $_SESSION['user']['id'], $id);
+      pm("insert into purchaseorderpayment (purchaseorderid, `type`, `date`, amount, chartofaccountid, currencyrate, totalamount)
+        values (?, ?, ?, ?, ? ,?, ?)", [
+        $id,
+        1,
+        $payment['date'],
+        $payment['amount'],
+        $payment['chartofaccountid'],
+        $payment['currencyrate'],
+        $payment['totalamount']
+      ]);
 
     }
+    $updatedrows['payments'] = $payments;
+
+    userlog('purchaseordermodify', $current, $updatedrows, $_SESSION['user']['id'], $id);
 
     pdo_commit();
 
@@ -672,6 +751,9 @@ function purchaseordermodify($purchaseorder){
     throw $ex;
 
   }
+
+  purchaseordercalculate($id);
+  inventory_purchaseorderqty();
 
   return array('id'=>$id);
 
@@ -735,6 +817,7 @@ function purchaseordercalculate($id){
   $import_cost = ov('import_cost', $current);
   $handlingfeepaymentamount = ov('handlingfeepaymentamount', $current);
   $isbaddebt = ov('isbaddebt', $current);
+  $payments = $current['payments'];
 
   /**
    * Create journals
@@ -742,23 +825,29 @@ function purchaseordercalculate($id){
   $journalvouchers = [];
 
   // Payment
-  if($paymentamount > 0){
+  if(count($payments) > 0){
 
-    $paymentaccountid = ov('paymentaccountid', $current);
-    $paymentdate = ov('paymentdate', $current);
+    foreach($payments as $index=>$payment){
 
-    $details = array();
-    $details[] = array('coaid'=>$purchaseinvoice_downpaymentaccountid, 'debitamount'=>$paymentamount, 'creditamount'=>0);
-    $details[] = array('coaid'=>$paymentaccountid, 'debitamount'=>0, 'creditamount'=>$paymentamount);
-    $journalvoucher = array(
-      'date'=>$paymentdate,
-      'description'=>'Payment for ' . $code,
-      'ref'=>'PO',
-      'refid'=>$id,
-      'type'=>'A',
-      'details'=>$details
-    );
-    $journalvouchers[] = $journalvoucher;
+      $paymentaccountid = $payment['paymentaccountid'];
+      $paymentdate = $payment['paymentdate'];
+      $paymentamount = $payment['paymenttotalamount'];
+      $paymentdate = $payment['paymentdate'];
+
+      $details = array();
+      $details[] = array('coaid'=>$purchaseinvoice_downpaymentaccountid, 'debitamount'=>$paymentamount, 'creditamount'=>0);
+      $details[] = array('coaid'=>$paymentaccountid, 'debitamount'=>0, 'creditamount'=>$paymentamount);
+      $journalvoucher = array(
+        'date'=>$paymentdate,
+        'description'=>'Payment ' . ($index + 1) . ' for ' . $code,
+        'ref'=>'PO',
+        'refid'=>$id,
+        'type'=>'A',
+        'details'=>$details
+      );
+      $journalvouchers[] = $journalvoucher;
+
+    }
 
   }
 

@@ -775,13 +775,12 @@ function purchaseinvoiceremove($filters){
 
 function purchaseinvoicecalculate($id){
 
-  echo "purchaseinvoicecalculate: $id\n";
-
   global $purchaseinvoice_inventoryaccountid, $purchaseinvoice_downpaymentaccountid, $purchaseinvoice_debtaccountid,
          $purchaseinvoice_payment_tolerance_accountid, $purchaseinvoice_payment_tolerance;
 
   $purchaseinvoice = purchaseinvoicedetail(null, array('id'=>$id));
   if(!$purchaseinvoice) return;
+  if(!$purchaseinvoice['code']) return;
 
   $date = $purchaseinvoice['date'];
   $supplierdescription = $purchaseinvoice['supplierdescription'];
@@ -830,6 +829,7 @@ function purchaseinvoicecalculate($id){
   /**
    * Inventory Balance
    */
+  $inventorybalances = [];
   foreach($inventories as $inventory){
 
     $purchaseinvoiceinventoryid = $inventory['id'];
@@ -852,7 +852,7 @@ function purchaseinvoicecalculate($id){
 
   }
   inventorybalanceremove(array('ref'=>'PI', 'refid'=>$id));
-  inventorybalanceentries($inventorybalances);
+  if(count($inventorybalances) > 0) inventorybalanceentries($inventorybalances);
 
   $debtamount = $totalpercurrency - $downpaymentamount - $paymentamount;
   if($debtamount < 1) $debtamount = 0; // If debtamount < 1, consider as paid
@@ -889,6 +889,23 @@ function purchaseinvoicecalculate($id){
 
     $journalvoucher = array(
       'date' => $paymentdate,
+      'description' => $code,
+      'ref' => 'PI',
+      'refid' => $id,
+      'type' => 'A',
+      'details' => $details
+    );
+    $journalvouchers[] = $journalvoucher;
+
+  }
+
+  else if($debtamount > 0){
+
+    $details[] = array('coaid' => $purchaseinvoice_inventoryaccountid, 'debitamount' => $debtamount, 'creditamount' => 0); // 10: Persediaan Barang Dagang
+    $details[] = array('coaid' => $purchaseinvoice_debtaccountid, 'debitamount' => 0, 'creditamount' => $debtamount); // 5: Hutang
+
+    $journalvoucher = array(
+      'date' => $date,
       'description' => $code,
       'ref' => 'PI',
       'refid' => $id,
@@ -1052,8 +1069,9 @@ function purchaseinvoicecalculate($id){
   //mysql_update_row("purchaseinvoice", [ 'ispaid'=>$debtamount > 0 ? 0 : 1 ], [ 'id'=>$id ]);
 
   // Update purchaseorder ispaid property if any
-  if($purchaseorderid > 0)
-    mysql_update_row("purchaseorder", [ 'ispaid'=>$debtamount > 0 ? 0 : 1 ], [ 'id'=>$purchaseorderid ]);
+  if($purchaseorderid > 0) {
+    mysql_update_row("purchaseorder", ['ispaid' => $debtamount > 0 ? 0 : 1], ['id' => $purchaseorderid]);
+  }
 
   return $journalvouchers;
 

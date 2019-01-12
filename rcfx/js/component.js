@@ -1113,18 +1113,17 @@ ui.dropdown_open = function(el, e){
 ui.dropdown_openex = function(el){
   var popup = el.lastElementChild;
   if(popup.classList.contains('off')){
-    var menuitems = ui('.menuitem', popup, true);
-    if(menuitems){
-      for(var i = 0 ; i < menuitems.length ; i++)
-        menuitems[i].addEventListener('click', ui.dropdown_menuitemclick, true);
       ui.popupopen(popup, el);
-    }
   }
   else{
 
   }
 }
 ui.dropdown_menuitemclick = function(e){
+
+  e.preventDefault();
+  e.stopPropagation();
+
   var popup = this.parentNode;
   var el = popup.parentNode;
   el.firstElementChild.innerHTML = this.innerHTML;
@@ -1134,6 +1133,7 @@ ui.dropdown_menuitemclick = function(e){
   var name = el.hasAttribute("data-name") ? el.getAttribute("data-name") : '';
   ui.eventcall(el.getAttribute("data-onchange"), { name:name, value:el.getAttribute("data-value"), text:this.innerHTML }, el);
   ui.popupclose(popup);
+
 }
 ui.dropdown_value = function(el){
   return el.getAttribute("data-value");

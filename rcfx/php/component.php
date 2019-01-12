@@ -380,7 +380,7 @@ function ui_dropdown($params){
   $items = ov('items', $params);
   $width = ov('width', $params);
   $value = ov('value', $params);
-  $class = ov('class', $params, 0, 'dropdown');
+  $class = ov('class', $params, 0);
   $placeholder = ov('placeholder', $params, 0, '-Select-');
   $onchange = ov('onchange', $params);
   $readonly = ov('readonly', $params);
@@ -400,7 +400,7 @@ function ui_dropdown($params){
   $readonly_exp = $readonly ? 'readonly' : '';
 
   $c = "
-  <span id='$id' class='$class $readonly_exp' data-name='$name' data-type='dropdown' data-src='$src' data-onchange=\"$onchange\"
+  <span id='$id' class='dropdown $class $readonly_exp' data-name='$name' data-type='dropdown' data-src='$src' data-onchange=\"$onchange\"
     data-items=\"" . htmlentities(json_encode($items)) . "\"
     style=\"width:$width;text-align:$align\" data-value=\"" . ($selecteditem != null ? htmlentities($selecteditem['value']) : '') . "\">
     <label onclick='ui.dropdown_open(this.parentNode, event)'>" . ($selecteditem != null ? $selecteditem['text'] : $placeholder) . "</label>
@@ -411,10 +411,11 @@ function ui_dropdown($params){
       $item = $items[$i];
       $itemvalue = $item['value'];
       $itemtext = ov('text', $item, 0, $itemvalue);
-      $c .= "<div class='menuitem' data-value=\"$itemvalue\">$itemtext</div>";
+      $c .= "<div class='menuitem' data-value=\"$itemvalue\" onclick=\"ui.dropdown_menuitemclick.apply(this, [ event ]);\">$itemtext</div>";
     }
   $c .= "</div></span>";
   return $c;
+
 }
 function ui_dropdownitems($popupuiid, $src){
 
@@ -426,7 +427,7 @@ function ui_dropdownitems($popupuiid, $src){
         $item = $items[$i];
         $itemvalue = $item['value'];
         $itemtext = ov('text', $item, 0, $itemvalue);
-        $c .= "<div class='menuitem' data-value=\"$itemvalue\">$itemtext</div>";
+        $c .= "<div class='menuitem' data-value=\"$itemvalue\" onclick=\"ui.dropdown_menuitemclick.apply(this, [ event ]);\">$itemtext</div>";
       }
     }
   }

@@ -42,6 +42,12 @@ function datasource($columns = null, $sorts = null, $filters = null, $limits = n
     $filters[] = [ 'name'=>'customerdescription', 'operator'=>'contains', 'value'=>'PT. FAJAR INDO SUKSES HARMONI' ];
     $filters[] = [ 'type'=>')' ];
   }
+  else if($_SESSION['user']['id'] == 1010){
+    if(count($filters) > 0) $filters[] = [ 'type'=>'and' ];
+    $filters[] = [ 'type'=>'(' ];
+    $filters[] = [ 'name'=>'inventorycode', 'operator'=>'contains', 'value'=>'KOB' ];
+    $filters[] = [ 'type'=>')' ];
+  }
 
   // Apply allowed_salesman (_self,*,<name>,<name>)
   $sales_allowed_salesman = userkeystoreget($_SESSION['user']['id'], 'privilege.sales_allowed_salesman');
@@ -78,7 +84,24 @@ function customheadcolumns(){
 }
 function defaultcolumns(){
 
-  return salesinvoice_uicolumns();
+  $columns = salesinvoice_uicolumns();
+
+  if($_SESSION['user']['id'] == 1010){
+    $columns = [
+      array('active'=>1, 'name'=>'date', 'text'=>'Tanggal', 'width'=>100, 'datatype'=>'date'),
+      array('active'=>1, 'name'=>'code', 'text'=>'Kode', 'width'=>110),
+      array('active'=>1, 'name'=>'customerdescription', 'text'=>'Pelanggan', 'width'=>200),
+      array('active'=>0, 'name'=>'customeraddress', 'text'=>'Alamat', 'width'=>200),
+      array('active'=>1, 'name'=>'inventorycode', 'text'=>'Kode Barang', 'width'=>80),
+      array('active'=>1, 'name'=>'inventorydescription', 'text'=>'Barang', 'width'=>200),
+      array('active'=>1, 'name'=>'qty', 'text'=>'Kts', 'width'=>60, 'datatype'=>'number'),
+      array('active'=>1, 'name'=>'unitprice', 'text'=>'Harga Satuan', 'width'=>80, 'datatype'=>'money'),
+      array('active'=>1, 'name'=>'unittotal', 'text'=>'Total Barang', 'width'=>80, 'datatype'=>'money'),
+      array('active'=>0, 'name'=>'createdon', 'text'=>'Dibuat', 'width'=>120, 'datatype'=>'datetime'),
+    ];
+  }
+
+  return $columns;
 
 }
 function defaultpresets(){

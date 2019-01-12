@@ -1972,15 +1972,15 @@ function terbilang_recurs($x){
   if ($x < 12)
     return " " . $abil[$x];
   elseif ($x < 20)
-    return terbilang_recurs($x - 10) . "belas";
+    return terbilang_recurs($x - 10) . " belas";
   elseif ($x < 100)
     return terbilang_recurs($x / 10) . " puluh" . terbilang_recurs($x % 10);
   elseif ($x < 200)
-    return " seratus" . Terbilang($x - 100);
+    return " seratus" . terbilang_recurs($x - 100);
   elseif ($x < 1000)
     return terbilang_recurs($x / 100) . " ratus" . terbilang_recurs($x % 100);
   elseif ($x < 2000)
-    return " seribu" . Terbilang($x - 1000);
+    return " seribu" . terbilang_recurs($x - 1000);
   elseif ($x < 1000000)
     return terbilang_recurs($x / 1000) . " ribu" . terbilang_recurs($x % 1000);
   elseif ($x < 1000000000)
