@@ -26,8 +26,8 @@ $row2height = 40;
 $id = $salesinvoice['id'];
 $salesinvoice = salesinvoicedetail_tax_to_nontax(null, array('id'=>$id));
 
-$creator = pmc("select `name` from `user` where `id` = ?", [ $salesinvoice['createdby'] ]);
-$creator = !$creator ? '' : $creator;
+$pic_admin = pmc("select `pic_admin` from `user` where `name` = ?", [ $salesinvoice['salesmanname'] ]);
+$pic_admin = !$pic_admin ? '' : $pic_admin;
 
 $companyname = systemvarget('companyname');
 $logo = systemvarget('logo');
@@ -222,7 +222,7 @@ for($a = 0 ; $a < $page ; $a++){
           <th style="text-align: right;white-space: nowrap"></th>
           <td></td>`
           <td style="font-size:.8em;width:40mm;text-align: right">
-            <?=strtolower($salesinvoice['salesmanname'])?> / <?=strtolower($creator)?>
+            <?=strtolower($salesinvoice['salesmanname'])?> <?=strlen($pic_admin) > 0 ? ' / ' .$pic_admin : ''?>
             <div></div>
             harga sudah termasuk ppn
           </td>

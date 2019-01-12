@@ -30,8 +30,8 @@ $taxable = $salesinvoice['taxable'];
 $customerid = $salesinvoice['customerid'];
 $customer = customerdetail(null, [ 'id'=>$customerid ]);
 
-$creator = pmc("select `name` from `user` where `id` = ?", [ $salesinvoice['createdby'] ]);
-$creator = !$creator ? '' : $creator;
+$pic_admin = pmc("select `pic_admin` from `user` where `name` = ?", [ $salesinvoice['salesmanname'] ]);
+$pic_admin = !$pic_admin ? '' : $pic_admin;
 
 if($customer['override_sales']){
   $logo = '';
@@ -260,7 +260,9 @@ for($a = 0 ; $a < $page ; $a++){
         <tr>
           <th style="text-align: right;white-space: nowrap"></th>
           <td></td>
-          <td style="font-size:.8em;width:20mm;text-align: right"><?=strtolower($salesinvoice['salesmanname'])?> / <?=strtolower($creator)?></td>
+          <td style="font-size:.8em;width:20mm;text-align: right">
+            <?=strtolower($salesinvoice['salesmanname'])?> <?=strlen($pic_admin) > 0 ? ' / ' .$pic_admin : ''?>
+          </td>
         </tr>
       </table>
     </div>
