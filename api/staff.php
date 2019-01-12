@@ -49,6 +49,7 @@ function staffentry($obj){
   $password = $obj['password'];
   $dept = $obj['dept'];
   $position = $obj['position'];
+  $pic_admin = $obj['pic_admin'];
   $confirm = $obj['password_confirm'];
   $accesslevel = $obj['accesslevel'];
   $multilogin = $obj['multilogin'];
@@ -56,9 +57,9 @@ function staffentry($obj){
   if(empty($password)) throw new Exception('Password tidak boleh kosong.');
   if($password != $confirm) throw new Exception('Password tidak sama.');
 
-  $id = pmi("INSERT INTO user(name, userid, password, salesable, createdon, createdby, accesslevel, multilogin, dept, `position`)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    array($name, $userid, md5($password), 1, date('YmdHis'), $_SESSION['user']['id'], $accesslevel, $multilogin, $dept, $position));
+  $id = pmi("INSERT INTO user(name, userid, password, salesable, createdon, createdby, accesslevel, multilogin, dept, `position`, pic_admin)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    array($name, $userid, md5($password), 1, date('YmdHis'), $_SESSION['user']['id'], $accesslevel, $multilogin, $dept, $position, $pic_admin));
 
   if(isset($obj['privilege_inventorycostprice'])){
     $privilege_inventorycostprice = $obj['privilege_inventorycostprice'] ? 1 : 0;
@@ -118,6 +119,9 @@ function staffmodify($obj){
 
   if(isset($obj['position']))
     $updatedcols['position'] = $obj['position'];
+
+  if(isset($obj['pic_admin']))
+    $updatedcols['pic_admin'] = $obj['pic_admin'];
 
   if(isset($obj['password']) && !empty($password)){
 

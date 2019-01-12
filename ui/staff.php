@@ -123,6 +123,7 @@ function ui_staffdetail($id, $mode = 'read', $index = 0){
     'userid'=>array('type'=>'textbox', 'name'=>'userid', 'value'=>ov('userid', $staff), 'width'=>150, 'readonly'=>$readonly),
     'dept'=>array('type'=>'dropdown', 'name'=>'dept', 'value'=>ov('dept', $staff), 'width'=>150, 'readonly'=>$readonly, 'items'=>$depts),
     'position'=>array('type'=>'dropdown', 'name'=>'position', 'value'=>ov('position', $staff), 'width'=>150, 'readonly'=>$readonly, 'items'=>$positions),
+    'pic_admin'=>array('type'=>'textbox', 'name'=>'pic_admin', 'value'=>ov('pic_admin', $staff), 'width'=>150, 'readonly'=>$readonly),
     'password'=>array('type'=>'textbox', 'name'=>'password', 'mode'=>'password', 'value'=>'', 'width'=>200, 'readonly'=>$readonly),
     'password_confirm'=>array('type'=>'textbox', 'name'=>'password_confirm', 'mode'=>'password', 'value'=>'', 'width'=>200, 'readonly'=>$readonly),
     'accesslevel'=>array('type'=>'dropdown', 'name'=>'accesslevel', 'readonly'=>$readonly, 'items'=>$accesslevels, 'value'=>ov('accesslevel', $staff)),
@@ -187,6 +188,10 @@ function ui_staffdetail($id, $mode = 'read', $index = 0){
               " . ui_control($controls['position']) . "              
               " . (!$readonly ? "<br /><small class='color-gray'>- Faktur penjualan terkirim hanya dapat diubah posisi diatas staff</small>" : '') . "
             </td>
+          </tr>
+          <tr>
+            <th><label>PIC Admin</label></th>
+            <td>" . ui_control($controls['pic_admin']) . "</td>
           </tr>
           <tr>
             <th><label>Level Akses</label></th>

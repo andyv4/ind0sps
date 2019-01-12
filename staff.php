@@ -38,7 +38,8 @@ function datasource($columns = null, $sorts = null, $filters = null, $limits = n
     'userid'=>'t1.userid',
     'multilogin'=>'t1.multilogin',
     'dept'=>'t1.dept',
-    'position'=>'t1.position'
+    'position'=>'t1.position',
+    'pic_admin'=>'t1.pic_admin'
   );
 
   // Generating sql queries
