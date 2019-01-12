@@ -30,6 +30,9 @@ $taxable = $salesinvoice['taxable'];
 $customerid = $salesinvoice['customerid'];
 $customer = customerdetail(null, [ 'id'=>$customerid ]);
 
+$creator = pmc("select `name` from `user` where `id` = ?", [ $salesinvoice['createdby'] ]);
+$creator = !$creator ? '' : $creator;
+
 if($customer['override_sales']){
   $logo = '';
   $companyname = $customer['sales_companyname'];
@@ -253,11 +256,11 @@ for($a = 0 ; $a < $page ; $a++){
           <td>&nbsp;:&nbsp;</td>
           <td style="width:20mm;text-align: right;font-size:1.2em"><?=number_format(floor($total))?></td>
         </tr>
-        <tr><td><div style="height:7mm">&nbsp;</div></td></tr>
+        <tr><td><div style="height:16mm">&nbsp;</div></td></tr>
         <tr>
           <th style="text-align: right;white-space: nowrap"></th>
           <td></td>
-          <td style="font-size:.8em;width:20mm;text-align: right"><?=$salesinvoice['salesmanname']?></td>
+          <td style="font-size:.8em;width:20mm;text-align: right"><?=strtolower($salesinvoice['salesmanname'])?> / <?=strtolower($creator)?></td>
         </tr>
       </table>
     </div>
