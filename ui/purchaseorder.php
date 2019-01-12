@@ -63,6 +63,7 @@ function ui_purchaseorderdetail($id, $mode = 'read', $obj = null){
   $import_cost_accountid = ov('import_cost_accountid', $obj, 0, 0);
 
   $chartofaccounts = chartofaccountlist(null, null, [ [ 'name'=>'code', 'operator'=>'contains', 'value'=>'100.' ] ]);
+  $bad_chartofaccounts = chartofaccountlist(null, null, [ [ 'name'=>'code', 'operator'=>'contains', 'value'=>'600.37' ] ]);
 
   $controls = array(
     'id'=>array('type'=>'hidden', 'name'=>'id', 'value'=>ov('id', $obj)),
@@ -80,8 +81,8 @@ function ui_purchaseorderdetail($id, $mode = 'read', $obj = null){
     'taxamount'=>array('type'=>'label', 'name'=>'taxamount', 'value'=>ov('taxamount', $obj, 0), 'width'=>100, 'datatype'=>'money', 'readonly'=>$readonly),
     'freightcharge'=>array('type'=>'textbox', 'name'=>'freightcharge', 'value'=>ov('freightcharge', $obj, 0), 'width'=>150, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()"),
     'total'=>array('type'=>'label', 'name'=>'total', 'value'=>ov('total', $obj, 0), 'width'=>150, 'datatype'=>'money', 'readonly'=>$readonly),
-    'ispaid'=>array('type'=>'checkbox', 'name'=>'ispaid', 'value'=>ov('ispaid', $obj, 0), 'readonly'=>$readonly, 'onchange'=>"purchaseorder_ispaid()"),
-    'paymentamount'=>array('type'=>'textbox', 'name'=>'paymentamount', 'value'=>ov('paymentamount', $obj, 0), 'readonly'=>1, 'width'=>150, 'datatype'=>'money', 'onchange'=>"purchaseorder_paymentamountchange()"),
+    'ispaid'=>array('type'=>'checkbox', 'name'=>'ispaid', 'value'=>ov('ispaid', $obj, 0), 'readonly'=>1, 'onchange'=>"purchaseorder_ispaid()"),
+    'paymentamount'=>array('type'=>'textbox', 'name'=>'paymentamount', 'value'=>ov('paymentamount', $obj, 0), 'readonly'=>1, 'width'=>120, 'datatype'=>'money', 'onchange'=>"purchaseorder_paymentamountchange()"),
     'paymentdate'=>array('type'=>'datepicker', 'name'=>'paymentdate', 'value'=>ov('paymentdate', $obj, 0), 'readonly'=>$readonly, 'onchange'=>"", 'align'=>'right'),
     'paymentaccountid'=>array('type'=>'dropdown', 'name'=>'paymentaccountid', 'value'=>ov('paymentaccountid', $obj, 0, 2), 'items'=>array_cast($chartofaccounts, array('text'=>'name', 'value'=>'id')), 'readonly'=>$readonly, 'width'=>150, 'onchange'=>"", 'align'=>'right'),
     'purchaseinvoicecode'=>array('type'=>'label', 'value'=>ov('code', $purchaseinvoice), 'onclick'=>"ui.async('ui_purchaseinvoiceopen', [ $purchaseinvoiceid, 'read', { callback:'ui_purchaseorderdetail', params:[ $id, 'read' ] } ], { waitel:this })"),
@@ -89,31 +90,31 @@ function ui_purchaseorderdetail($id, $mode = 'read', $obj = null){
     'refno'=>[ 'type'=>'textbox', 'name'=>'refno', 'value'=>ov('refno', $obj, 0), 'readonly'=>$readonly, 'width'=>100 ],
     'eta'=>[ 'type'=>'datepicker', 'name'=>'eta', 'value'=>ov('eta', $obj, 0), 'readonly'=>$readonly ],
     'term'=>[ 'type'=>'dropdown', 'name'=>'term', 'items'=>$terms, 'value'=>ov('term', $obj, 0), 'readonly'=>$readonly ],
-    'taxamount'=>array('type'=>'textbox', 'name'=>'taxamount', 'value'=>$taxamount, 'width'=>150, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()"),
+    'taxamount'=>array('type'=>'textbox', 'name'=>'taxamount', 'value'=>$taxamount, 'width'=>120, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()"),
     'taxdate'=>array('type'=>'datepicker', 'name'=>'taxdate', 'value'=>$taxdate, 'readonly'=>$readonly, 'onchange'=>"", 'align'=>'right', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()"),
-    'taxaccountid'=>array('type'=>'dropdown', 'name'=>'taxaccountid', 'value'=>$taxaccountid, 'items'=>$chartofaccounts, 'readonly'=>$readonly, 'width'=>150, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
-    'pph'=>array('type'=>'textbox', 'name'=>'pph', 'value'=>$pph, 'width'=>150, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()"),
+    'taxaccountid'=>array('type'=>'dropdown', 'name'=>'taxaccountid', 'value'=>$taxaccountid, 'items'=>array_cast($chartofaccounts, array('text'=>'name', 'value'=>'id')), 'readonly'=>$readonly, 'width'=>150, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
+    'pph'=>array('type'=>'textbox', 'name'=>'pph', 'value'=>$pph, 'width'=>120, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()"),
     'pphdate'=>array('type'=>'datepicker', 'name'=>'pphdate', 'value'=>$pphdate, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
-    'pphaccountid'=>array('type'=>'dropdown', 'name'=>'pphaccountid', 'value'=>$pphaccountid, 'width'=>150, 'items'=>$chartofaccounts, 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
-    'kso'=>array('type'=>'textbox', 'name'=>'kso', 'value'=>$kso, 'width'=>150, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()"),
+    'pphaccountid'=>array('type'=>'dropdown', 'name'=>'pphaccountid', 'value'=>$pphaccountid, 'width'=>150, 'items'=>array_cast($chartofaccounts, array('text'=>'name', 'value'=>'id')), 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
+    'kso'=>array('type'=>'textbox', 'name'=>'kso', 'value'=>$kso, 'width'=>120, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()"),
     'ksodate'=>array('type'=>'datepicker', 'name'=>'ksodate', 'value'=>$ksodate, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
-    'ksoaccountid'=>array('type'=>'dropdown', 'name'=>'ksoaccountid', 'value'=>$ksoaccountid, 'width'=>150, 'items'=>$chartofaccounts, 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
-    'ski'=>array('type'=>'textbox', 'name'=>'ski', 'value'=>$ski, 'width'=>150, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()"),
+    'ksoaccountid'=>array('type'=>'dropdown', 'name'=>'ksoaccountid', 'value'=>$ksoaccountid, 'width'=>150, 'items'=>array_cast($chartofaccounts, array('text'=>'name', 'value'=>'id')), 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
+    'ski'=>array('type'=>'textbox', 'name'=>'ski', 'value'=>$ski, 'width'=>120, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()"),
     'skidate'=>array('type'=>'datepicker', 'name'=>'skidate', 'value'=>$skidate, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
-    'skiaccountid'=>array('type'=>'dropdown', 'name'=>'skiaccountid', 'value'=>$skiaccountid, 'width'=>150, 'items'=>$chartofaccounts, 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
-    'clearance_fee'=>array('type'=>'textbox', 'name'=>'clearance_fee', 'value'=>$clearance_fee, 'width'=>150, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()"),
+    'skiaccountid'=>array('type'=>'dropdown', 'name'=>'skiaccountid', 'value'=>$skiaccountid, 'width'=>150, 'items'=>array_cast($chartofaccounts, array('text'=>'name', 'value'=>'id')), 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
+    'clearance_fee'=>array('type'=>'textbox', 'name'=>'clearance_fee', 'value'=>$clearance_fee, 'width'=>120, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()"),
     'clearance_fee_date'=>array('type'=>'datepicker', 'name'=>'clearance_fee_date', 'value'=>$clearance_fee_date, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
-    'clearance_fee_accountid'=>array('type'=>'dropdown', 'name'=>'clearance_fee_accountid', 'value'=>$clearance_fee_accountid, 'width'=>150, 'items'=>$chartofaccounts, 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
-    'import_cost'=>array('type'=>'textbox', 'name'=>'import_cost', 'value'=>$import_cost, 'width'=>150, 'datatype'=>'money', 'readonly'=>1, 'onchange'=>"purchaseorder_total()"),
+    'clearance_fee_accountid'=>array('type'=>'dropdown', 'name'=>'clearance_fee_accountid', 'value'=>$clearance_fee_accountid, 'width'=>150, 'items'=>array_cast($chartofaccounts, array('text'=>'name', 'value'=>'id')), 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
+    'import_cost'=>array('type'=>'textbox', 'name'=>'import_cost', 'value'=>$import_cost, 'width'=>120, 'datatype'=>'money', 'readonly'=>1, 'onchange'=>"purchaseorder_total()"),
     'import_cost_date'=>array('type'=>'datepicker', 'name'=>'import_cost_date', 'value'=>$import_cost_date, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
-    'import_cost_accountid'=>array('type'=>'dropdown', 'name'=>'import_cost_accountid', 'value'=>$import_cost_accountid, 'width'=>150, 'items'=>$chartofaccounts, 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
-    'handlingfeepaymentamount'=>array('type'=>'textbox', 'name'=>'handlingfeepaymentamount', 'value'=>ov('handlingfeepaymentamount', $obj), 'readonly'=>$readonly, 'width'=>150, 'datatype'=>'money', 'onchange'=>"purchaseorder_total()"),
+    'import_cost_accountid'=>array('type'=>'dropdown', 'name'=>'import_cost_accountid', 'value'=>$import_cost_accountid, 'width'=>150, 'items'=>array_cast($chartofaccounts, array('text'=>'name', 'value'=>'id')), 'readonly'=>$readonly, 'onchange'=>"purchaseorder_total()", 'align'=>'right'),
+    'handlingfeepaymentamount'=>array('type'=>'textbox', 'name'=>'handlingfeepaymentamount', 'value'=>ov('handlingfeepaymentamount', $obj), 'readonly'=>$readonly, 'width'=>120, 'datatype'=>'money', 'onchange'=>"purchaseorder_total()"),
     'handlingfeedate'=>array('type'=>'datepicker', 'name'=>'handlingfeedate', 'value'=>ov('handlingfeedate', $obj), 'readonly'=>$readonly, 'align'=>'right'),
-    'handlingfeeaccountid'=>array('type'=>'dropdown', 'name'=>'handlingfeeaccountid', 'value'=>ov('handlingfeeaccountid', $obj), 'items'=>$chartofaccounts, 'readonly'=>$readonly, 'width'=>150, 'onchange'=>"", 'align'=>'right'),
+    'handlingfeeaccountid'=>array('type'=>'dropdown', 'name'=>'handlingfeeaccountid', 'value'=>ov('handlingfeeaccountid', $obj), 'items'=>array_cast($chartofaccounts, array('text'=>'name', 'value'=>'id')), 'readonly'=>$readonly, 'width'=>150, 'onchange'=>"", 'align'=>'right'),
     'isbaddebt'=>array('type'=>'checkbox', 'name'=>'isbaddebt', 'value'=>ov('isbaddebt', $obj, 0, 0), 'readonly'=>$readonly, 'onchange'=>"purchaseorder_isbaddebt()"),
-    'baddebtamount'=>array('type'=>'textbox', 'name'=>'baddebtamount', 'value'=>ov('baddebtamount', $obj), 'readonly'=>$readonly, 'width'=>150, 'datatype'=>'money'),
+    'baddebtamount'=>array('type'=>'textbox', 'name'=>'baddebtamount', 'value'=>ov('baddebtamount', $obj), 'readonly'=>$readonly, 'width'=>120, 'datatype'=>'money'),
     'baddebtamountdate'=>array('type'=>'datepicker', 'name'=>'baddebtdate', 'value'=>ov('baddebtdate', $obj), 'readonly'=>$readonly, 'align'=>'right'),
-    'baddebtaccountid'=>array('type'=>'dropdown', 'name'=>'baddebtaccountid', 'value'=>ov('baddebtaccountid', $obj), 'items'=>$chartofaccounts, 'readonly'=>$readonly, 'width'=>150, 'onchange'=>"", 'align'=>'right'),
+    'baddebtaccountid'=>array('type'=>'dropdown', 'name'=>'baddebtaccountid', 'value'=>ov('baddebtaccountid', $obj), 'items'=>array_cast($bad_chartofaccounts, array('text'=>'name', 'value'=>'id')), 'readonly'=>$readonly, 'width'=>150, 'onchange'=>"", 'align'=>'right'),
   );
 
   $payments = $obj['payments'];
@@ -220,12 +221,12 @@ function ui_purchaseorderdetail($id, $mode = 'read', $obj = null){
         </tr>
       </table>      
       <div style='height:20px'></div>
-      <div class='align-right'>
-      
-        <span style='background:rgb(240, 250, 237);width:700px' class='padding10 payment-section'>
+      <div class='align-right'>";
+
+    $c .= "<span style='background:rgb(240, 250, 237);width:700px' class='padding10 payment-section'>
           <table cellspacing='0' class='form'>";
 
-  $c .= "<tr>
+    $c .= "<tr>
                 <th style='text-align:left'></th>
                 <td align='right' style='color:rgba(0, 0, 0, .2);font-weight:600;padding:6px'>JUMLAH</td>
                 <td align='right' style='color:rgba(0, 0, 0, .2);font-weight:600;padding:6px'>NILAI TUKAR</td>
@@ -233,11 +234,11 @@ function ui_purchaseorderdetail($id, $mode = 'read', $obj = null){
                 <td align='right' style='color:rgba(0, 0, 0, .2);font-weight:600;padding:6px'>AKUN</td>
               </tr>";
 
-for($i = 0 ; $i < 5 ; $i++){
+    for ($i = 0; $i < 5; $i++) {
 
-  $off = !isset($payments[$i]) && $i > 0 ? 'off' : '';
+      $off = !isset($payments[$i]) && $i > 0 ? 'off' : '';
 
-  $c .= "<tr class='$off'>
+      $c .= "<tr class='$off'>
               <th style='text-align:left'>" . (!$readonly ? "<span class='fa fa-times-circle payment-remove-btn' style='color:red' onclick='purchaseorder_paymentremove(this)'></span>" : '') . "<label>Pembayaran " . ($i + 1) . "</label></th>
               <td>" . ui_control($controls["paymentamount_$i"]) . "</td>
               <td>" . ui_control($controls["paymentcurrencyrate_$i"]) . "</td>
@@ -245,17 +246,17 @@ for($i = 0 ; $i < 5 ; $i++){
               <td>" . ui_control($controls["paymentaccountid_$i"]) . "</td>
             </tr>";
 
-}
+    }
 
-          $c .= "</table>";
+    $c .= "</table>";
 
-if(!$readonly)
-$c .= "<div class='align-center'><span onclick='purchaseorder_paymentadd()'><span class='fa fa-plus-circle payment-add-btn padding10' style='color:green'></span>Tambah Pembayaran</span></div>";
+    if (!$readonly)
+      $c .= "<div class='align-center'><span onclick='purchaseorder_paymentadd()'><span class='fa fa-plus-circle payment-add-btn padding10' style='color:green'></span>Tambah Pembayaran</span></div>";
 
 
-        $c .= "</span>
+    $c .= "</span>";
         
-        <div class='height15'></div>
+        $c .= "<div class='height15'></div>
         
         <span style='background:rgb(255, 250, 237);width:600px' class='padding10'>
           <table cellspacing='0' class='form'>";
@@ -263,7 +264,7 @@ $c .= "<div class='align-center'><span onclick='purchaseorder_paymentadd()'><spa
           $c .= "<tr>
               <th><label>Total Pembayaran</label></th>
               <td class='align-right'>" . ui_control($controls['ispaid']) . "</td>
-              <td>" . ui_control($controls['paymentamount']) . "</td>
+              <td>Rp. " . ui_control($controls['paymentamount']) . "</td>
               <td></td>
               <td></td>
             </tr>";
@@ -272,7 +273,7 @@ $c .= "<div class='align-center'><span onclick='purchaseorder_paymentadd()'><spa
             $c .= "<tr>
               <th><label>PPn</label></th>
               <td class='align-right'></td>
-              <td>" . ui_control($controls['taxamount']) . "</td>
+              <td>Rp. " . ui_control($controls['taxamount']) . "</td>
               <td>" . ui_control($controls['taxdate']) . "</td>
               <td>" . ui_control($controls['taxaccountid']) . "</td>
             </tr>";
@@ -282,7 +283,7 @@ $c .= "<div class='align-center'><span onclick='purchaseorder_paymentadd()'><spa
             $c .= "<tr>
               <th><label>PPH</label></th>
               <td class='align-right'></td>
-              <td>" . ui_control($controls['pph']) . "</td>
+              <td>Rp. " . ui_control($controls['pph']) . "</td>
               <td>" . ui_control($controls['pphdate']) . "</td>
               <td>" . ui_control($controls['pphaccountid']) . "</td>
             </tr>";
@@ -292,7 +293,7 @@ $c .= "<div class='align-center'><span onclick='purchaseorder_paymentadd()'><spa
             $c .= "<tr>
               <th><label>KSO</label></th>
               <td class='align-right'></td>
-              <td>" . ui_control($controls['kso']) . "</td>
+              <td>Rp. " . ui_control($controls['kso']) . "</td>
               <td>" . ui_control($controls['ksodate']) . "</td>
               <td>" . ui_control($controls['ksoaccountid']) . "</td>
             </tr>";
@@ -302,7 +303,7 @@ $c .= "<div class='align-center'><span onclick='purchaseorder_paymentadd()'><spa
             $c .= "<tr>
               <th><label>SKI</label></th>
               <td class='align-right'></td>
-              <td>" . ui_control($controls['ski']) . "</td>
+              <td>Rp. " . ui_control($controls['ski']) . "</td>
               <td>" . ui_control($controls['skidate']) . "</td>
               <td>" . ui_control($controls['skiaccountid']) . "</td>
             </tr>";
@@ -312,7 +313,7 @@ $c .= "<div class='align-center'><span onclick='purchaseorder_paymentadd()'><spa
             $c .= "<tr>
               <th><label>Clearance Fee</label></th>
               <td class='align-right'></td>
-              <td>" . ui_control($controls['clearance_fee']) . "</td>
+              <td>Rp. " . ui_control($controls['clearance_fee']) . "</td>
               <td>" . ui_control($controls['clearance_fee_date']) . "</td>
               <td>" . ui_control($controls['clearance_fee_accountid']) . "</td>
             </tr>";
@@ -322,7 +323,7 @@ $c .= "<div class='align-center'><span onclick='purchaseorder_paymentadd()'><spa
             $c .= "<tr>
               <th><label>Bea Masuk</label></th>
               <td class='align-right'></td>
-              <td>" . ui_control($controls['import_cost']) . "</td>
+              <td>Rp. " . ui_control($controls['import_cost']) . "</td>
               <td>" . ui_control($controls['import_cost_date']) . "</td>
               <td>" . ui_control($controls['import_cost_accountid']) . "</td>
             </tr>";
@@ -332,7 +333,7 @@ $c .= "<div class='align-center'><span onclick='purchaseorder_paymentadd()'><spa
             $c .= "<tr>
               <th><label>Handling Fee</label></th>
               <td class='align-right'></td>
-              <td>" . ui_control($controls['handlingfeepaymentamount']) . "</td>
+              <td>Rp. " . ui_control($controls['handlingfeepaymentamount']) . "</td>
               <td>" . ui_control($controls['handlingfeedate']) . "</td>
               <td>" . ui_control($controls['handlingfeeaccountid']) . "</td>
               <td></td>

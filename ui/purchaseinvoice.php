@@ -161,7 +161,8 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
     array('active'=>1, 'name'=>'col8', 'text'=>"Harga Modal", 'type'=>'html', 'html'=>'ui_purchaseinvoicedetail_col8', 'width'=>100, 'align'=>'right', 'class'=>'bg-light-yellow'),
   );
 
-  $chartofaccounts = array_cast(chartofaccountlist(), array('text'=>'name', 'value'=>'id'));
+  $chartofaccounts = chartofaccountlist(null, null, [ [ 'name'=>'code', 'operator'=>'contains', 'value'=>'100.' ] ]);
+  $chartofaccounts = array_cast($chartofaccounts, array('text'=>'name', 'value'=>'id'));
 
   $date_onchanged = $is_new ? "ui.async('ui_purchaseinvoicedetail_datechanged', [ value, $('#taxable').val(), $('#code').val() ]);" : '';
   $closebtn_onclicked = $is_new ? "if(confirm('Batalkan transaksi ini?')) ui.async('ui_purchaseinvoiceclose', [ $('#code').val() ], { waitel:this })" : "ui.modal_close(ui('.modal'))";
@@ -223,7 +224,7 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
 
     'freightcharge'=>array('type'=>'textbox', 'name'=>'freightcharge', 'value'=>$freightcharge, 'width'=>150, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseinvoice_total()"),
     'total'=>array('type'=>'label', 'name'=>'total', 'value'=>$total, 'width'=>150, 'datatype'=>'money', 'readonly'=>$readonly),
-    'ispaid'=>array('type'=>'checkbox', 'name'=>'ispaid', 'value'=>$ispaid, 'readonly'=>$readonly, 'onchange'=>"purchaseinvoice_ispaid()"),
+    'ispaid'=>array('type'=>'checkbox', 'name'=>'ispaid', 'value'=>$ispaid, 'readonly'=>1, 'onchange'=>"purchaseinvoice_ispaid()"),
     'warehouseid'=>array('type'=>'dropdown', 'name'=>'warehouseid', 'value'=>$warehouseid, 'items'=>array_cast(warehouselist(), array('text'=>'name', 'value'=>'id')), 'readonly'=>$readonly, 'width'=>150, 'onchange'=>""),
     'handlingfeevolume'=>array('type'=>'textbox', 'name'=>'handlingfeevolume', 'value'=>$handlingfeevolume, 'placeholder'=>'Volume...', 'readonly'=>$readonly, 'width'=>80, 'datatype'=>'number'),
     'items'=>array('columns'=>$detailcolumns, 'name'=>'inventories', 'value'=>$inventories, 'mode'=>'write', 'readonly'=>$readonly, 'id'=>'inventories', 'onremove'=>"purchaseinvoice_total()", 'write_no_add'=>($purchaseorder ? 1 : 0)),
@@ -248,8 +249,6 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
 
     if($purchaseorder['paymentamount'] > 0){
 
-      $controls['currencyid']['readonly'] = 1;
-      $controls['currencyrate']['readonly'] = 1;
       $controls['discount']['readonly'] = 1;
       $controls['discountamount']['readonly'] = 1;
       $controls['freightcharge']['readonly'] = 1;

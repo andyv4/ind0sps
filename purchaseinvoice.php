@@ -299,7 +299,7 @@ function ui_purchaseinvoicedetail_journal($purchaseinvoiceid){
 
   $purchaseinvoice = purchaseinvoicedetail(null, [ 'id'=>$purchaseinvoiceid ]);
   $purchaseorderid = $purchaseinvoice['purchaseorderid'];
-
+exc(1);
   $jv = journalvoucherlist('*', null, [
     [ 'type'=>'(' ],
     [ 'type'=>'(' ],

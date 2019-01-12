@@ -792,7 +792,6 @@ function purchaseinvoicecalculate($id){
   $paymentdate = ov('paymentdate', $purchaseinvoice);
   $paymentamount = ov('paymentamount', $purchaseinvoice);
   $total = ov('total', $purchaseinvoice);
-  $ispaid = ov('ispaid', $purchaseinvoice);
   $totalpercurrency = round($total * $currencyrate);
   $handlingfeeaccountid = $purchaseinvoice['handlingfeeaccountid'];
   $handlingfeedate = $purchaseinvoice['handlingfeedate'];
@@ -856,7 +855,8 @@ function purchaseinvoicecalculate($id){
 
   $debtamount = $totalpercurrency - $downpaymentamount - $paymentamount;
   if($debtamount < 1) $debtamount = 0; // If debtamount < 1, consider as paid
-  if($ispaid) $debtamount = 0;
+
+  $total_payment = 0;
 
   /**
    * Journal
@@ -866,7 +866,7 @@ function purchaseinvoicecalculate($id){
   // Default journal
   $details = [];
 
-  if($downpaymentamount > 0){
+  if($downpaymentamount > 0 && isdate($purchaseorder['paymentdate']) && $purchaseinvoice_downpaymentaccountid > 0){
     $details[] = array('coaid' => $purchaseinvoice_inventoryaccountid, 'debitamount' => $downpaymentamount, 'creditamount' => 0); // 10: Persediaan Barang Dagang
     $details[] = array('coaid' => $purchaseinvoice_downpaymentaccountid, 'debitamount' => 0, 'creditamount' => $downpaymentamount); // 18: Uang Muka Pembelian
 
@@ -879,6 +879,8 @@ function purchaseinvoicecalculate($id){
       'details' => $details
     );
     $journalvouchers[] = $journalvoucher;
+
+    $total_payment += $downpaymentamount;
   }
 
   if($paymentamount > 0){
@@ -896,6 +898,8 @@ function purchaseinvoicecalculate($id){
       'details' => $details
     );
     $journalvouchers[] = $journalvoucher;
+
+    $total_payment += $paymentamount;
 
   }
 
@@ -1064,6 +1068,16 @@ function purchaseinvoicecalculate($id){
   if(count($journalvouchers) > 0){
     journalvoucherentries($journalvouchers);
   }
+
+  $updates = [];
+  $total = $purchaseinvoice['total'] * $purchaseinvoice['currencyrate'];
+  if(abs($total - $total_payment) < 0.5 || $total_payment > $total){
+    $updates['ispaid'] = 1;
+  }
+  else{
+    $updates['ispaid'] = 0;
+  }
+  mysql_update_row('purchaseinvoice', $updates, [ 'id'=>$purchaseinvoice['id'] ]);
 
   // Update purchaseinvoice ispaid property
   //mysql_update_row("purchaseinvoice", [ 'ispaid'=>$debtamount > 0 ? 0 : 1 ], [ 'id'=>$id ]);
