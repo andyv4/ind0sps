@@ -46,7 +46,7 @@ mysql_update_row('jobs',
 try{
 
   include __DIR__ . '/../api/' . $file . '.php';
-  $result = $function($payload);
+  $result = call_user_func_array($function, $payload);
 
   $status = 1;
   $message = $result ? json_encode($result) : '';
