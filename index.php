@@ -149,6 +149,7 @@ require_once 'rcfx/php/pdo.php';
 require_once 'rcfx/php/util.php';
 require_once 'api/privilege.php';
 require_once 'api/intl.php';
+require_once 'api/job.php';
 require_once 'api/system.php';
 require_once 'api/config.php';
 require_once 'api/user.php';
