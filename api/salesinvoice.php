@@ -775,8 +775,8 @@ function salesinvoiceentry($salesinvoice){
     $query = "INSERT INTO salesinvoiceinventory(salesinvoiceid, inventoryid, inventorycode,
       inventorydescription, qty, unit, unitprice, unitdiscount, unitdiscountamount, unittotal) VALUES " . implode(',', $paramstr);
     pm($query, $params);
-
-    salesinvoicecalculate($id);
+    
+    code_commit($code);
 
     userlog('salesinvoiceentry', $salesinvoice, '', $_SESSION['user']['id'], $id);
 
@@ -789,6 +789,8 @@ function salesinvoiceentry($salesinvoice){
     throw $ex;
   
   }
+  
+  job_create_and_run('salesinvoice_calculate', [ $id ]);
 
   $result = array('id'=>$id, 'warnings'=>$warnings);
   return $result;
@@ -1023,8 +1025,6 @@ function salesinvoicemodify($salesinvoice){
 
     }
 
-    salesinvoicecalculate($id, $inventory_modified);
-
     userlog('salesinvoicemodify', $current, $updatedrow, $_SESSION['user']['id'], $id);
 
     pdo_commit();
@@ -1037,6 +1037,8 @@ function salesinvoicemodify($salesinvoice){
     throw $ex;
 
   }
+
+  job_create_and_run('salesinvoice_calculate', [ $id, $inventory_modified ]);
 
   return array('id'=>$id);
 
@@ -1090,7 +1092,7 @@ function salesinvoice_salesinvoicegroup_clear($salesinvoicegroupid){
   pm("UPDATE salesinvoice SET salesinvoicegroupid = null, isgroup = 0 WHERE salesinvoicegroupid = ?", array($salesinvoicegroupid));
 
 }
-function salesinvoicecalculate($id, $inventory_ischanged = true){
+function salesinvoice_calculate($id, $inventory_ischanged = true){
 
   $salesinvoice = salesinvoicedetail(null, array('id'=>$id));
   if(!$salesinvoice) return;
@@ -1199,9 +1201,8 @@ function salesinvoicecalculate($id, $inventory_ischanged = true){
   if($salesinvoice['isgroup']) salesinvoicegroup_salesinvoicemodify($salesinvoice['salesinvoicegroupid']);
 
   customerreceivablecalculate($customerid);
-  code_commit($code);
 
-  global $_REQUIRE_WORKER; $_REQUIRE_WORKER = true;
+  //global $_REQUIRE_WORKER; $_REQUIRE_WORKER = true;
 
 }
 function salesinvoice_release_unused(){
