@@ -177,7 +177,7 @@ $tax_mode_modules = [
 
 $requestid = uniqid();
 $requeststarttimestamp = microtime(1);
-$nocache = '3.9.2.1';
+$nocache = '3.9.2.2';
 $cachedir = 'usr/' . md5($_SESSION['user']['id'] . $_SESSION['dbschema']);
 if(!file_exists($cachedir)) mkdir($cachedir);
 

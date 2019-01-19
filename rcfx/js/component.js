@@ -1089,7 +1089,7 @@ ui.dropdown = function(params){
       var item = items[i];
       var text = item['text'];
       var value = item['value'];
-      c += "<div class='menuitem' data-value=\"" + value + "\">" + text + "</div>";
+      c += "<div class='menuitem' data-value=\"" + value + "\" onclick=\"ui.dropdown_menuitemclick.apply(this, [ event ]);\">" + text + "</div>";
     }
 
   c += "</div></span>";

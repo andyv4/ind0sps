@@ -203,7 +203,7 @@ $invoicefontsize = count($items) >= 20 ? 'font6pt' : (count($items) >= 10 ? 'fon
 
           <div style="">
             <label>Beneficiary Detail :</label>
-            <p><?=nl2br($beneficiarydetail)?></p>
+            <p style="font-size:1.3em;font-weight:bold;font-family:OpenSansBold"><?=nl2br($beneficiarydetail)?></p>
             <br />
             <i class="small">This receipt will consider valid after Bilyet Giro / Cheque can be cleared.</i>
           </div>
@@ -218,7 +218,6 @@ $invoicefontsize = count($items) >= 20 ? 'font6pt' : (count($items) >= 10 ? 'fon
             </div>
             <div style="width:40mm;text-align: center"><?=systemvarget('accountreceivable')?></div>
           </div>
-
 
         </td>
       </tr>
