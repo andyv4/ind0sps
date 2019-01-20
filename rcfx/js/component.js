@@ -1422,7 +1422,6 @@ ui.gridhead_oncolumnapply = function(e, button){
 
 ui.grid_onscroll = function(e){
 
-  console.log([ this.getAttribute("data-gridhead"), $(this.getAttribute("data-gridhead")).length ]);
   $(this.getAttribute("data-gridhead")).parent().scrollLeft($(this).scrollLeft());
 
 }
@@ -1473,6 +1472,7 @@ ui.grid2_moreresult = function(id, response){
 
 }
 ui.grid2_more2 = function(id){
+
   var tr = ui.grid2moredataex[id];
   if(ui.el_in_viewport(tr)){
     tr.firstElementChild.firstElementChild.innerHTML = 'Loading...';
@@ -1493,7 +1493,6 @@ ui.grid2init = function(id){
     var scrollel = ui(griddata['scrollel']);
     $(scrollel).on('scroll', function(){
       ui.grid2_more2(id);
-      //ui.grid2_more(griddata['id'], scrollel);
     });
 
     ui.grid2moredata[id]['lastfetch'] = new Date().getTime();
@@ -1579,7 +1578,6 @@ ui.groupgridrowclick = function(e, tr){
     if(el.classList.contains('groupgrid')) break;
   }
   while(true);
-  console.log(el);
 
   var active_tr = ui('.active', el);
   if(active_tr) active_tr.classList.remove('active');

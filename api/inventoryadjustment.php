@@ -184,9 +184,9 @@ function inventoryadjustmententry($obj){
     VALUES " . implode(',', $paramstr);
     pm($query, $params);
 
-    inventoryadjustmentcalculate($id);
-
     userlog('inventoryadjustmententry', $obj, '', $_SESSION['user']['id'], $id);
+
+    job_create_and_run('inventoryadjustment_ext', [ $id ]);
 
     pdo_commit();
 
@@ -199,7 +199,7 @@ function inventoryadjustmententry($obj){
 
   }
 
-  return array('id'=>$id);
+  return [ 'id'=>$id ];
 
 }
 function inventoryadjustmentmodify($obj){
@@ -280,9 +280,9 @@ function inventoryadjustmentmodify($obj){
 
       $updatedrow['details'] = $obj['details'];
 
-      inventoryadjustmentcalculate($id);
-
       userlog('inventoryadjustmentmodify', $current, $updatedrow, $_SESSION['user']['id'], $id);
+
+      job_create_and_run('inventoryadjustment_ext', [ $id ]);
 
     }
 
@@ -297,7 +297,7 @@ function inventoryadjustmentmodify($obj){
 
   }
 
-  return array('id'=>$id);
+  return [ 'id'=>$id ];
   
 }
 function inventoryadjustmentremove($filters){
@@ -311,12 +311,11 @@ function inventoryadjustmentremove($filters){
 
       pdo_begin_transaction();
 
-      inventorybalanceremove(array('ref'=>'IA', 'refid'=>$id));
-      journalvoucherremove(array('ref'=>'AJ', 'refid'=>$id));
-
       pm("DELETE FROM inventoryadjustment WHERE `id` = ?", array($id));
 
       userlog('inventoryadjustmentremove', $inventoryadjustment, '', $_SESSION['user']['id'], $id);
+
+      job_create_and_run('inventoryadjustment_remove_ext', [ $id ]);
 
       pdo_commit();
 
@@ -333,7 +332,7 @@ function inventoryadjustmentremove($filters){
 
 }
 
-function inventoryadjustmentcalculate($id){
+function inventoryadjustment_ext($id){
 
   $current = inventoryadjustmentdetail(null, array('id'=>$id));
   $code = $current['code'];
@@ -341,7 +340,6 @@ function inventoryadjustmentcalculate($id){
   $date = $current['date'];
   $details = $current['details'];
 
-  inventorybalanceremove(array('ref'=>'IA', 'refid'=>$id));
   $total = 0;
   $inventorybalances = array();
   for($i = 0 ; $i < count($details) ; $i++){
@@ -367,21 +365,26 @@ function inventoryadjustmentcalculate($id){
   }
   inventorybalanceentries($inventorybalances);
 
-  journalvoucherremove(array('ref'=>'AJ', 'refid'=>$id));
-  journalvoucherentry(array(
+  journalvoucherentriesj([
+    [
       'date'=>$date,
       'description'=>$code,
       'ref'=>'AJ',
       'refid'=>$id,
       'type'=>'A',
       'details'=>array(
-          array('coaid'=>10, 'debitamount'=>$total, 'creditamount'=>0),
-          array('coaid'=>19, 'debitamount'=>0, 'creditamount'=>$total)
+        array('coaid'=>10, 'debitamount'=>$total, 'creditamount'=>0),
+        array('coaid'=>19, 'debitamount'=>0, 'creditamount'=>$total)
       )
-  ));
+    ]
+  ]);
 
-  global $_REQUIRE_WORKER;
-  $_REQUIRE_WORKER = true;
+}
+function inventoryadjustment_remove_ext($id){
+
+  inventorybalanceremove(array('ref'=>'IA', 'refid'=>$id));
+  journalvoucherremove(array('ref'=>'AJ', 'refid'=>$id));
+
 
 }
 

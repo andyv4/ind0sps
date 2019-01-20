@@ -112,10 +112,6 @@ file_put_contents('usr/dc5ace4afe06201150ee30de65e80d96/3fc0faff5e000dcd00f2e0dc
       <td><button class="blue" onclick="ui.async('chartofaccount_updatemovestate', [], { waitel:this })"><span class="fa fa-cog"></span><label>Start</label></button></td>
     </tr>
     <tr>
-      <th><label>Update inventory move state</label></th>
-      <td><button class="blue" onclick="ui.async('inventory_updatemovestate', [], { waitel:this })"><span class="fa fa-cog"></span><label>Start</label></button></td>
-    </tr>
-    <tr>
       <th><label>Update warehouse move state</label></th>
       <td><button class="blue" onclick="ui.async('warehouse_updatemovestate', [], { waitel:this })"><span class="fa fa-cog"></span><label>Start</label></button></td>
     </tr>

@@ -124,7 +124,7 @@ function sampleinvoiceentry($sampleinvoice){
     }
     pm("INSERT INTO sampleinvoiceinventory(sampleinvoiceid, inventoryid, inventorycode, inventorydescription, qty, unit) VALUES " . implode(', ', $queries), $params);
 
-    sampleinvoicecalculate($id);
+    sampleinvoice_ext($id);
 
     userlog('sampleinvoiceentry', $sampleinvoice, '', $_SESSION['user']['id'], $id);
 
@@ -233,9 +233,9 @@ function sampleinvoicemodify($sampleinvoice){
 
     }
 
-    sampleinvoicecalculate($id);
-
     userlog('sampleinvoicemodify', $current, $updatedcols, $_SESSION['user']['id'], $id);
+
+    job_create_and_run('sampleinvoice_ext', [ $id ]);
 
     pdo_commit();
 
@@ -263,10 +263,11 @@ function sampleinvoiceremove($filters){
 
     pdo_begin_transaction();
 
-    journalvoucherremove(array('ref'=>'SJS', 'refid'=>$id));
-    inventorybalanceremove(array('ref'=>'SJS', 'refid'=>$id));
     pm("DELETE FROM sampleinvoice WHERE `id` = ?", array($id));
+
     userlog('sampleinvoiceremove', $sampleinvoice, '', $_SESSION['user']['id'], $id);
+
+    job_create_and_run('sampleinvoice_remove_ext', [ $id ]);
 
     pdo_commit();
 
@@ -281,32 +282,23 @@ function sampleinvoiceremove($filters){
 
 }
 
-function sampleinvoicecalculate($id){
+function sampleinvoice_ext($id){
 
   $sampleinvoice = sampleinvoicedetail(null, array('id'=>$id));
+  if(!$sampleinvoice) return;
 
-  // Inventory balance
-  $inventoryouts = array();
   $inventories = $sampleinvoice['inventories'];
-  for($i = 0 ; $i < count($inventories) ; $i++){
-    $inventory = $inventories[$i];
-    $inventoryid = $inventory['inventoryid'];
-    $qty = ov('qty', $inventory);
 
-    if(!isset($inventoryouts[$inventoryid])) $inventoryouts[$inventoryid] = array('qty'=>0);
-    $inventoryouts[$inventoryid]['qty'] += $qty;
-  }
-  inventorybalanceremove(array('ref'=>'SJS', 'refid'=>$id));
   $inventorybalances = array();
-  foreach($inventoryouts as $inventoryid=>$out){
+  foreach($inventories as $inventory){
     $inventorybalance = array(
       'ref'=>'SJS',
       'refid'=>$id,
       'date'=>$sampleinvoice['date'],
       'warehouseid'=>$sampleinvoice['warehouseid'],
       'description'=>$sampleinvoice['customerdescription'],
-      'inventoryid'=>$inventoryid,
-      'out'=>$out['qty'],
+      'inventoryid'=>$inventory['inventoryid'],
+      'out'=>$inventory['qty'],
       'createdon'=>$sampleinvoice['createdon']
     );
     $inventorybalances[] = $inventorybalance;
@@ -324,10 +316,13 @@ function sampleinvoicecalculate($id){
       'description'=>$sampleinvoice['customerdescription'],
       'details'=>$details
   );
-  journalvoucherentryormodify($journal);
+  journalvoucherentries([ $journal ]);
 
-  global $_REQUIRE_WORKER;
-  $_REQUIRE_WORKER = true;
+}
+function sampleinvoice_remove_ext($id){
+
+  journalvoucherremove(array('ref'=>'SJS', 'refid'=>$id));
+  inventorybalanceremove(array('ref'=>'SJS', 'refid'=>$id));
 
 }
 

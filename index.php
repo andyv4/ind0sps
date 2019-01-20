@@ -33,9 +33,6 @@ function onshutdown(){
     echo $content;
   }
 
-  global $_REQUIRE_WORKER;
-  if($_REQUIRE_WORKER) system_worker_run();
-
   pdo_close();
 
 }
@@ -120,27 +117,6 @@ function ui_notification(){
 }
 function is_debugmode(){
   return isset($_SESSION['debugmode']) && $_SESSION['debugmode'] ? true : false;
-}
-function require_worker(){
-
-  global $_REQUIRE_WORKER;
-  $_REQUIRE_WORKER = true;
-
-}
-function acquire_lock($key){
-
-  $lock_file = __DIR__ . "/usr/system/{$key}.lock";
-  $fp = fopen($lock_file, 'w+');
-  if(!flock($fp, LOCK_EX)) exc('Unable to acquire LOCK_EX');
-  return $fp;
-
-}
-function release_lock($fp, $key){
-
-  $lock_file = __DIR__ . "/usr/system/{$key}.lock";
-  fclose($fp);
-  unlink($lock_file);
-
 }
 
 require_once 'rcfx/php/component.php';

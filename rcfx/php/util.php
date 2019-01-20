@@ -2717,24 +2717,5 @@ function applog($key, $oneliner = '', $type = LOG_INFO, $dest = null){
 
 }
 
-/**
- * Queue implementation
- * For:
- * - purchase order save
- * Usage:
- *      queue_add([
- *        [ 'purchaseinvoicecalculate', [ 1, 2, 3 ] ],
- *        ...
- *      ])
- * @param $arr
- */
-function queue_add($arr){
-
-  $queue_dir = realpath(__DIR__ . '/../../queue');
-  $queue_path = $queue_dir . '/' . md5(uniqid());
-  file_put_contents($queue_path, json_encode($arr));
-
-}
-
 ?>
 

@@ -177,9 +177,9 @@ function pettycashentry($pettycash){
     $query = "INSERT INTO pettycashdebitaccount(pettycashid, debitaccountid, amount, remark) VALUES " . implode(',', $paramstr);
     pm($query, $params);
 
-    pettycashrecalculate($id);
-
     userlog('pettycashentry', $pettycash, '', $_SESSION['user']['id'], $id);
+
+    job_create_and_run('pettycash_ext', [ $id ]);
 
     pdo_commit();
 
@@ -222,7 +222,6 @@ function pettycashmodify($pettycash){
   if(isset($pettycash['creditaccountid']) && $pettycash['creditaccountid'] && $pettycash['creditaccountid'] != $current_pettycash['creditaccountid']){
     if(!chartofaccountdetail(null, array('id'=>$pettycash['creditaccountid']))) throw new Exception(excmsg('pe06'));
     $updatedrow['creditaccountid'] = $pettycash['creditaccountid'];
-    $is_recalculate = 1;
   }
 
   try{
@@ -265,9 +264,9 @@ function pettycashmodify($pettycash){
       $updatedrow['debitaccounts'] = $pettycash['debitaccounts'];
     }
 
-    if($is_recalculate) pettycashrecalculate($id);
-
     userlog('pettycashmodify', $current_pettycash, $updatedrow, $_SESSION['user']['id'], $id);
+
+    job_create_and_run('pettycash_ext', [ $id ]);
 
     pdo_commit();
 
@@ -279,7 +278,7 @@ function pettycashmodify($pettycash){
 
   }
 
-  return array('id'=>$id);
+  return [ 'id'=>$id ];
   
 }
 function pettycashremove($filters){
@@ -294,11 +293,11 @@ function pettycashremove($filters){
 
       pdo_begin_transaction();
 
-      journalvoucherremove(array('ref'=>'PE', 'refid'=>$id));
-      $query = "DELETE FROM pettycash WHERE `id` = ?";
-      pm($query, array($id));
+      pm("DELETE FROM pettycash WHERE `id` = ?", array($id));
 
       userlog('pettycashremove', $pettycash, '', $_SESSION['user']['id'], $id);
+
+      job_create_and_run('pettycash_remove_ext', [ $id ]);
 
       pdo_commit();
 
@@ -314,11 +313,10 @@ function pettycashremove($filters){
 
 }
 
-function pettycashrecalculate($id){
+function pettycash_ext($id){
 
   $pettycash = pettycashdetail(null, array('id'=>$id));
   $date = $pettycash['date'];
-  $code = $pettycash['code'];
   $creditaccountid = $pettycash['creditaccountid'];
   $debitaccounts = $pettycash['debitaccounts'];
   $debitaccountstotal = array();
@@ -332,25 +330,28 @@ function pettycashrecalculate($id){
     if(!isset($debitaccountstotal[$debitaccountid])) $debitaccountstotal[$debitaccountid] = 0;
     $debitaccountstotal[$debitaccountid] += $amount;
   }
+  $query = "UPDATE pettycash SET total = ? WHERE `id` = ?";
+  pm($query, array($total, $id));
 
   $details = array(array('coaid'=>$creditaccountid, 'debitamount'=>'', 'creditamount'=>$total));
   foreach($debitaccountstotal as $debitaccountid=>$debitaccounttotal)
     $details[] = array('coaid'=>$debitaccountid, 'debitamount'=>$debitaccounttotal, 'creditamount'=>0);
+  journalvoucherentries([
+    [
+      'date'=>$date,
+      'description'=>$pettycash['description'],
+      'type'=>'A',
+      'ref'=>'PE',
+      'refid'=>$id,
+      'details'=>$details
+    ]
+  ]);
+
+}
+
+function pettycash_remove_ext($id){
+
   journalvoucherremove(array('ref'=>'PE', 'refid'=>$id));
-  journalvoucherentry(array(
-    'date'=>$date,
-    'description'=>$pettycash['description'],
-    'type'=>'A',
-    'ref'=>'PE',
-    'refid'=>$id,
-    'details'=>$details
-  ));
-
-  $query = "UPDATE pettycash SET total = ? WHERE `id` = ?";
-  pm($query, array($total, $id));
-
-  global $_REQUIRE_WORKER;
-  $_REQUIRE_WORKER = true;
 
 }
 

@@ -732,6 +732,7 @@ ui_async();
     function m_resize(){
 
       ui('#row2').style.height = (window.innerHeight - ui('#row0').clientHeight - ui('#row1').clientHeight) - 24 + "px";
+      $('#row2>.grid').css({ 'min-height':(window.innerHeight - ui('#row0').clientHeight - ui('#row1').clientHeight) - 27 + "px" });
 
     }
 

@@ -1,5 +1,6 @@
 <?php
 require_once dirname(__FILE__) . '/chartofaccount.php';
+require_once dirname(__FILE__) . '/job.php';
 
 function journalvoucher_ui_columns(){
 
@@ -104,31 +105,46 @@ function journalvoucherentryormodify($obj){
   }
 
 }
-function journalvoucherentries($journalvouchers, $options = null){
+function journalvoucherentries($journalvouchers){
 
-  $options['dovalidation'] = 1; // Debug mode, on release default 0 prefered to improve performance
+  /*
+   * Validation
+   */
+  global $chartofaccounts_indexbyid;
+  for($i = 0 ; $i < count($journalvouchers) ; $i++){
+    $journalvoucher = $journalvouchers[$i];
+    $date = ov('date', $journalvoucher);
+    ov('description', $journalvoucher, 1, array('notempty'=>1));
+    $details = ov('details', $journalvoucher, 1);
 
-  // ------------------
-  // Validation - Default is omitted, only run when options.dovalidation is set to true
-  // ------------------
-  if(isset($options['dovalidation']) && $options['dovalidation']){
-    if(!is_array($journalvouchers)) throw new Exception('Invalid journalvouchers parameter, array required.');
-    if(count($journalvouchers) <= 0) throw new Exception('Parameter journalvouchers is empty.');
-    foreach($journalvouchers as $journalvoucher){
-      if(!is_assoc($journalvoucher)) throw new Exception('Invalid journalvouchers parameter, array of object required.');
-      if(!isset($journalvoucher['date'])) throw new Exception('Parameter date required.');
-      if(!isset($journalvoucher['ref'])) throw new Exception('Parameter ref required.');
-      if(!isset($journalvoucher['refid'])) throw new Exception('Parameter refid required.');
-      if(!isset($journalvoucher['details'])) throw new Exception('Parameter details required.');
-      if(!is_array($journalvoucher['details'])) throw new Exception('Invalid details parameter, array required.');
+    if(!isdate($date)) continue;
+
+    if(!isdate($date)) exc('Tanggal harus diisi.');
+    if(!is_array($details) && count($details) > 0) throw new Exception("Invalid details parameter.");
+    if(!is_array($details) || count($details) <= 0) throw new Exception('Detil akun belum diisi.');
+
+    for($j = 0 ; $j < count($details) ; $j++){
+      $detail = $details[$j];
+      if(!isset($detail['coaid'])) throw new Exception('Parameter coaid of detail is required.');
+      if(!isset($detail['debitamount']) && !isset($detail['creditamount'])) throw new Exception('Parameter creditamount/debitamount of detail is required.');
+      if(isset($detail['debitamount']) && $detail['debitamount'] < 0) throw new Exception('Invalid debit amount parameter, number required. ' . $detail['debitamount']);
+      if(isset($detail['creditamount']) && $detail['creditamount'] < 0) throw new Exception('Invalid credit amount parameter, number required. ' . $detail['creditamount']);
+      if(!isset($chartofaccounts_indexbyid[$detail['coaid']])) throw new Exception('Invalid coaid parameter.');
     }
   }
 
-  // --------------------
-  // Process
-  // --------------------
-  $params = $queries = $affectedcoaids = array();
-  global $chartofaccounts_indexbyid;
+  $related_coaids = [];
+
+  foreach($journalvouchers as $journalvoucher){
+    $rows = pmrs("select t2.coaid from journalvoucher t1, journalvoucherdetail t2 where t1.id = t2.jvid and 
+      t1.ref = ? and t1.refid = ?", [ $journalvoucher['ref'], $journalvoucher['refid'] ]);
+    if(is_array($rows))
+      foreach($rows as $row)
+        $related_coaids[$row['coaid']] = 1;
+    pm("delete from journalvoucher where `ref` = ? and refid = ?", [ $journalvoucher['ref'], $journalvoucher['refid'] ]);
+  }
+
+  $params = $queries = [];
   for($i = 0 ; $i < count($journalvouchers) ; $i++){
 
     $journalvoucher = $journalvouchers[$i];
@@ -141,30 +157,14 @@ function journalvoucherentries($journalvouchers, $options = null){
     $createdon = date('YmdHis');
     $createdby = isset($journalvoucher['createdby']) ? $journalvoucher['createdby'] : (isset($_SESSION['user']['id']) ? $_SESSION['user']['id'] : 0);
 
-    if(!isdate($date)) continue;
-
-    // ------------------
-    // Validation - Default is omitted, only run when options.dovalidation is set to true
-    // ------------------
-    if(isset($options['dovalidation']) && $options['dovalidation']){
-      if(!isdate($date)) exc('Tanggal harus diisi.');
-      if(!is_array($details) && count($details) > 0) throw new Exception("Invalid details parameter.");
-      if(!is_array($details) || count($details) <= 0) throw new Exception('Detil akun belum diisi.');
-      $totaldebitamount = $totalcreditamount = 0;
-      $affectedcoaids = array();
-      for($j = 0 ; $j < count($details) ; $j++){
-        $detail = $details[$j];
-        if(!isset($detail['coaid'])) throw new Exception('Parameter coaid of detail is required.');
-        if(!isset($detail['debitamount']) && !isset($detail['creditamount'])) throw new Exception('Parameter creditamount/debitamount of detail is required.');
-        if(isset($detail['debitamount']) && $detail['debitamount'] < 0) throw new Exception('Invalid debit amount parameter, number required. ' . $detail['debitamount']);
-        if(isset($detail['creditamount']) && $detail['creditamount'] < 0) throw new Exception('Invalid credit amount parameter, number required. ' . $detail['creditamount']);
-        if(!isset($chartofaccounts_indexbyid[$detail['coaid']])) throw new Exception('Invalid coaid parameter.');
-        $totaldebitamount += $detail['debitamount'];
-        $totalcreditamount += $detail['creditamount'];
-      }
-      if(abs($totaldebitamount - $totalcreditamount) > 0.001){
-        throw new Exception("Jurnal tidak balance $totaldebitamount-$totalcreditamount " . json_encode($details));
-      }
+    $totaldebitamount = $totalcreditamount = 0;
+    for($j = 0 ; $j < count($details) ; $j++){
+      $detail = $details[$j];
+      $totaldebitamount += $detail['debitamount'];
+      $totalcreditamount += $detail['creditamount'];
+    }
+    if(abs($totaldebitamount - $totalcreditamount) > 0.001){
+      throw new Exception("Jurnal tidak balance $totaldebitamount-$totalcreditamount " . json_encode($details));
     }
 
     $query = "INSERT INTO journalvoucher(`date`, `type`, description, amount, ref, refid, createdon, createdby) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
@@ -188,21 +188,14 @@ function journalvoucherentries($journalvouchers, $options = null){
 
       $queries[] = "(?, ?, ?, ?, ?, ?)";
       array_push($params, $id, $section, $coaid, $type, $debit, $credit);
-      $affectedcoaids[$detail['coaid']] = 1;
+      $related_coaids[$coaid] = 1;
     }
+
   }
   $query = "INSERT INTO journalvoucherdetail(jvid, section, coaid, `type`, debit, credit) VALUES " . implode(',', $queries);
   pm($query, $params);
 
-  // --------------------
-  // Post calculation
-  // --------------------
-
-  //if(is_array($affectedcoaids))
-   //foreach($affectedcoaids as $coaid=>$value)
-      //chartofaccountrecalculate($coaid);
-
-  //chartofaccountrecalculateall();
+  chartofaccountrecalculate(array_keys($related_coaids));
 
 }
 function journalvoucherentry($journalvoucher, $log = false){
@@ -227,7 +220,7 @@ function journalvoucherentry($journalvoucher, $log = false){
   if(!is_array($details) && count($details) > 0) throw new Exception("Invalid details parameter.");
   if(!is_array($details) || count($details) <= 0) throw new Exception('Detil akun belum diisi.');
   $totaldebitamount = $totalcreditamount = 0;
-  $affectedcoaids = array();
+  $related_coaids = array();
   $paramstr = $params = array();
   for($i = 0 ; $i < count($details) ; $i++){
     $detail = $details[$i];
@@ -245,45 +238,51 @@ function journalvoucherentry($journalvoucher, $log = false){
     throw new Exception('Jurnal tidak balance');
   }
 
-  // Apply lock
-  $lock_file = __DIR__ . "/../usr/system/journalvoucher_entry.lock";
-  $fp = fopen($lock_file, 'w+');
-  if(!flock($fp, LOCK_EX)) exc('Tidak dapat menyimpan, silakan ulangi beberapa saat lagi.');
-
   // --------------------
   // Store to database
   // --------------------
-  $query = "INSERT INTO journalvoucher(`date`, `type`, description, amount, ref, refid, createdon, createdby) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-  $id = pmi($query, array($date, $type, $description, abs($totaldebitamount), $ref, $refid, $createdon, $createdby));
+  try{
 
-  for($i = 0 ; $i < count($details) ; $i++){
-    $detail = $details[$i];
-    if(count($detail) == 0) continue;
-    if(!$detail['coaid'] && !$detail['debitamount'] && !$detail['creditamount']) continue;
-    $coaid = $detail['coaid'];
-    $section = ov('section', $detail, 0, 0);
-    $debitamount = floatval($detail['debitamount']);
-    $creditamount = floatval($detail['creditamount']);
-    $type = isset($detail['type']) && in_array($detail['type'], array('D', 'C')) ? $detail['type'] : ($debitamount == 0 ? 'C' : 'D');
-    $amount = $type == 'C' ? $creditamount : $debitamount;
-    $totaldebitamount += $debitamount;
-    $totalcreditamount += $creditamount;
-    $debit = $type == 'D' ? $amount : 0;
-    $credit = $type == 'C' ? $amount : 0;
+    pdo_begin_transaction();
 
-    $paramstr[] = "(?, ?, ?, ?, ?, ?)";
-    array_push($params, $id, $section, $coaid, $type, $debit, $credit);
-    $affectedcoaids[$detail['coaid']] = 1;
+    $query = "INSERT INTO journalvoucher(`date`, `type`, description, amount, ref, refid, createdon, createdby) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+    $id = pmi($query, array($date, $type, $description, abs($totaldebitamount), $ref, $refid, $createdon, $createdby));
+
+    for($i = 0 ; $i < count($details) ; $i++){
+      $detail = $details[$i];
+      if(count($detail) == 0) continue;
+      if(!$detail['coaid'] && !$detail['debitamount'] && !$detail['creditamount']) continue;
+      $coaid = $detail['coaid'];
+      $section = ov('section', $detail, 0, 0);
+      $debitamount = floatval($detail['debitamount']);
+      $creditamount = floatval($detail['creditamount']);
+      $type = isset($detail['type']) && in_array($detail['type'], array('D', 'C')) ? $detail['type'] : ($debitamount == 0 ? 'C' : 'D');
+      $amount = $type == 'C' ? $creditamount : $debitamount;
+      $totaldebitamount += $debitamount;
+      $totalcreditamount += $creditamount;
+      $debit = $type == 'D' ? $amount : 0;
+      $credit = $type == 'C' ? $amount : 0;
+
+      $paramstr[] = "(?, ?, ?, ?, ?, ?)";
+      array_push($params, $id, $section, $coaid, $type, $debit, $credit);
+      $related_coaids[$detail['coaid']] = 1;
+    }
+    $query = "INSERT INTO journalvoucherdetail(jvid, section, coaid, `type`, debit, credit) VALUES " . implode(',', $paramstr);
+    pm($query, $params);
+
+    if($log) userlog('journalvoucherentry', $journalvoucher, null, $_SESSION['user']['id'], $id);
+
+    pdo_commit();
+
   }
-  $query = "INSERT INTO journalvoucherdetail(jvid, section, coaid, `type`, debit, credit) VALUES " . implode(',', $paramstr);
-  pm($query, $params);
+  catch(Exception $ex){
 
-  journalvouchercalculate();
+    pdo_rollback();
+    throw $ex;
 
-  if($log) userlog('journalvoucherentry', $journalvoucher, null, $_SESSION['user']['id'], $id);
+  }
 
-  fclose($fp);
-  unlink($lock_file);
+  chartofaccountrecalculate(array_keys($related_coaids));
 
   return array('id'=>$id);
   
@@ -294,10 +293,6 @@ function journalvouchermodify($journalvoucher, $log = false){
   $current_journalvoucher = journalvoucherdetail(null, array('id'=>$id));
   if(!$current_journalvoucher) throw new Exception('Journal voucher not exists.');
   global $chartofaccounts_indexbyid;
-
-  $lock_file = __DIR__ . "/../usr/system/journalvoucher_modify_" . $id . ".lock";
-  $fp = fopen($lock_file, 'w+');
-  if(!flock($fp, LOCK_EX)) exc('Tidak dapat menyimpan, silakan ulangi beberapa saat lagi.');
 
   $updatedrow = array();
   if(isset($journalvoucher['date']) && strtotime($journalvoucher['date']) != strtotime($current_journalvoucher['date'])){
@@ -349,50 +344,46 @@ function journalvouchermodify($journalvoucher, $log = false){
 
       $paramstr[] = "(?, ?, ?, ?, ?, ?)";
       array_push($params, $id, $section, $coaid, $type, $debit, $credit);
-      $affectedcoaids[$detail['coaid']] = 1;
+      $related_coaids[$detail['coaid']] = 1;
     }
     if(abs($totaldebitamount - $totalcreditamount) > 0.001)
       throw new Exception('Jurnal tidak balance');
 
-    $affectedcoaids = array();
+    $related_coaids = array();
     foreach($current_journalvoucher['details'] as $currentdetail)
-      $affectedcoaids[$currentdetail['coaid']] = 1;
+      $related_coaids[$currentdetail['coaid']] = 1;
 
-    // Store to database
-    $query = "DELETE FROM journalvoucherdetail WHERE jvid = ?";
-    pm($query, array($id));
-    $query = "INSERT INTO journalvoucherdetail(jvid, section, coaid, `type`, debit, credit) VALUES " . implode(',', $paramstr);
-    pm($query, $params);
-    $query = "UPDATE journalvoucher SET amount = ? WHERE `id` = ?";
-    pm($query, array(abs($totaldebitamount), $id));
+    try{
+
+      pdo_begin_transaction();
+
+      // Store to database
+      $query = "DELETE FROM journalvoucherdetail WHERE jvid = ?";
+      pm($query, array($id));
+      $query = "INSERT INTO journalvoucherdetail(jvid, section, coaid, `type`, debit, credit) VALUES " . implode(',', $paramstr);
+      pm($query, $params);
+      $query = "UPDATE journalvoucher SET amount = ? WHERE `id` = ?";
+      pm($query, array(abs($totaldebitamount), $id));
+
+      if($log) userlog('journalvouchermodify', $current_journalvoucher, $updatedrow, $_SESSION['user']['id'], $id);
+
+      pdo_commit();
+
+    }
+    catch(Exception $ex){
+
+      pdo_rollback();
+      throw $ex;
+
+    }
 
   }
 
-  journalvouchercalculate();
-
-  if($log) userlog('journalvouchermodify', $current_journalvoucher, $updatedrow, $_SESSION['user']['id'], $id);
-
-  fclose($fp);
-  unlink($lock_file);
+  chartofaccountrecalculate(array_keys($related_coaids));
 
   return array('id'=>$id);
 
 }
-
-function journalvoucheritemmodify($condition, $update){
-
-  $ref = $condition['ref'];
-  $refid = $condition['refid'];
-  $coaid = $condition['coaid'];
-
-  $id = pmc("select t2.id from journalvoucher t1, journalvoucherdetail t2
-    where t1.id = t2.jvid and t1.ref = ? and t1.refid = ? and t2.coaid = ?",
-    [ $ref, $refid, $coaid ]);
-
-  mysql_update_row("journalvoucherdetail", $update, [ 'id'=>$id ], [ 'skip_table_checking'=>true ]);
-
-}
-
 function journalvoucherremove($filters, $log = false){
 
   $ids = array();
@@ -414,38 +405,40 @@ function journalvoucherremove($filters, $log = false){
     array_push($ids, $id);
   }
 
+  $related_coaids = [];
   for($i = 0 ; $i < count($ids) ; $i++){
 
     $id = $ids[$i];
     $current = journalvoucherdetail('*', [ 'id'=>$id ]);
     if(!$current) continue;
 
-    $lock_file = __DIR__ . "/../usr/system/journalvoucher_remove_" . $id . ".lock";
-    $fp = fopen($lock_file, 'w+');
-    if(!flock($fp, LOCK_EX)) exc('Tidak dapat menyimpan, silakan ulangi beberapa saat lagi.');
-
-    $affectedcoaids = array();
     $query = "SELECT coaid FROM journalvoucherdetail WHERE jvid = ?";
     $rows = pmrs($query, array($id));
     for($j = 0 ; $j < count($rows) ; $j++)
-      $affectedcoaids[$rows[$j]['coaid']] = 1;
+      $related_coaids[$rows[$j]['coaid']] = 1;
 
     $query = "DELETE FROM journalvoucher WHERE `id` = ?";
     pm($query, array($id));
 
     if($log) userlog('journalvoucherremove', $current, null, $_SESSION['user']['id'], $id);
 
-    fclose($fp);
-    unlink($lock_file);
-
   }
 
+  chartofaccountrecalculate(array_keys($related_coaids));
 
 }
-function journalvouchercalculate(){
 
-  global $_REQUIRE_WORKER;
-  $_REQUIRE_WORKER = true;
+function journalvoucheritemmodify($condition, $update){
+
+  $ref = $condition['ref'];
+  $refid = $condition['refid'];
+  $coaid = $condition['coaid'];
+
+  $id = pmc("select t2.id from journalvoucher t1, journalvoucherdetail t2
+    where t1.id = t2.jvid and t1.ref = ? and t1.refid = ? and t2.coaid = ?",
+    [ $ref, $refid, $coaid ]);
+
+  mysql_update_row("journalvoucherdetail", $update, [ 'id'=>$id ], [ 'skip_table_checking'=>true ]);
 
 }
 

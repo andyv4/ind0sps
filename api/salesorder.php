@@ -366,9 +366,6 @@ function salesorderrecalculate($id){
     ));
   }
 
-  global $_REQUIRE_WORKER;
-  $_REQUIRE_WORKER = true;
-
 }
 function salesorder_salesinvoicenew($id){
   $salesorder = salesorderdetail(null, array('id'=>$id));

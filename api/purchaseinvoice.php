@@ -457,17 +457,8 @@ function purchaseinvoiceentry($purchaseinvoice){
   // Automatically set purchase invoice code to new one if current code already used
   if(pmc("select count(*) from purchaseinvoice where `code` = ?", [ $purchaseinvoice['code'] ]) > 0) $code = purchaseinvoicecode($purchaseinvoice['date'], $purchaseinvoice['taxable']);
 
-  $purchaseinvoice['createdon'] = $purchaseinvoice['lastupdatedon'] = date('YmdHis');
-  $purchaseinvoice['createdby'] = $_SESSION['user']['id'];
-
-  $id = mysql_insert_row('purchaseinvoice', $purchaseinvoice);
-
-  /**
-   * Save inventories
-   */
-  $inventories = $purchaseinvoice['inventories'];
-
   // Group inventory by code and unitprice
+  $inventories = $purchaseinvoice['inventories'];
   if(systemvarget('purchaseinvoice_item_grouping')){
     $inventories = array_index($inventories, ['inventorycode', 'unitprice']);
     $temp = [];
@@ -483,6 +474,14 @@ function purchaseinvoiceentry($purchaseinvoice){
     }
     $inventories = $temp;
   }
+  $purchaseinvoice['createdon'] = $purchaseinvoice['lastupdatedon'] = date('YmdHis');
+  $purchaseinvoice['createdby'] = $_SESSION['user']['id'];
+
+  $id = mysql_insert_row('purchaseinvoice', $purchaseinvoice);
+
+  /**
+   * Save inventories
+   */
 
   $values = $params = [];
   for($i = 0 ; $i < count($inventories) ; $i++){
@@ -516,15 +515,15 @@ function purchaseinvoiceentry($purchaseinvoice){
       $params);
 
     // Update purchase order
-    if($purchaseinvoice['purchaseorderid'] > 0) pm("UPDATE purchaseorder SET isinvoiced = 1 WHERE `id` = ?", array($purchaseinvoice['purchaseorderid']));
+    if($purchaseinvoice['purchaseorderid'] > 0)
+      pm("UPDATE purchaseorder SET isinvoiced = 1 WHERE `id` = ?", array($purchaseinvoice['purchaseorderid']));
 
     // Commit current code
     code_commit($purchaseinvoice['code']);
 
-    purchaseinvoicecalculate($id);
-
-    // Save user log
     userlog('purchaseinvoiceentry', $purchaseinvoice, '', $_SESSION['user']['id'], $id);
+
+    job_create_and_run('purchaseinvoice_ext', [ $id ]);
 
     pdo_commit();
 
@@ -535,8 +534,6 @@ function purchaseinvoiceentry($purchaseinvoice){
     throw $ex;
 
   }
-
-  require_worker();
 
   return array('id'=>$id);
   
@@ -579,6 +576,9 @@ function purchaseinvoicemodify($purchaseinvoice){
   }
   if(isset($purchaseinvoice['note']) && $purchaseinvoice['note'] != $current['note']){
     $updatedrows['note'] = $purchaseinvoice['note'];
+  }
+  if(isset($purchaseinvoice['warehouseid']) && $purchaseinvoice['warehouseid'] != $current['warehouseid']){
+    $updatedrows['warehouseid'] = $purchaseinvoice['warehouseid'];
   }
 
   if(isset($purchaseinvoice['ispaid']) && $purchaseinvoice['ispaid'] != $current['ispaid'])
@@ -709,9 +709,9 @@ function purchaseinvoicemodify($purchaseinvoice){
 
     if(isset($updatedrows['code'])) code_commit($updatedrows['code'], $current['code']);
 
-    purchaseinvoicecalculate($id);
-
     userlog('purchaseinvoicemodify', $current, $updatedrows, $_SESSION['user']['id'], $id);
+
+    job_create_and_run('purchaseinvoice_ext', [ $id ]);
 
     pdo_commit();
 
@@ -722,8 +722,6 @@ function purchaseinvoicemodify($purchaseinvoice){
     throw $ex;
 
   }
-
-  require_worker();
 
   return array('id'=>$id);
 
@@ -748,7 +746,7 @@ function purchaseinvoiceremove($filters){
 
       if($purchaseinvoice['purchaseorderid']){
         pm("UPDATE purchaseorder SET isinvoiced = 0 WHERE `id` = ?", array($purchaseinvoice['purchaseorderid']));
-        purchaseordercalculate($purchaseinvoice['purchaseorderid']);
+        purchaseorder_ext($purchaseinvoice['purchaseorderid']);
       }
 
       if(!$taxable) code_remove($code); // Remove reservation if sales invoice is non-taxable
@@ -765,15 +763,13 @@ function purchaseinvoiceremove($filters){
 
     }
 
-    require_worker();
-
  	}
  	else
       throw new Exception('Faktur pembelian telah dihapus.');
 
 }
 
-function purchaseinvoicecalculate($id){
+function purchaseinvoice_ext($id){
 
   global $purchaseinvoice_inventoryaccountid, $purchaseinvoice_downpaymentaccountid, $purchaseinvoice_debtaccountid,
          $purchaseinvoice_payment_tolerance_accountid, $purchaseinvoice_payment_tolerance;
@@ -850,8 +846,7 @@ function purchaseinvoicecalculate($id){
     ];
 
   }
-  inventorybalanceremove(array('ref'=>'PI', 'refid'=>$id));
-  if(count($inventorybalances) > 0) inventorybalanceentries($inventorybalances);
+  inventorybalanceentries($inventorybalances);
 
   $debtamount = $totalpercurrency - $downpaymentamount - $paymentamount;
   if($debtamount < 1) $debtamount = 0; // If debtamount < 1, consider as paid
@@ -1085,6 +1080,7 @@ function purchaseinvoicecalculate($id){
   // Update purchaseorder ispaid property if any
   if($purchaseorderid > 0) {
     mysql_update_row("purchaseorder", ['ispaid' => $debtamount > 0 ? 0 : 1], ['id' => $purchaseorderid]);
+    inventory_purchaseorderqty();
   }
 
   return $journalvouchers;
@@ -1095,7 +1091,7 @@ function purchaseinvoicecalculateall(){
   $purchaseinvoiceids = pmrs("select id from purchaseinvoice");
   if(is_array($purchaseinvoiceids))
     foreach($purchaseinvoiceids as $purchaseinvoice)
-      purchaseinvoicecalculate($purchaseinvoice['id']);
+      purchaseinvoice_ext($purchaseinvoice['id']);
 
 }
 function purchaseinvoice_release_unused(){

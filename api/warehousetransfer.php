@@ -165,9 +165,9 @@ function warehousetransferentry($warehousetransfer){
       pm($query, $params);
     }
 
-    warehousetransfercalculate($id);
-
     userlog('warehousetransferentry', $warehousetransfer, '', $_SESSION['user']['id'], $id);
+
+    job_create_and_run('warehousetransfer_ext', [ $id ] );
 
     pdo_commit();
 
@@ -261,9 +261,9 @@ function warehousetransfermodify($warehousetransfer){
       $updatedrow['inventories'] = $warehousetransfer['inventories'];
     }
 
-    warehousetransfercalculate($id);
-
     userlog('warehousetransfermodify', $current, $updatedrow, $_SESSION['user']['id'], $id);
+
+    job_create_and_run('warehousetransfer_ext', [ $id ]);
 
     pdo_commit();
 
@@ -290,12 +290,11 @@ function warehousetransferremove($filters){
 
     pdo_begin_transaction();
 
-    inventorybalanceremove(array('ref'=>'WT', 'refid'=>$filters['id']));
-
-    $query = "DELETE FROM warehousetransfer WHERE `id` = ?";
-    pm($query, array($filters['id']));
+    pm("DELETE FROM warehousetransfer WHERE `id` = ?", array($filters['id']));
 
     userlog('warehousetransferremove', $warehousetransfer, '', $_SESSION['user']['id'], $id);
+
+    job_create_and_run('warehousetransfer_remove_ext', [ $id ]);
 
     pdo_commit();
 
@@ -309,7 +308,7 @@ function warehousetransferremove($filters){
 
 }
 
-function warehousetransfercalculate($id){
+function warehousetransfer_ext($id){
 
   $warehousetransfer = warehousetransferdetail(null, array('id'=>$id));
   $inventories = $warehousetransfer['inventories'];
@@ -318,7 +317,6 @@ function warehousetransfercalculate($id){
   $towarehouseid = $warehousetransfer['towarehouseid'];
 
   $totalqty = 0;
-  inventorybalanceremove(array('ref'=>'WT', 'refid'=>$id));
   $inventorybalances = [];
   for($i = 0 ; $i < count($inventories) ; $i++){
     $inventory = $inventories[$i];
@@ -333,10 +331,13 @@ function warehousetransfercalculate($id){
 
   $query = "UPDATE warehousetransfer SET totalqty = ? WHERE `id` = ?";
   pm($query, array($totalqty, $id));
-
-  global $_REQUIRE_WORKER;
-  $_REQUIRE_WORKER = true;
   
+}
+
+function warehousetransfer_remove_ext($id){
+
+  inventorybalanceremove(array('ref'=>'WT', 'refid'=>$id));
+
 }
 
 function warehousetransfer_fix1(){
@@ -347,8 +348,8 @@ function warehousetransfer_fix1(){
   if(is_array($rows) && count($rows) > 0){
     foreach($rows as $row){
       $id = $row['warehousetransferid'];
-      warehousetransfercalculate($id);
-      console_log([ 'warehousetransfercalculate', $id ]);
+      warehousetransfer_ext($id);
+      console_log([ 'warehousetransfer_ext', $id ]);
     }
   }
   else{

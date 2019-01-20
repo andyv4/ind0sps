@@ -1,5 +1,7 @@
 <?php
 
+exit();
+
 $stateurl = __DIR__ . '/../usr/system/.bgp';
 $runurl = __DIR__ . '/../usr/system/.bgpr';
 $waiturl = __DIR__ . '/../usr/system/.bgpw';

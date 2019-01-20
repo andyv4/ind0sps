@@ -448,7 +448,7 @@ function salesreturn_journal($id){
       'details'=>$details
   );
 
-  journalvoucherentryormodify($journal);
+  journalvoucherentries([ $journal ]);
 
 }
 

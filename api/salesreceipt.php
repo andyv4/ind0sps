@@ -334,9 +334,6 @@ function salesreceiptrecalculate($id, $items){
   }
   pm("UPDATE salesreceipt SET total = ? WHERE `id` = ?", array($total, $id));
 
-  global $_REQUIRE_WORKER;
-  $_REQUIRE_WORKER = true;
-
 }
 
 ?>

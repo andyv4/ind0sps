@@ -21,7 +21,7 @@ $job = pmr("select * from jobs where `id` = ? and running < 1", [ $job_id ]);
 if(!$job) return;
 
 $target = $job['target'];
-$payload = json_decode($job['target'], true);
+$payload = json_decode($job['payload'], true);
 $attempt = $job['attempt'];
 $target = explode('_', $target);
 $file = $target[0];
@@ -69,7 +69,7 @@ function onshutdown(){
   global $attempt, $ellapsed, $status, $message, $job_id, $start_time;
 
   $err = error_get_last();
-  if(isset($err['type'])){
+  if(isset($err['type']) && $err['type'] == E_ERROR){
 
     $status = 2;
     $message = json_encode($err);

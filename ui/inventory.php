@@ -216,16 +216,6 @@ function ui_inventoryremove($id){
   return m_load();
 
 }
-function ui_inventorymove($id){
-
-  inventorymove($id);
-  return
-    uijs("
-        ui('#grid1').querySelector(\"tr[data-id='$id']\").querySelector('.inventorymove').innerHTML = \"<span class='fa fa-check color-green'></span>\";
-      ") .
-    ui_dialog('Info', 'Barang berhasil dipindah.');
-
-}
 function ui_inventoryexport(){
 
   global $module;

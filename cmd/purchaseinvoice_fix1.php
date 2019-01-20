@@ -102,7 +102,7 @@ echo "#4 Found " . count($rows) . " issues." . PHP_EOL;
 if($fix) {
   if (is_array($rows)) {
     foreach ($rows as $row) {
-      purchaseinvoicecalculate($row['id']);
+      purchaseinvoice_ext($row['id']);
     }
     echo "#4 Completed." . PHP_EOL;
   }

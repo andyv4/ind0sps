@@ -400,9 +400,6 @@ function salesinvoicegroupmodify($salesinvoicegroup){
 
   }
 
-  global $_REQUIRE_WORKER;
-  $_REQUIRE_WORKER = true;
-
   return array('id'=>$id);
 
 }

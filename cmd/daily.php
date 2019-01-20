@@ -7,12 +7,9 @@ $mysqlpdo_password = 'webapp';
 
 require_once __DIR__ . '/../rcfx/php/pdo.php';
 require_once __DIR__ . '/../rcfx/php/util.php';
-require_once __DIR__ . '/../api/job.php';
+require_once __DIR__ . '/../api/inventory.php';
 
-define('MAX_ATTEMPT', 9);
-
-date_default_timezone_set('Asia/Jakarta');
-
-ini_set('max_execution_time', 600);
+inventoryanalysisgenerate();
+customer_suspended_calc();
 
 ?>

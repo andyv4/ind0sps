@@ -434,12 +434,20 @@ function chartofaccountremove($filters){
  * Calculate chart of account balance
  * @param $id
  */
-function chartofaccountrecalculate($id){
+function chartofaccountrecalculate($params){
 
-  $totalamount = pmc("select SUM(t2.debit) - SUM(t2.credit) from journalvoucher t1, journalvoucherdetail t2 
-    where t1.id = t2.jvid and t1.date <= ? and t2.coaid = ? group by t2.coaid", [ date('Ymd'), $id ]);
-  $query = "UPDATE chartofaccount SET amount = ? WHERE `id` = ?";
-  pm($query, array($totalamount, $id));
+  if(is_array($params)){
+    foreach($params as $id){
+      chartofaccountrecalculate($id);
+    }
+  }
+  else{
+    if(!is_int($params) || !$params) return;
+    $totalamount = pmc("select SUM(t2.debit) - SUM(t2.credit) from journalvoucher t1, journalvoucherdetail t2 
+      where t1.id = t2.jvid and t1.date <= ? and t2.coaid = ? group by t2.coaid", [ date('Ymd'), $params ]);
+    $query = "UPDATE chartofaccount SET amount = ? WHERE `id` = ?";
+    pm($query, array($totalamount, $params));
+  }
 
 }
 

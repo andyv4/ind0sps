@@ -443,7 +443,19 @@ function inventorybalancelist($columns = null, $filters){
 
 function inventorybalanceentry($inventorybalance){
 
-  $fp = acquire_lock(__FUNCTION__);
+  $inventories = [];
+  $warehouses = [];
+
+  $rows = pmrs("select inventoryid, warehouseid from inventorybalance where `ref` = ? and refid = ?", [
+    $inventorybalance['ref'], $inventorybalance['refid']
+  ]);
+  if(is_array($rows)){
+    foreach($rows as $row){
+      $inventories[$row['inventoryid']] = 1;
+      $warehouses[$row['warehouseid']] = 1;
+    }
+    pm("delete from inventorybalance where ref =  ? and refid = ?", [ $inventorybalance['ref'], $inventorybalance['refid']]);
+  }
 
   // Required parameters
   $inventoryid = ov('inventoryid', $inventorybalance, 1);
@@ -470,20 +482,37 @@ function inventorybalanceentry($inventorybalance){
         autoamount, `amount`, `ref`, `refid`, refitemid, createdon, lastupdatedon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
   $params = [ $inventoryid, $date, $warehouseid, $section, $description, $in, $out, $unitamount, $autoamount,
     $amount, $ref, $refid, $refitemid, $createdon, $lastupdatedon ];
-  console_info([ $query, $params ]);
   pm($query, $params);
 
-  release_lock($fp, __FUNCTION__);
+  $inventories[$inventoryid] = 1;
+  $warehouses[$warehouseid] = 1;
+
+  $related_inventories = [];
+  $inventories = array_keys($inventories);
+  $warehouses = array_keys($warehouses);
+  foreach($inventories as $inventoryid)
+    $related_inventories[$inventoryid] = $warehouses;
+
+  inventory_calc_qty($related_inventories);
 
 }
 function inventorybalanceentries($inventorybalances){
 
-  $lock_file = __DIR__ . "/../usr/system/inventorybalance_entry.lock";
-  $fp = fopen($lock_file, 'w+');
-  if(!flock($fp, LOCK_EX)) exc('Tidak dapat menyimpan, silakan ulangi beberapa saat lagi.');
+  $inventories = [];
+  $warehouses = [];
 
-  foreach($inventorybalances as $inventorybalance)
-    pm("delete from inventorybalance where ref =  ? and refid = ?", [ $inventorybalance['ref'], $inventorybalance['refid']]);
+  foreach($inventorybalances as $inventorybalance){
+    $rows = pmrs("select inventoryid, warehouseid from inventorybalance where `ref` = ? and refid = ?", [
+      $inventorybalance['ref'], $inventorybalance['refid']
+    ]);
+    if(is_array($rows)){
+      foreach($rows as $row){
+        $inventories[$row['inventoryid']] = 1;
+        $warehouses[$row['warehouseid']] = 1;
+      }
+      pm("delete from inventorybalance where ref =  ? and refid = ?", [ $inventorybalance['ref'], $inventorybalance['refid']]);
+    }
+  }
 
   foreach($inventorybalances as $inventorybalance){
 
@@ -513,26 +542,38 @@ function inventorybalanceentries($inventorybalances){
     pm($query, [ $inventoryid, $date, $warehouseid, $section, $description, $in, $out, $unitamount, $autoamount,
       $amount, $ref, $refid, $refitemid, $createdon, $lastupdatedon ]);
 
+    $inventories[$inventoryid] = 1;
+    $warehouses[$warehouseid] = 1;
+
   }
 
-  fclose($fp);
-  unlink($lock_file);
+  $related_inventories = [];
+  $inventories = array_keys($inventories);
+  $warehouses = array_keys($warehouses);
+  foreach($inventories as $inventoryid)
+    $related_inventories[$inventoryid] = $warehouses;
+
+  inventory_calc_qty($related_inventories);
 
 }
 function inventorybalanceremove($filters){
 
-  if(isset($filters['ref']) && isset($filters['refid'])){
+  $related_inventories = [];
 
-    $lock_file = __DIR__ . "/../usr/system/inventorybalance_remove_" . $filters['refid'] . ".lock";
-    $fp = fopen($lock_file, 'w+');
-    if(!flock($fp, LOCK_EX)) exc('Tidak dapat menghapus, silakan ulangi beberapa saat lagi.');
+  if(isset($filters['ref']) && isset($filters['refid'])){
 
     $ref = $filters['ref'];
     $refid = $filters['refid'];
-    pm("delete from inventorybalance where `ref` = ? and refid = ?", [ $ref, $refid ]);
 
-    fclose($fp);
-    unlink($lock_file);
+    $rows = pmrs("select inventoryid, warehouseid from inventorybalance where `ref` = ? and refid = ?", [ $ref, $refid ]);
+    foreach($rows as $row){
+      $inventoryid = $row['inventoryid'];
+      $warehouseid = $row['warehouseid'];
+      if(!isset($related_inventories[$inventoryid])) $related_inventories[$inventoryid] = [];
+      $related_inventories[$inventoryid][] = $warehouseid;
+    }
+
+    pm("delete from inventorybalance where `ref` = ? and refid = ?", [ $ref, $refid ]);
 
   }
 
@@ -540,84 +581,35 @@ function inventorybalanceremove($filters){
 
     $ref = $filters['ref'];
     $refitemid = $filters['refitemid'];
+
+    $rows = pmrs("select inventoryid, warehouseid from inventorybalance where `ref` = ? and refitemid = ?", [ $ref, $refitemid ]);
+    foreach($rows as $row){
+      $inventoryid = $row['inventoryid'];
+      $warehouseid = $row['warehouseid'];
+      if(!isset($related_inventories[$inventoryid])) $related_inventories[$inventoryid] = [];
+      $related_inventories[$inventoryid][] = $warehouseid;
+    }
+
     pm("delete from inventorybalance where `ref` = ? and refitemid = ?", [ $ref, $refitemid ]);
 
   }
 
-}
-function inventorybalancemodify($idObj, $inventorybalance){
-
-  // Required parameters
-  $inventoryid = ov('inventoryid', $inventorybalance, 1);
-  $warehouseid = ov('warehouseid', $inventorybalance, 1);
-  $date = ov('date', $inventorybalance, 1, array('type'=>'date'));
-  $description = ov('description', $inventorybalance, 0, '');
-  $section = ov('section', $inventorybalance, 0, 0);
-  $in = ov('in', $inventorybalance, 0, 0);
-  $out = ov('out', $inventorybalance, 0, 0);
-  $amount = ov('amount', $inventorybalance, 0, 0);
-  $autoamount = $amount > 0 ? 0 : 1;
-  $qty = $in > 0 ? $in : $out;
-  if($qty > 0) $unitamount = round($amount / $qty, 2); else $unitamount = 0;
-  $ref = ov('ref', $inventorybalance, 1);
-  $refid = ov('refid', $inventorybalance, 1);
-  $lastupdatedon = date('YmdHis');
-
-  $inventorybalance['lastupdatedon'] = $lastupdatedon;
-  mysql_update_row('inventorybalance', $inventorybalance, $idObj);
-
-}
-function inventorymove($id){
-
-  // Check for existing inventory
-  $inventory = pmr("SELECT moved FROM inventory WHERE `id` = ?", array($id));
-  if(!$inventory) throw new Exception('Barang tidak terdaftar');
-  if($inventory['moved']) throw new Exception('Barang telah dipindah.');
-
-  // Check if exists on second database
-  if(intval(pmc("SELECT COUNT(*) FROM indosps2.inventory WHERE `id` = ?", array($id))) > 0)
-    throw new Exception('Barang sudah dipindah.');
-
-  // Move to next database
-  pm("INSERT INTO indosps2.inventory SELECT * FROM inventory WHERE `id` = ?", array($id));
-
-  // Update salesinvoice row
-  pm("UPDATE inventory SET moved = ? WHERE `id` = ?", array(1, $id));
-
-}
-function inventory_updatemovestate(){
-
-  // Fetch indosps2 customers
-  $inventories = pmrs("SELECT `id` FROM indosps2.inventory");
-
-  $inventory_ids = array();
-  foreach($inventories as $inventory)
-    $inventory_ids[] = $inventory['id'];
+  inventory_calc_qty($related_inventories);
 
 }
 
 function inventoryqty_calculate($inventoryids){
 
   if(is_array($inventoryids) && count($inventoryids) > 0){
-
     $date = date('Ymd');
-    //$query = "UPDATE inventory t1 SET qty = (select qty from inventorybalance where inventoryid = t1.id and `date` <= '$date' ORDER BY `date` DESC, `id` DESC limit 1) WHERE t1.id IN (" . implode(', ', $inventoryids) . ");";
     $query = "UPDATE inventory t1 SET qty = (select SUM(`in` - `out`) from inventorybalance where inventoryid = t1.id and `date` <= ?) WHERE t1.id IN (" . implode(', ', $inventoryids) . ");";
     pm($query, [ $date ]);
-
   }
 
 }
 function inventoryqty_calculateall(){
 
   $date = date('Ymd');
-
-//  $inventory_qtys = pmrs("SELECT inventoryid, SUM(`in` - `out`) as qty FROM inventorybalance WHERE `date` <= '$date' GROUP BY inventoryid");
-//  $inventory_qtys = array_index($inventory_qtys, [ 'inventoryid' ], 1);
-//  exc($inventory_qtys);
-
-//  $query = "update inventory t1 set qty = (select qty from inventorybalance where inventoryid = t1.id and `date` <= ? order by `date` desc, `section` desc, `id` desc limit 1);";
-//  $params = [ $date ];
   $query = "update inventory t1 set qty = (select SUM(`in` - `out`) from inventorybalance where inventoryid = t1.id and `date` <= ?);";
   $params = [ $date ];
   pm($query, $params);
@@ -638,6 +630,32 @@ function inventorysoldqty_calculateall(){
   $query = "update inventory t1 set soldqty = (select abs(sum(`out`)) from inventorybalance where
     inventoryid = t1.id and ref = 'SI')";
   pm($query);
+
+}
+
+/**
+ * Calculate inventory qty
+ * @param $inventory_warehouses  [ inventoryid:[ warehouseid, warehouseid, ... ] ]
+ */
+function inventory_calc_qty($inventory_warehouses, $date = null){
+
+  $inventoryids = [];
+  foreach($inventory_warehouses as $inventoryid=>$warehouseids)
+    $inventoryids[$inventoryid] = 1;
+  $inventoryids = array_keys($inventoryids);
+  inventoryqty_calculate($inventoryids);
+
+  if(!$date) $date = date('Ymd');
+
+  foreach($inventory_warehouses as $inventoryid=>$warehouseids){
+    foreach($warehouseids as $warehouseid){
+
+      pm("insert into inventorywarehouse (inventoryid, warehouseid, qty) values (?, ?, 
+          (select sum(`in` - `out`) from inventorybalance where inventoryid = ? and warehouseid = ? and `date` <= ?)
+        ) on duplicate key update qty = values(qty);", [ $inventoryid, $warehouseid, $inventoryid, $warehouseid, $date ]);
+
+    }
+  }
 
 }
 
@@ -1019,10 +1037,10 @@ function inventoryanalysisgenerate(){
     qty_ordered DOUBLE(16,2),
     qty_purchased DOUBLE(16,2),
     qty_sold DOUBLE(16,2),
-    avg_qty_purchased_per_month DOUBLE(16,2),
-    " . implode(', ', $vv_inventory_qty_ordered_) . ",
-    " . implode(', ', $vv_inventory_qty_purchased_) . ",
-    " . implode(', ', $vv_inventory_months) . ",
+    avg_qty_purchased_per_month DOUBLE(16,2)
+    " . (isset($vv_inventory_qty_ordered_) && count($vv_inventory_qty_ordered_) > 0 ? ',' . implode(', ', $vv_inventory_qty_ordered_) : '') . "
+    " . (isset($vv_inventory_qty_purchased_) && count($vv_inventory_qty_purchased_) > 0 ? ',' . implode(', ', $vv_inventory_qty_purchased_) : '') . "
+    " . (isset($vv_inventory_months) && count($vv_inventory_months) > 0 ? ',' . implode(', ', $vv_inventory_months) : '') . ",
     PRIMARY KEY (`id`)
   ) ENGINE=InnoDB, DEFAULT CHARSET=utf8");
 
@@ -1034,10 +1052,10 @@ function inventoryanalysisgenerate(){
     t2.qty_ordered,
     (SELECT SUM(qty) FROM purchaseinvoiceinventory WHERE inventoryid = t1.id),
     (SELECT SUM(qty) FROM salesinvoiceinventory WHERE inventoryid = t1.id),
-    (SELECT AVG(qty) FROM vw_inventory_purchased_per_months$uid WHERE inventoryid = t1.id AND (" . implode('OR', $vv_avg_months) . ")),
-    " . implode(', ', $vv_inventory_t2_qty_ordered_) . ",
-    " . implode(', ', $vv_inventory_t2_qty_purchased_) . ",
-    " . implode(',', $vv_inventory_months_queries) . "
+    (SELECT AVG(qty) FROM vw_inventory_purchased_per_months$uid WHERE inventoryid = t1.id AND (" . implode('OR', $vv_avg_months) . "))
+    " . (isset($vv_inventory_t2_qty_ordered_) && count($vv_inventory_t2_qty_ordered_) > 0 ? ',' . implode(', ', $vv_inventory_t2_qty_ordered_) : '') . "
+    " . (isset($vv_inventory_t2_qty_purchased_) && count($vv_inventory_t2_qty_purchased_) > 0 ? ',' . implode(', ', $vv_inventory_t2_qty_purchased_) : '') . "
+    " . (isset($vv_inventory_months_queries) && count($vv_inventory_months_queries) > 0 ? ',' . implode(',', $vv_inventory_months_queries) : '') . "
     FROM inventory t1
     LEFT OUTER JOIN vv_inventory_ordered$uid t2
     ON t1.id = t2.inventoryid
@@ -1261,14 +1279,6 @@ function inventory_warehouse_calc(){
     // TODO handle this exception
     // SQLSTATE[40001]: Serialization failure: 1213 Deadlock found when trying to get lock; try restarting transaction
   }
-
-}
-
-function inventorybalance_calc($inventoryid, $start_date = null){
-
-  $limit = 1000;
-
-  $rows = pmrs("select ");
 
 }
 

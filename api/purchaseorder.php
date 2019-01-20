@@ -413,6 +413,10 @@ function purchaseorderentry($purchaseorder){
 
     userlog('purchaseorderentry', $purchaseorder, '', $_SESSION['user']['id'], $id);
 
+    job_create_and_run('purchaseorder_ext', [ $id ]);
+
+    inventory_purchaseorderqty();
+
     pdo_commit();
 
   }
@@ -422,9 +426,6 @@ function purchaseorderentry($purchaseorder){
     throw $ex;
 
   }
-
-  purchaseordercalculate($id);
-  inventory_purchaseorderqty();
 
   return [ 'id'=>$id ];
 
@@ -678,6 +679,10 @@ function purchaseordermodify($purchaseorder){
 
     userlog('purchaseordermodify', $current, $updatedrows, $_SESSION['user']['id'], $id);
 
+    job_create_and_run('purchaseorder_ext', [ $id ]);
+
+    inventory_purchaseorderqty();
+
     pdo_commit();
 
   }
@@ -687,9 +692,6 @@ function purchaseordermodify($purchaseorder){
     throw $ex;
 
   }
-
-  purchaseordercalculate($id);
-  inventory_purchaseorderqty();
 
   return array('id'=>$id);
 
@@ -729,7 +731,7 @@ function purchaseorderremove($filters){
 
 }
 
-function purchaseordercalculate($id){
+function purchaseorder_ext($id){
 
   // Retrieve system object
   $purchaseinvoice_downpaymentaccountid = systemvarget('purchaseinvoice_downpaymentaccountid');
@@ -951,10 +953,8 @@ function purchaseordercalculate($id){
 
   }
 
-  if(count($journalvouchers) > 0){
-    journalvoucherremove(array('ref'=>'PO', 'refid'=>$id));
+  if(count($journalvouchers) > 0)
     journalvoucherentries($journalvouchers);
-  }
 
   $total = $current['total'];
   if(abs($total_payment - $total) < 0.5)
@@ -987,7 +987,7 @@ function purchaseorder_check_journal($fix = false, $callback = null){
         where t1.id = t2.jvid and ((t1.ref = 'PO' and t1.refid = ?) or (t1.ref = 'PI' and t1.refid = ?))
         and t2.coaid = ?", [ $row['id'], $piid, $chartofaccountid ]);
       if($amount > 0){
-        if($fix) purchaseinvoicecalculate($piid);
+        if($fix) purchaseinvoice_ext($piid);
         if(is_callable($callback))
           call_user_func_array($callback, [ $row['id'] . ' ' . number_format($amount) ]);
         $total_amount_restored += $amount;

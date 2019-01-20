@@ -790,7 +790,7 @@ function salesinvoiceentry($salesinvoice){
   
   }
   
-  job_create_and_run('salesinvoice_calculate', [ $id ]);
+  job_create_and_run('salesinvoice_ext', [ $id ]);
 
   $result = array('id'=>$id, 'warnings'=>$warnings);
   return $result;
@@ -1038,7 +1038,7 @@ function salesinvoicemodify($salesinvoice){
 
   }
 
-  job_create_and_run('salesinvoice_calculate', [ $id, $inventory_modified ]);
+  job_create_and_run('salesinvoice_ext', [ $id, $inventory_modified ]);
 
   return array('id'=>$id);
 
@@ -1061,13 +1061,11 @@ function salesinvoiceremove($filters){
 
       pdo_begin_transaction();
 
-      inventorybalanceremove(array('ref'=>'SI', 'refid'=>$id));
-      journalvoucherremove(array('ref'=>'SI', 'refid'=>$id));
-      pm("UPDATE salesorder SET isinvoiced = 0 WHERE `id` = ?", array($salesinvoice['salesorderid']));
       pm("DELETE FROM salesinvoice WHERE `id` = ?", array($id));
-      code_release($code);
-      taxreservationpool_remove($salesinvoice['tax_code'], 'SI', $id);
       userlog('salesinvoiceremove', $salesinvoice, '', $_SESSION['user']['id'], $id);
+      code_release($code);
+      pm("UPDATE salesorder SET isinvoiced = 0 WHERE `id` = ?", array($salesinvoice['salesorderid']));
+      taxreservationpool_remove($salesinvoice['tax_code'], 'SI', $id);
 
       pdo_commit();
 
@@ -1079,7 +1077,7 @@ function salesinvoiceremove($filters){
 
     }
 
-    global $_REQUIRE_WORKER; $_REQUIRE_WORKER = true;
+    job_create_and_run('salesinvoice_remove_ext', [ $id ]);
 
   }
   else
@@ -1087,12 +1085,7 @@ function salesinvoiceremove($filters){
 
 }
 
-function salesinvoice_salesinvoicegroup_clear($salesinvoicegroupid){
-
-  pm("UPDATE salesinvoice SET salesinvoicegroupid = null, isgroup = 0 WHERE salesinvoicegroupid = ?", array($salesinvoicegroupid));
-
-}
-function salesinvoice_calculate($id, $inventory_ischanged = true){
+function salesinvoice_ext($id){
 
   $salesinvoice = salesinvoicedetail(null, array('id'=>$id));
   if(!$salesinvoice) return;
@@ -1101,9 +1094,7 @@ function salesinvoice_calculate($id, $inventory_ischanged = true){
 
   $date = ov('date', $salesinvoice);
   $customerid = $salesinvoice['customerid'];
-  $code = ov('code', $salesinvoice);
   $salesorderid = $salesinvoice['salesorderid'];
-  $salesorder = salesorderdetail(null, array('id'=>$salesorderid));
 
   // Subtotal, discountamount, taxamount, total
   $inventories = $salesinvoice['inventories'];
@@ -1142,7 +1133,7 @@ function salesinvoice_calculate($id, $inventory_ischanged = true){
   if($paymentamount > 0){
 
     if($paymentamount != $total && abs($paymentamount - $total) < 1)
-    $total = $paymentamount;
+      $total = $paymentamount;
 
     $details = array(
       array('coaid'=>6, 'debitamount'=>0, 'creditamount'=>$total),
@@ -1170,7 +1161,7 @@ function salesinvoice_calculate($id, $inventory_ischanged = true){
     'description'=>$salesinvoice['customerdescription'],
     'details'=>$details
   );
-  journalvoucherentryormodify($journal);
+  journalvoucherentries([ $journal ]);
 
   // Inventory balance
   $inventorybalances = [];
@@ -1193,16 +1184,26 @@ function salesinvoice_calculate($id, $inventory_ischanged = true){
     );
     $inventorybalances[] = $inventorybalance;
   }
-  inventorybalanceremove(array('ref'=>'SI', 'refid'=>$id));
   inventorybalanceentries($inventorybalances);
 
-  // salesorderid
+  // Sales order
   if($salesorderid) pm("UPDATE salesorder SET isinvoiced = 1 WHERE `id` = ?", array($salesorderid));
   if($salesinvoice['isgroup']) salesinvoicegroup_salesinvoicemodify($salesinvoice['salesinvoicegroupid']);
 
+  // Customer
   customerreceivablecalculate($customerid);
 
-  //global $_REQUIRE_WORKER; $_REQUIRE_WORKER = true;
+}
+function salesinvoice_remove_ext($id){
+
+  inventorybalanceremove(array('ref'=>'SI', 'refid'=>$id));
+  journalvoucherremove(array('ref'=>'SI', 'refid'=>$id));
+
+}
+
+function salesinvoice_salesinvoicegroup_clear($salesinvoicegroupid){
+
+  pm("UPDATE salesinvoice SET salesinvoicegroupid = null, isgroup = 0 WHERE salesinvoicegroupid = ?", array($salesinvoicegroupid));
 
 }
 function salesinvoice_release_unused(){
@@ -1263,11 +1264,6 @@ function salesinvoice_process_no_tax_code($progress_callback = null){
   ];
 
 }
-
-/**
- * @param $start_date
- * @param $end_date
- */
 
 function salesinvoice_total($salesinvoice){
 
