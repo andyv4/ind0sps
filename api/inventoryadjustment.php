@@ -365,7 +365,7 @@ function inventoryadjustment_ext($id){
   }
   inventorybalanceentries($inventorybalances);
 
-  journalvoucherentriesj([
+  journalvoucherentries([
     [
       'date'=>$date,
       'description'=>$code,
