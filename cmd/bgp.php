@@ -1,7 +1,5 @@
 <?php
 
-exit();
-
 $stateurl = __DIR__ . '/../usr/system/.bgp';
 $runurl = __DIR__ . '/../usr/system/.bgpr';
 $waiturl = __DIR__ . '/../usr/system/.bgpw';
@@ -30,6 +28,13 @@ ini_set('memory_limit', '256M');
 $applog_dest = 'echo';
 ob_start();
 register_shutdown_function("onshutdown");
+
+
+inventorywarehouse_calc_all();
+inventoryqty_calculateall();
+echo 'OK' . "\n";
+exit();
+
 
 // Validation
 if(!is_writable(dirname($stateurl))){ echo "Unable to start, data path is not writtable." . PHP_EOL; exit(); }

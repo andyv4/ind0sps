@@ -789,7 +789,8 @@ function salesinvoiceentry($salesinvoice){
     throw $ex;
   
   }
-  
+
+  salesinvoice_calc_total($id);
   job_create_and_run('salesinvoice_ext', [ $id ]);
 
   $result = array('id'=>$id, 'warnings'=>$warnings);
@@ -1038,6 +1039,7 @@ function salesinvoicemodify($salesinvoice){
 
   }
 
+  salesinvoice_calc_total($id);
   job_create_and_run('salesinvoice_ext', [ $id, $inventory_modified ]);
 
   return array('id'=>$id);
@@ -1085,6 +1087,51 @@ function salesinvoiceremove($filters){
 
 }
 
+function salesinvoice_calc_total($id){
+
+  $salesinvoice = salesinvoicedetail(null, array('id'=>$id));
+  if(!$salesinvoice) return;
+  if(!$salesinvoice['customerdescription']) return;
+  if(count($salesinvoice['inventories']) <= 0) return;
+
+  $date = ov('date', $salesinvoice);
+  $customerid = $salesinvoice['customerid'];
+  $salesorderid = $salesinvoice['salesorderid'];
+
+  // Subtotal, discountamount, taxamount, total
+  $inventories = $salesinvoice['inventories'];
+  $discountamount = ov('discountamount', $salesinvoice);
+  $subtotal = 0;
+  $taxable_excluded = 1;
+  for($i = 0 ; $i < count($inventories) ; $i++){
+    $row = $inventories[$i];
+    $inventoryid = ov('inventoryid', $row);
+    $inventory = inventorydetail(null, array('id'=>$inventoryid));
+    $qty = ov('qty', $row);
+    $unitprice = ov('unitprice', $row);
+    $unittotal = $qty * $unitprice;
+    $subtotal += $unittotal;
+    if(!$inventory['taxable_excluded']) $taxable_excluded = 0;
+  }
+  $total = $subtotal;
+  $discount = $salesinvoice['discount'];
+  if(intval($discount) && $discount > 0)
+    $discountamount = $discount / 100 * $total;
+  if(!floatval($discountamount)) $discountamount = 0;
+  $total -= $discountamount;
+  $taxable = $salesinvoice['taxable'];
+  $taxamount = $taxable && !$taxable_excluded ? $total * 0.1 : 0;
+  $deliverycharge = $salesinvoice['deliverycharge'];
+  $total += floor($taxamount + $deliverycharge);
+  $total = salesinvoice_total($salesinvoice)['total'];
+  $paymentamount = $salesinvoice['paymentamount'];
+  $paymentaccountid = $salesinvoice['paymentaccountid'];
+  $ispaid = abs($paymentamount - $total) < 1 ? 1 : ($paymentamount > 0 ? 2 : 0);
+  $paymentdate = $salesinvoice['paymentdate'];
+  $query = "UPDATE salesinvoice SET subtotal = ?, discountamount = ?, taxamount = ?, ispaid = ?, total = ? WHERE `id` = ?";
+  pm($query, array($subtotal, $discountamount, $taxamount, $ispaid, $total, $id));
+
+}
 function salesinvoice_ext($id){
 
   $salesinvoice = salesinvoicedetail(null, array('id'=>$id));

@@ -686,6 +686,29 @@ function inventory_purchaseorderqty(){
   if(count($queries) > 0) pm(implode(';', $queries), $params);
   
 }
+function inventorywarehouse_calc_all(){
+
+  $inventoryids = [];
+  $rows = pmrs("select `id` from inventory");
+  foreach($rows as $row)
+    $inventoryids[] = $row['id'];
+
+  $warehouseids = [];
+  $rows = pmrs("select `id` from warehouse");
+  foreach($rows as $row)
+    $warehouseids[] = $row['id'];
+
+  $date = date('Ymd');
+
+  foreach($inventoryids as $inventoryid)
+    foreach($warehouseids as $warehouseid){
+      echo $inventoryid . " | " . $warehouseid . "\n";
+      pm("insert into inventorywarehouse (inventoryid, warehouseid, qty) values (?, ?, 
+          (select sum(`in` - `out`) from inventorybalance where inventoryid = ? and warehouseid = ? and `date` <= ?)
+        ) on duplicate key update qty = values(qty);", [ $inventoryid, $warehouseid, $inventoryid, $warehouseid, $date ]);
+    }
+
+}
 
 function inventorycostprice($id = null, $date = null){
 
