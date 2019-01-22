@@ -501,59 +501,78 @@ function inventorybalanceentries($inventorybalances){
   $inventories = [];
   $warehouses = [];
 
-  foreach($inventorybalances as $inventorybalance){
-    $rows = pmrs("select inventoryid, warehouseid from inventorybalance where `ref` = ? and refid = ?", [
-      $inventorybalance['ref'], $inventorybalance['refid']
-    ]);
-    if(is_array($rows)){
-      foreach($rows as $row){
-        $inventories[$row['inventoryid']] = 1;
-        $warehouses[$row['warehouseid']] = 1;
+  try{
+
+    pm("SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;");
+
+    pdo_begin_transaction();
+
+    foreach($inventorybalances as $inventorybalance){
+      $rows = pmrs("select inventoryid, warehouseid from inventorybalance where `ref` = ? and refid = ?", [
+        $inventorybalance['ref'], $inventorybalance['refid']
+      ]);
+      if(is_array($rows)){
+        foreach($rows as $row){
+          $inventories[$row['inventoryid']] = 1;
+          $warehouses[$row['warehouseid']] = 1;
+        }
+        pm("delete from inventorybalance where ref =  ? and refid = ?", [ $inventorybalance['ref'], $inventorybalance['refid']]);
       }
-      pm("delete from inventorybalance where ref =  ? and refid = ?", [ $inventorybalance['ref'], $inventorybalance['refid']]);
     }
-  }
 
-  foreach($inventorybalances as $inventorybalance){
+    foreach($inventorybalances as $inventorybalance){
 
-    // Required parameters
-    $inventoryid = ov('inventoryid', $inventorybalance, 1);
-    $warehouseid = ov('warehouseid', $inventorybalance, 1);
-    $date = ov('date', $inventorybalance, 1, array('type'=>'date'));
-    $in = ov('in', $inventorybalance, 0, 0);
-    $out = ov('out', $inventorybalance, 0, 0);
-    $ref = ov('ref', $inventorybalance, 1);
-    $refid = ov('refid', $inventorybalance, 1);
-    $refitemid = ov('refitemid', $inventorybalance, 0, 0);
-    $description = ov('description', $inventorybalance, 0, '');
-    $amount = ov('amount', $inventorybalance, 0, 0);
-    $createdon = $lastupdatedon = date('YmdHis');
-    $section = ov('section', $inventorybalance, 0, 0);
-    $autoamount = $amount > 0 ? 0 : 1;
-    $qty = $in > 0 ? $in : $out;
-    if($qty > 0) $unitamount = round($amount / $qty, 2); else $unitamount = 0;
-    if($autoamount && $section < 1) $section = 1;
+      // Required parameters
+      $inventoryid = ov('inventoryid', $inventorybalance, 1);
+      $warehouseid = ov('warehouseid', $inventorybalance, 1);
+      $date = ov('date', $inventorybalance, 1, array('type'=>'date'));
+      $in = ov('in', $inventorybalance, 0, 0);
+      $out = ov('out', $inventorybalance, 0, 0);
+      $ref = ov('ref', $inventorybalance, 1);
+      $refid = ov('refid', $inventorybalance, 1);
+      $refitemid = ov('refitemid', $inventorybalance, 0, 0);
+      $description = ov('description', $inventorybalance, 0, '');
+      $amount = ov('amount', $inventorybalance, 0, 0);
+      $createdon = $lastupdatedon = date('YmdHis');
+      $section = ov('section', $inventorybalance, 0, 0);
+      $autoamount = $amount > 0 ? 0 : 1;
+      $qty = $in > 0 ? $in : $out;
+      if($qty > 0) $unitamount = round($amount / $qty, 2); else $unitamount = 0;
+      if($autoamount && $section < 1) $section = 1;
 
-    if($out > 0 && $amount > 0) $amount = $amount * -1;
-    if($in > 0 && $amount < 0) $amount = $amount * -1;
+      if($out > 0 && $amount > 0) $amount = $amount * -1;
+      if($in > 0 && $amount < 0) $amount = $amount * -1;
 
-    $query = "INSERT INTO inventorybalance(inventoryid, `date`, warehouseid, `section`, description, `in`, `out`, unitamount, 
+      $query = "INSERT INTO inventorybalance(inventoryid, `date`, warehouseid, `section`, description, `in`, `out`, unitamount, 
         autoamount, `amount`, `ref`, `refid`, refitemid, createdon, lastupdatedon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    pm($query, [ $inventoryid, $date, $warehouseid, $section, $description, $in, $out, $unitamount, $autoamount,
-      $amount, $ref, $refid, $refitemid, $createdon, $lastupdatedon ]);
+      pm($query, [ $inventoryid, $date, $warehouseid, $section, $description, $in, $out, $unitamount, $autoamount,
+        $amount, $ref, $refid, $refitemid, $createdon, $lastupdatedon ]);
 
-    $inventories[$inventoryid] = 1;
-    $warehouses[$warehouseid] = 1;
+      $inventories[$inventoryid] = 1;
+      $warehouses[$warehouseid] = 1;
+
+    }
+
+    $related_inventories = [];
+    $inventories = array_keys($inventories);
+    $warehouses = array_keys($warehouses);
+    foreach($inventories as $inventoryid)
+      $related_inventories[$inventoryid] = $warehouses;
+
+    inventory_calc_qty($related_inventories);
+
+    pdo_commit();
+
+    pm("SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ;");
 
   }
+  catch(Exception $ex){
 
-  $related_inventories = [];
-  $inventories = array_keys($inventories);
-  $warehouses = array_keys($warehouses);
-  foreach($inventories as $inventoryid)
-    $related_inventories[$inventoryid] = $warehouses;
+    pdo_rollback();
 
-  inventory_calc_qty($related_inventories);
+    throw $ex;
+
+  }
 
 }
 function inventorybalanceremove($filters){
