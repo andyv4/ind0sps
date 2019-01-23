@@ -9,7 +9,7 @@ require_once __DIR__ . '/../rcfx/php/pdo.php';
 require_once __DIR__ . '/../rcfx/php/util.php';
 require_once __DIR__ . '/../api/job.php';
 
-define('MAX_ATTEMPT', 9);
+define('MAX_ATTEMPT', 99);
 
 date_default_timezone_set('Asia/Jakarta');
 
