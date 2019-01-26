@@ -503,8 +503,6 @@ function inventorybalanceentries($inventorybalances){
 
   try{
 
-    pm("SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;");
-
     pdo_begin_transaction();
 
     foreach($inventorybalances as $inventorybalance){
@@ -562,8 +560,6 @@ function inventorybalanceentries($inventorybalances){
     inventory_calc_qty($related_inventories);
 
     pdo_commit();
-
-    pm("SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ;");
 
   }
   catch(Exception $ex){
@@ -666,6 +662,7 @@ function inventory_calc_qty($inventory_warehouses, $date = null){
 
   if(!$date) $date = date('Ymd');
 
+  $warehouseids = [];
   foreach($inventory_warehouses as $inventoryid=>$warehouseids){
     foreach($warehouseids as $warehouseid){
 
@@ -673,8 +670,13 @@ function inventory_calc_qty($inventory_warehouses, $date = null){
           (select sum(`in` - `out`) from inventorybalance where inventoryid = ? and warehouseid = ? and `date` <= ?)
         ) on duplicate key update qty = values(qty);", [ $inventoryid, $warehouseid, $inventoryid, $warehouseid, $date ]);
 
+      $warehouseids[$warehouseid] = 1;
     }
   }
+
+  file_put_contents(base_path() . '/usr/system/inventory_calc_qty.log',
+    "[" . date('Y-m-d H:i:s') . "]" . json_encode([ $inventoryids, array_keys($warehouseids) ]) . "\n",
+    FILE_APPEND);
 
 }
 

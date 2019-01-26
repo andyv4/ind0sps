@@ -29,7 +29,6 @@ $applog_dest = 'echo';
 ob_start();
 register_shutdown_function("onshutdown");
 
-
 inventorywarehouse_calc_all();
 inventoryqty_calculateall();
 echo 'OK' . "\n";

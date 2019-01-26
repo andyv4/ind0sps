@@ -2346,11 +2346,11 @@ function get_round_precision($value){
 
 /**
  * Retrieve base path of app (no ending slash)
- * @return mixed
+ * @return mixed   /var/www/html/office
  */
 function base_path(){
 
-  return str_replace('/rcfx/php', '', dirname(__FILE__));
+  return realpath(__DIR__ . '/../../');
 
 }
 

@@ -88,9 +88,10 @@ function pdo_close(){
   global $pdo_con;
   if($pdo_con) $pdo_con = null;
 }
-function pm($query, $arr = null, $params = null){
+function pm($query, $arr = null, $params = null, $attempt = 0){
 
   try{
+
     $pdo_con = pdo_con(true);
     $pdo_res = $pdo_con->prepare($query);
     $pdo_res->execute($arr);
@@ -98,13 +99,21 @@ function pm($query, $arr = null, $params = null){
   }
   catch(Exception $ex){
 
-    file_put_contents(app_dir() . '/usr/system/error-query.log', json_encode([
-        date('Y-m-d H:i:s'),
-        $query,
-        $params,
-        $ex->getMessage()
-      ], JSON_PRETTY_PRINT) . "\n\n", FILE_APPEND);
-    throw $ex;
+    // Automatic retry on deadlock
+    if(strpos($ex->getMessage(), 'Serialization failure: 1213 Deadlock') !== false && $attempt < 5){
+      sleep(1);
+      pm($query, $arr, $params, $attempt + 1, $ex);
+    }
+
+    else{
+      file_put_contents(app_dir() . '/usr/system/error-query.log', json_encode([
+          date('Y-m-d H:i:s'),
+          $query,
+          $params,
+          "#" . $attempt . " " . $ex->getMessage()
+        ], JSON_PRETTY_PRINT) . "\n\n", FILE_APPEND);
+      throw $ex;
+    }
 
   }
 
