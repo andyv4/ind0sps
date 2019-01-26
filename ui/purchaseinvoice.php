@@ -192,7 +192,7 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
 
     'paymentdate'=>array('type'=>'datepicker', 'name'=>'paymentdate', 'value'=>$paymentdate, 'readonly'=>$readonly, 'onchange'=>"", 'align'=>'right'),
     'paymentaccountid'=>array('type'=>'dropdown', 'name'=>'paymentaccountid', 'value'=>$paymentaccountid, 'items'=>$chartofaccounts, 'readonly'=>$readonly, 'width'=>150, 'onchange'=>"", 'align'=>'right'),
-    'paymentamount'=>array('type'=>'textbox', 'name'=>'paymentamount', 'value'=>$paymentamount, 'readonly'=>$readonly, 'width'=>150, 'datatype'=>'money', 'onchange'=>"purchaseinvoice_onpaymentamountchange()"),
+    'paymentamount'=>array('type'=>'textbox', 'name'=>'paymentamount', 'value'=>$paymentamount, 'readonly'=>1, 'width'=>150, 'datatype'=>'money', 'onchange'=>"purchaseinvoice_onpaymentamountchange()"),
 
     'taxamount'=>array('type'=>'textbox', 'name'=>'taxamount', 'value'=>$taxamount, 'width'=>150, 'datatype'=>'money', 'readonly'=>$tax_readonly, 'onchange'=>"purchaseinvoice_total()"),
     'taxdate'=>array('type'=>'datepicker', 'name'=>'taxdate', 'value'=>$taxdate, 'readonly'=>$readonly, 'onchange'=>"", 'align'=>'right', 'readonly'=>$tax_readonly, 'onchange'=>"purchaseinvoice_total()"),
@@ -231,6 +231,28 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
     'itemshead'=>[ 'columns'=>$detailcolumns, 'gridexp'=>'#inventories' ],
 
   ];
+
+  $payments = isset($purchaseinvoice['payments']) ? $purchaseinvoice['payments'] : [];
+  for($i = 0 ; $i < 5 ; $i++){
+
+    $n_paymentamount = isset($payments[$i]['paymentamount']) ? $payments[$i]['paymentamount'] : 0;
+    $n_paymentcurrencyrate = isset($payments[$i]['paymentcurrencyrate']) ? $payments[$i]['paymentcurrencyrate'] : 0;
+    $n_paymentdate = isset($payments[$i]['paymentdate']) ? $payments[$i]['paymentdate'] : '';
+    $n_paymentaccountid = isset($payments[$i]['paymentaccountid']) ? $payments[$i]['paymentaccountid'] : 0;
+
+    if($n_paymentcurrencyrate < 1) $n_paymentcurrencyrate = 1;
+
+    $controls["paymentamount_$i"] = array('type'=>'textbox', 'class'=>'paymentamount', 'name'=>"paymentamount-$i", 'value'=>$n_paymentamount,
+      'readonly'=>$readonly, 'width'=>150, 'datatype'=>'money', 'onchange'=>"purchaseorder_paymentamountchange()");
+    $controls["paymentcurrencyrate_$i"] = array('type'=>'textbox', 'class'=>'paymentcurrencyrate', 'name'=>"paymentcurrencyrate-$i",
+      'value'=>$n_paymentcurrencyrate, 'readonly'=>$readonly, 'width'=>150, 'datatype'=>'money', 'onchange'=>"purchaseorder_paymentamountchange()");
+    $controls["paymentdate_$i"] = array('type'=>'datepicker', 'class'=>'paymentdate', 'name'=>"paymentdate-$i",
+      'value'=>$n_paymentdate, 'readonly'=>$readonly, 'onchange'=>"purchaseorder_paymentamountchange()", 'align'=>'right');
+    $controls["paymentaccountid_$i"] = array('type'=>'dropdown', 'class'=>'paymentaccountid', 'name'=>"paymentaccountid-$i",
+      'value'=>$n_paymentaccountid, 'items'=>$chartofaccounts,
+      'readonly'=>$readonly, 'onchange'=>"purchaseorder_paymentamountchange()", 'width'=>150, 'align'=>'right');
+
+  }
 
   // Controls setup change on existence of purchase order
   if(is_array($purchaseorder)){
@@ -310,7 +332,41 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
         </tr>
       </table>
       <div class='height20'></div>
-      <div class='align-right'>
+      <div class='align-right'>";
+
+        $c .= "<span style='background:rgb(240, 250, 237);width:700px' class='padding10 payment-section'>
+            <table cellspacing='0' class='form'>";
+
+        $c .= "<tr>
+                    <th style='text-align:left'></th>
+                    <td align='right' style='color:rgba(0, 0, 0, .2);font-weight:600;padding:6px'>JUMLAH</td>
+                    <td align='right' style='color:rgba(0, 0, 0, .2);font-weight:600;padding:6px'>NILAI TUKAR</td>
+                    <td align='right' style='color:rgba(0, 0, 0, .2);font-weight:600;padding:6px'>TANGGAL</td>
+                    <td align='right' style='color:rgba(0, 0, 0, .2);font-weight:600;padding:6px'>AKUN</td>
+                  </tr>";
+
+        for ($i = 0; $i < 5; $i++) {
+
+          $off = !isset($payments[$i]) && $i > 0 ? 'off' : '';
+
+          $c .= "<tr class='$off'>
+                  <th style='text-align:left'>" . (!$readonly ? "<span class='fa fa-times-circle payment-remove-btn' style='color:red' onclick='purchaseinvoice_paymentremove(this)'></span>" : '') . "<label>Pembayaran " . ($i + 1) . "</label></th>
+                  <td>" . ui_control($controls["paymentamount_$i"]) . "</td>
+                  <td>" . ui_control($controls["paymentcurrencyrate_$i"]) . "</td>
+                  <td>" . ui_control($controls["paymentdate_$i"]) . "</td>
+                  <td>" . ui_control($controls["paymentaccountid_$i"]) . "</td>
+                </tr>";
+
+        }
+
+        $c .= "</table>";
+
+        if (!$readonly)
+          $c .= "<div class='align-center'><span onclick='purchaseinvoice_paymentadd()'><span class='fa fa-plus-circle payment-add-btn padding10' style='color:green'></span>Tambah Pembayaran</span></div>";
+
+        $c .= "</span>";
+
+        $c .= "<div class='height15'></div>
         <span style='background:rgb(255, 250, 237)' class='padding10'>
           <table cellspacing='0' class='form'>";
 

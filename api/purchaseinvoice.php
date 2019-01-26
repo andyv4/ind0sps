@@ -127,6 +127,13 @@ function purchaseinvoicedetail($columns, $filters){
         $purchaseinvoice['downpaymentaccountid'] = $purchaseorder['paymentaccountid'];
       }
     }
+
+    $payments = pmrs("select 
+        `id`, `date` as paymentdate, amount as paymentamount, currencyrate as paymentcurrencyrate,
+        totalamount as paymenttotalamount, chartofaccountid as paymentaccountid
+      from purchaseinvoicepayment where purchaseinvoiceid = ?", [ $purchaseinvoice['id'] ]);
+    $purchaseinvoice['payments'] = $payments;
+
   }
 
   return $purchaseinvoice;
@@ -477,6 +484,9 @@ function purchaseinvoiceentry($purchaseinvoice){
   $purchaseinvoice['createdon'] = $purchaseinvoice['lastupdatedon'] = date('YmdHis');
   $purchaseinvoice['createdby'] = $_SESSION['user']['id'];
 
+  $currencyid = $purchaseinvoice['currencyid'];
+  $currency_code = pmc("select code from currency where `id` = ?", [ $currencyid ]);
+
   $id = mysql_insert_row('purchaseinvoice', $purchaseinvoice);
 
   /**
@@ -484,6 +494,7 @@ function purchaseinvoiceentry($purchaseinvoice){
    */
 
   $values = $params = [];
+  $total_in_currency = 0;
   for($i = 0 ; $i < count($inventories) ; $i++){
     $inventory = $inventories[$i];
     $inventoryid = $inventory['inventoryid'];
@@ -504,7 +515,48 @@ function purchaseinvoiceentry($purchaseinvoice){
     $values[] = "(?, ?, ?, ?, ?, ?, ?, ?, ? , ?, ?, ?, ?, ?)";
     array_push($params, $id, $inventoryid, $inventorycode, $inventorydescription, $qty, $unit, $unitprice, $unitdiscount,
       $unitdiscountamount, $unittotal, $unithandlingfee, $unitcostprice, $unitcostpriceflag, $unittax);
+
+    $total_in_currency += $unittotal;
   }
+
+  // Validate payment
+  $paymentdate = null;
+  $paymentamount = 0;
+  $paymentaccountid = 0;
+  $payments = [];
+  $payment_amount_in_currency = 0;
+  for($i = 0 ; $i < 5 ; $i++){
+
+    $n_paymentamount = ov("paymentamount-$i", $purchaseinvoice);
+    $n_paymentcurrencyrate = ov("paymentcurrencyrate-$i", $purchaseinvoice);
+    $n_paymentdate = ov("paymentdate-$i", $purchaseinvoice);
+    $n_paymentaccountid = ov("paymentaccountid-$i", $purchaseinvoice);
+    $n_totalamount = $n_paymentcurrencyrate * $n_paymentamount;
+
+    if(!$n_paymentamount) continue;
+
+    if(!$n_paymentdate) exc("Tanggal pembayaran belum diisi");
+    if(!$n_paymentaccountid) exc("Akun pembayaran belum diisi");
+    if(!$n_totalamount) exc("Total pembayaran belum diisi ");
+
+    $payments[] = [
+      'amount'=>$n_paymentamount,
+      'currencyrate'=>$n_paymentcurrencyrate,
+      'date'=>$n_paymentdate,
+      'chartofaccountid'=>$n_paymentaccountid,
+      'totalamount'=>$n_totalamount,
+    ];
+
+    $paymentamount += $n_totalamount;
+    $payment_amount_in_currency += $n_paymentamount;
+    if(!$paymentdate) $paymentdate = $n_paymentdate;
+    if(!$paymentaccountid) $paymentaccountid = $n_paymentaccountid;
+
+  }
+
+  if($payment_amount_in_currency > $total_in_currency)
+    exc("Pembayaran melebihi total yang harus dibayar, total yang dapat dibayar: {$currency_code} {$total_in_currency}, pembayaran yang dimasukkan: {$payment_amount_in_currency}");
+
 
   try{
 
@@ -513,6 +565,22 @@ function purchaseinvoiceentry($purchaseinvoice){
     pm("INSERT INTO purchaseinvoiceinventory(purchaseinvoiceid, inventoryid, inventorycode, inventorydescription, qty, 
       unit, unitprice, unitdiscount, unitdiscountamount, unittotal, unithandlingfee, unitcostprice, unitcostpriceflag, unittax) VALUES " . implode(', ', $values),
       $params);
+
+    pm("delete from purchaseinvoicepayment where purchaseinvoiceid = ?", [ $id ]);
+    foreach($payments as $payment){
+
+      pm("insert into purchaseinvoicepayment (purchaseinvoiceid, `type`, `date`, amount, chartofaccountid, currencyrate, totalamount)
+        values (?, ?, ?, ?, ? ,?, ?)", [
+        $id,
+        1,
+        $payment['date'],
+        $payment['amount'],
+        $payment['chartofaccountid'],
+        $payment['currencyrate'],
+        $payment['totalamount']
+      ]);
+
+    }
 
     // Update purchase order
     if($purchaseinvoice['purchaseorderid'] > 0)
@@ -645,6 +713,56 @@ function purchaseinvoicemodify($purchaseinvoice){
   if(isset($purchaseinvoice['handlingfeeaccountid']) && $purchaseinvoice['handlingfeeaccountid'] != $current['handlingfeeaccountid'])
     $updatedrows['handlingfeeaccountid'] = $purchaseinvoice['handlingfeeaccountid'] > 0 ? $purchaseinvoice['handlingfeeaccountid'] : 0;
 
+  $currencyid = $purchaseinvoice['currencyid'];
+  $currency_code = pmc("select code from currency where `id` = ?", [ $currencyid ]);
+
+  $inventories = $purchaseinvoice['inventories'];
+  $total_in_currency = 0;
+  foreach($inventories as $inventory){
+    $qty = $inventory['qty'];
+    $unit = $inventory['unit'];
+    $unitprice = $inventory['unitprice'];
+    $unittotal = $inventory['unittotal'];
+    $total_in_currency += $unittotal;
+  }
+
+  // Validate payment
+  $paymentdate = null;
+  $paymentamount = 0;
+  $payment_amount_in_currency = 0;
+  $paymentaccountid = 0;
+  $payments = [];
+  for($i = 0 ; $i < 5 ; $i++){
+
+    $n_paymentamount = ov("paymentamount-$i", $purchaseinvoice);
+    $n_paymentcurrencyrate = ov("paymentcurrencyrate-$i", $purchaseinvoice);
+    $n_paymentdate = ov("paymentdate-$i", $purchaseinvoice);
+    $n_paymentaccountid = ov("paymentaccountid-$i", $purchaseinvoice);
+    $n_totalamount = $n_paymentcurrencyrate * $n_paymentamount;
+
+    if(!$n_paymentamount && !isdate($n_paymentdate) && !$n_paymentaccountid && !$n_totalamount) continue;
+
+    $payments[] = [
+      'amount'=>$n_paymentamount,
+      'currencyrate'=>$n_paymentcurrencyrate,
+      'date'=>$n_paymentdate,
+      'chartofaccountid'=>$n_paymentaccountid,
+      'totalamount'=>$n_totalamount,
+    ];
+
+    $paymentamount += $n_totalamount;
+    $payment_amount_in_currency += $n_paymentamount;
+    if(!$paymentdate) $paymentdate = $n_paymentdate;
+    if(!$paymentaccountid) $paymentaccountid = $n_paymentaccountid;
+
+  }
+  $updatedrows['paymentamount'] = $paymentamount;
+  if($paymentdate) $updatedrows['paymentdate'] = $paymentdate;
+  if($paymentaccountid > 0) $updatedrows['paymentaccountid'] = $paymentaccountid;
+
+  if($payment_amount_in_currency > $total_in_currency)
+    exc("Pembayaran melebihi total yang harus dibayar, total yang dapat dibayar: {$currency_code} {$total_in_currency}, pembayaran yang dimasukkan: {$payment_amount_in_currency}");
+
   try{
 
     pdo_begin_transaction();
@@ -654,58 +772,72 @@ function purchaseinvoicemodify($purchaseinvoice){
       mysql_update_row('purchaseinvoice', $updatedrows, [ 'id'=>$id ]);
     }
 
-    if(isset($purchaseinvoice['inventories'])){
 
-      $inventories = $purchaseinvoice['inventories'];
-      $updatedrows['inventories'] = $inventories; // Add inventories to updated rows, always appear in log
+    $inventories = $purchaseinvoice['inventories'];
+    $updatedrows['inventories'] = $inventories; // Add inventories to updated rows, always appear in log
 
-      // Group inventory by code and unitprice
-      if(systemvarget('purchaseinvoice_item_grouping')){
-        $inventories = array_index($inventories, ['inventorycode', 'unitprice']);
-        $temp = [];
-        foreach ($inventories as $inventorycode => $inventorycodes) {
-          foreach ($inventorycodes as $unitprice => $inventoryunits) {
-            $qty = 0;
-            foreach ($inventoryunits as $inventoryunit)
-              $qty += $inventoryunit['qty'];
-            $inventoryunit = $inventoryunits[0];
-            $inventoryunit['qty'] = $qty;
-            $temp[] = $inventoryunit;
-          }
+    // Group inventory by code and unitprice
+    if(systemvarget('purchaseinvoice_item_grouping')){
+      $inventories = array_index($inventories, ['inventorycode', 'unitprice']);
+      $temp = [];
+      foreach ($inventories as $inventorycode => $inventorycodes) {
+        foreach ($inventorycodes as $unitprice => $inventoryunits) {
+          $qty = 0;
+          foreach ($inventoryunits as $inventoryunit)
+            $qty += $inventoryunit['qty'];
+          $inventoryunit = $inventoryunits[0];
+          $inventoryunit['qty'] = $qty;
+          $temp[] = $inventoryunit;
         }
-        $inventories = $temp;
       }
+      $inventories = $temp;
+    }
 
-      // Insert to database
-      $queries = $params = [];
-      $queries[] = "DELETE FROM purchaseinvoiceinventory WHERE purchaseinvoiceid = ?";
-      $params[] = $id;
-      foreach($inventories as $inventory){
+    // Insert to database
+    $queries = $params = [];
+    $queries[] = "DELETE FROM purchaseinvoiceinventory WHERE purchaseinvoiceid = ?";
+    $params[] = $id;
+    foreach($inventories as $inventory){
 
-        if(isset($inventory['__flag']) && $inventory['__flag'] == 'removed') continue; // Skip removed row
+      if(isset($inventory['__flag']) && $inventory['__flag'] == 'removed') continue; // Skip removed row
 
-        $inventoryid = $inventory['inventoryid'];
-        if(!($inventory_data = inventorydetail(null, array('id'=>$inventoryid)))) exc("Barang tidak terdaftar");
-        $inventorycode = $inventory_data['code'];
-        $inventorydescription = $inventory_data['description'];
-        $qty = $inventory['qty'];
-        $unit = $inventory['unit'];
-        $unitprice = $inventory['unitprice'];
-        $unittotal = $inventory['unittotal'];
-        $unittax = $inventory['unittax'];
-        $unitcostprice = $inventory['unitcostprice'];
-        $unitcostpriceflag = $inventory['unitcostpriceflag'];
+      $inventoryid = $inventory['inventoryid'];
+      if(!($inventory_data = inventorydetail(null, array('id'=>$inventoryid)))) exc("Barang tidak terdaftar");
+      $inventorycode = $inventory_data['code'];
+      $inventorydescription = $inventory_data['description'];
+      $qty = $inventory['qty'];
+      $unit = $inventory['unit'];
+      $unitprice = $inventory['unitprice'];
+      $unittotal = $inventory['unittotal'];
+      $unittax = $inventory['unittax'];
+      $unitcostprice = $inventory['unitcostprice'];
+      $unitcostpriceflag = $inventory['unitcostpriceflag'];
 
-        $queries[] = "INSERT INTO purchaseinvoiceinventory(`id`, purchaseinvoiceid, inventoryid, inventorycode, inventorydescription, 
-        qty, unit, unitprice, unittotal, unitcostprice, unitcostpriceflag, unittax) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        array_push($params, null, $id, $inventoryid, $inventorycode, $inventorydescription,
-          $qty, $unit, $unitprice, $unittotal, $unitcostprice, $unitcostpriceflag, $unittax);
-
-      }
-      if(count($queries) > 0)
-        pm(implode(';', $queries), $params);
+      $queries[] = "INSERT INTO purchaseinvoiceinventory(`id`, purchaseinvoiceid, inventoryid, inventorycode, inventorydescription, 
+      qty, unit, unitprice, unittotal, unitcostprice, unitcostpriceflag, unittax) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+      array_push($params, null, $id, $inventoryid, $inventorycode, $inventorydescription,
+        $qty, $unit, $unitprice, $unittotal, $unitcostprice, $unitcostpriceflag, $unittax);
 
     }
+    if(count($queries) > 0)
+      pm(implode(';', $queries), $params);
+
+    pm("delete from purchaseinvoicepayment where purchaseinvoiceid = ?", [ $id ]);
+    foreach($payments as $payment){
+
+      pm("insert into purchaseinvoicepayment (purchaseinvoiceid, `type`, `date`, amount, chartofaccountid, currencyrate, totalamount)
+        values (?, ?, ?, ?, ? ,?, ?)", [
+        $id,
+        1,
+        $payment['date'],
+        $payment['amount'],
+        $payment['chartofaccountid'],
+        $payment['currencyrate'],
+        $payment['totalamount']
+      ]);
+
+    }
+    $updatedrows['payments'] = $payments;
 
     if(isset($updatedrows['code'])) code_commit($updatedrows['code'], $current['code']);
 
@@ -786,7 +918,6 @@ function purchaseinvoice_ext($id){
   $currencyrate = $purchaseinvoice['currencyrate'];
   $paymentaccountid = ov('paymentaccountid', $purchaseinvoice);
   $paymentdate = ov('paymentdate', $purchaseinvoice);
-  $paymentamount = ov('paymentamount', $purchaseinvoice);
   $total = ov('total', $purchaseinvoice);
   $totalpercurrency = round($total * $currencyrate);
   $handlingfeeaccountid = $purchaseinvoice['handlingfeeaccountid'];
@@ -852,6 +983,7 @@ function purchaseinvoice_ext($id){
   if($debtamount < 1) $debtamount = 0; // If debtamount < 1, consider as paid
 
   $total_payment = 0;
+  $total_payment_in_currency = 0;
 
   /**
    * Journal
@@ -878,23 +1010,35 @@ function purchaseinvoice_ext($id){
     $total_payment += $downpaymentamount;
   }
 
-  if($paymentamount > 0){
+  // Payment
+  $payments = $purchaseinvoice['payments'];
+  if(count($payments) > 0){
 
-    $details[] = array('coaid' => $purchaseinvoice_inventoryaccountid, 'debitamount' => $paymentamount + $debtamount, 'creditamount' => 0); // 10: Persediaan Barang Dagang
-    $details[] = array('coaid' => $paymentaccountid, 'debitamount' => 0, 'creditamount' => $paymentamount); // As of payment account id
-    if ($debtamount > 0) $details[] = array('coaid'=>$purchaseinvoice_debtaccountid, 'debitamount'=>0, 'creditamount'=>$debtamount ); // 5: Hutang
+    foreach($payments as $index=>$payment){
 
-    $journalvoucher = array(
-      'date' => $paymentdate,
-      'description' => $code,
-      'ref' => 'PI',
-      'refid' => $id,
-      'type' => 'A',
-      'details' => $details
-    );
-    $journalvouchers[] = $journalvoucher;
+      $paymentaccountid = $payment['paymentaccountid'];
+      $paymentamount = $payment['paymentamount'];
+      $paymenttotalamount = $payment['paymenttotalamount'];
+      $paymentdate = $payment['paymentdate'];
 
-    $total_payment += $paymentamount;
+      if($paymentaccountid > 0 && $paymenttotalamount > 0 && isdate($paymentdate)){
+        $details = array();
+        $details[] = array('coaid'=>$purchaseinvoice_inventoryaccountid, 'debitamount'=>$paymenttotalamount, 'creditamount'=>0);
+        $details[] = array('coaid'=>$paymentaccountid, 'debitamount'=>0, 'creditamount'=>$paymenttotalamount);
+        $journalvoucher = array(
+          'date'=>$paymentdate,
+          'description'=>'Payment ' . ($index + 1) . ' for ' . $code,
+          'ref'=>'PI',
+          'refid'=>$id,
+          'type'=>'A',
+          'details'=>$details
+        );
+        $journalvouchers[] = $journalvoucher;
+        $total_payment += $paymenttotalamount;
+        $total_payment_in_currency += $paymentamount;
+      }
+
+    }
 
   }
 
@@ -1064,9 +1208,10 @@ function purchaseinvoice_ext($id){
     journalvoucherentries($journalvouchers);
   }
 
-  $updates = [];
-  $total = $purchaseinvoice['total'] * $purchaseinvoice['currencyrate'];
-  if(abs($total - $total_payment) < 0.5 || $total_payment > $total){
+  $updates = [
+    'paymentamount'=>$total_payment
+  ];
+  if(abs($purchaseinvoice['total'] - $total_payment_in_currency) < 0.5){
     $updates['ispaid'] = 1;
   }
   else{

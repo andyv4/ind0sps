@@ -36,6 +36,66 @@ function purchaseinvoice_subtotal(){
 
 }
 
+function purchaseinvoice_paymentamountchange(){
+
+  var payments = ui.container_value(ui('.payment-section'));
+
+  var total = ui.label_value(ui('%total'));
+  var total_payment_idr = 0;
+  var total_payment = 0;
+  for(var i = 0 ; i < 5 ; i++){
+
+    var n_paymentamount = payments['paymentamount-' + i];
+    var n_paymentcurrencyrate = payments['paymentcurrencyrate-' + i];
+    var n_paymentdate = payments['paymentdate-' + i];
+    var n_paymentaccountid = payments['paymentaccountid-' + i];
+
+    if(/^\d{8}$/.test(n_paymentdate) && parseInt(n_paymentaccountid) > 0){
+      total_payment += n_paymentamount;
+      total_payment_idr += n_paymentamount * n_paymentcurrencyrate;
+    }
+
+  }
+
+  if(total_payment > total){
+    alert("Pembayaran melebihi total.");
+    total_payment_idr = 0;
+  }
+  else
+    ui.checkbox_setvalue(ui('%ispaid'), (total_payment >= total ? 1 : 0));
+
+  ui.textbox_setvalue(ui('%paymentamount'), total_payment_idr);
+
+}
+
+function purchaseinvoice_paymentremove(button){
+
+  var tr = $(button).closest('tr')[0];
+  ui.textbox_setvalue(ui('.paymentamount', tr), 0);
+  ui.textbox_setvalue(ui('.paymentcurrencyrate', tr), 0);
+  ui.textbox_setvalue(ui('.paymentdate', tr), '');
+  ui.textbox_setvalue(ui('.paymentaccountid', tr), '');
+  $(tr).addClass('off');
+  purchaseorder_paymentamountchange();
+
+}
+
+function purchaseinvoice_paymentadd(){
+
+  var completed = false;
+  $('tr', '.payment-section').each(function(){
+
+    if(completed) return;
+    if($(this).hasClass('off')){
+      $(this).removeClass('off');
+      completed = true;
+    }
+
+  })
+  purchaseinvoice_paymentamountchange();
+
+}
+
 function purchaseinvoice_total(){
 
   var currencyrate = parseFloat($("*[data-name='currencyrate']", '.modal').val());
@@ -161,11 +221,7 @@ function purchaseinvoice_taxchange(){
 
 function purchaseinvoice_ispaid(){
 
-  var ispaid = ui.checkbox_value(ui('%ispaid', ui('.modal')));
-  if(ispaid)
-    purchaseinvoice_paymentamount();
-  else
-    ui.textbox_setvalue(ui('%paymentamount'), 0);
+
 
 }
 
