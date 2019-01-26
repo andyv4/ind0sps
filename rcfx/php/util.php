@@ -2717,5 +2717,38 @@ function applog($key, $oneliner = '', $type = LOG_INFO, $dest = null){
 
 }
 
+
+function cli_add_color($text, $bgcolor = 'red', $fgcolor = 'white'){
+
+  $bgcolors = [
+    'red'=>'41',
+    'green'=>'42',
+    'yellow'=>'43',
+    'blue'=>'44',
+    'magenta'=>'45',
+    'cyan'=>'46',
+    'light_gray'=>'47',
+  ];
+
+  $fgcolors = [
+    'white'=>'1;37',
+    'yellow'=>'1;33',
+  ];
+
+  $formatted_text = '';
+  if(isset($fgcolors[$fgcolor]))
+    $formatted_text = "\033[" . $fgcolors[$fgcolor] . "m";
+  if(isset($bgcolors[$bgcolor]))
+    $formatted_text = "\033[" . $bgcolors[$bgcolor] . "m";
+
+  $formatted_text .= $text;
+
+  if(strpos($formatted_text, "\033") !== false)
+    $formatted_text .= "\033[0m";
+
+  return $formatted_text;
+
+}
+
 ?>
 

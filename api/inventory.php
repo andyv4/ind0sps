@@ -1403,4 +1403,20 @@ function inventorybalance_calc_refitemid(){
 
 }
 
+function inventory_check($callback = null){
+
+  $rows = pmrs("select `id`, code, qty from inventory");
+
+  $total = count($rows);
+  foreach($rows as $index=>$row){
+
+    $row['qty_calculated'] = pmc("select SUM(`in` - `out`) from inventorybalance where inventoryid = ? and `date` <= ?", [
+      $row['id'], date('Ymd')
+    ]);
+
+    if(is_callable($callback)) $callback($index, $total, $row);
+  }
+
+}
+
 ?>
