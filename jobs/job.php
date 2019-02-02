@@ -20,6 +20,14 @@ include 'config.php';
 $job = pmr("select * from jobs where `id` = ? and running < 1", [ $job_id ]);
 if(!$job) return;
 
+// Job can only be executed once at a time
+$log_path = realpath(__DIR__ . '/../usr/system');
+if(file_exists($log_path . '/job-' . $job['id'])) return;
+file_put_contents($log_path . '/job-' . $job['id'], json_encode($job));
+
+// make sure job is unique
+$log_path = realpath(__DIR__ . '/../usr/system');
+
 $target = $job['target'];
 $payload = json_decode($job['payload'], true);
 $attempt = $job['attempt'];
@@ -59,7 +67,8 @@ catch(Exception $ex){
 
 }
 
-
+// Mark job as available
+unlink($log_path . '/job-' . $job['id']);
 
 function onshutdown(){
 
