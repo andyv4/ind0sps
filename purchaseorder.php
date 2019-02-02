@@ -198,6 +198,7 @@ function ui_purchaseorder_createinvoice($id){
 
   $date = date('Ymd');
   $taxable = $purchaseorder['taxable'];
+  $downpaymentamount_in_currency = pmc("select sum(amount) from purchaseorderpayment where purchaseorderid = ?", [ $id ]);
 
   $purchaseinvoice = array(
     'date'=>date('Ymd'),
@@ -216,11 +217,14 @@ function ui_purchaseorder_createinvoice($id){
     'total'=>$purchaseorder['total'],
     'ispaid'=>0,
     'downpaymentamount'=>$purchaseorder['paymentamount'],
+    'downpaymentamount_in_currency'=>$downpaymentamount_in_currency,
     'downpaymentdate'=>$purchaseorder['paymentdate'],
     'downpaymentaccountid'=>$purchaseorder['paymentaccountid'],
     'purchaseorderid'=>$id,
     'pocode'=>$purchaseorder['code'],
-    'freightcharge'=>$purchaseorder['freightcharge']
+    'freightcharge'=>$purchaseorder['freightcharge'],
+    'paymentamount'=>$purchaseorder['paymentamount'],
+    'paymentamount_in_currency'=>$downpaymentamount_in_currency
   );
 
   return ui_purchaseinvoicedetail($purchaseinvoice, false);

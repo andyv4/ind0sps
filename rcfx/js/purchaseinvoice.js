@@ -62,7 +62,7 @@ function purchaseinvoice_paymentremove(button){
   ui.textbox_setvalue(ui('.paymentdate', tr), '');
   ui.textbox_setvalue(ui('.paymentaccountid', tr), '');
   $(tr).addClass('off');
-  purchaseorder_paymentamountchange();
+  purchaseinvoice_calculate();
 
 }
 

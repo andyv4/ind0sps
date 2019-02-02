@@ -435,7 +435,6 @@ function purchaseinvoicevalidate(&$updated, $original = null){
 
       $actual_unittotal = $qty * $unitprice;
       if(round($unittotal) != round($actual_unittotal)) exc("Total $inventorycode salah. $unittotal : $actual_unittotal ");
-      if(!$unitcostprice) exc("Harga modal $inventorycode salah");
       if($taxable && !$inventory_data['taxable']) exc("Barang $inventorycode tidak kena pajak, tidak dapat dimasukkan kedalam faktur pajak");
 
       $updated['inventories'][$index]['inventoryid'] = $inventoryid;
@@ -752,7 +751,6 @@ function purchaseinvoicemodify($purchaseinvoice){
       $updatedrows['lastupdatedon'] = date('YmdHis');
       mysql_update_row('purchaseinvoice', $updatedrows, [ 'id'=>$id ]);
     }
-
 
     $inventories = $purchaseinvoice['inventories'];
     $updatedrows['inventories'] = $inventories; // Add inventories to updated rows, always appear in log
