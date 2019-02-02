@@ -21,20 +21,6 @@ function purchaseinvoice_rowtotal(tr){
 
 }
 
-function purchaseinvoice_subtotal(){
-
-  var subtotal = 0;
-  var inventories = ui.grid_value(ui('%inventories', ui('.modal')));
-  for(var i = 0 ; i < inventories.length ; i++){
-    var unittotal = parseFloat(inventories[i]['unittotal']);
-    if(isNaN(unittotal)) unittotal = 0;
-    subtotal += unittotal;
-  }
-
-  ui.label_setvalue(ui('%subtotal', ui('.modal')), subtotal);
-  return subtotal;
-
-}
 
 function purchaseinvoice_paymentamountchange(){
 
@@ -96,13 +82,70 @@ function purchaseinvoice_paymentadd(){
 
 }
 
+function purchaseinvoice_calculate(){
+
+  var total_in_currency = purchaseinvoice_total();
+  var downpaymentamount = ui("%downpaymentamount") != null ? ui.textbox_value(ui("%downpaymentamount")) : 0;
+  var downpaymentamount_in_currency = ui("%downpaymentamount") != null ? ui.textbox_value(ui("%downpaymentamount_in_currency")) : 0;
+
+  var paymentamount_in_currency = 0;
+  var paymentamount = 0;
+  $('.payment-row').each(function(){
+
+    var index = $(this).index() - 1;
+    var n_payment_amount = ui.textbox_value(ui('%paymentamount-' + index, this));
+    var n_payment_date = ui.datepicker_value(ui('%paymentdate-' + index, this));
+    var n_payment_currency_rate = ui.textbox_value(ui('%paymentcurrencyrate-' + index, this));
+    var n_payment_accountid = parseInt(ui.dropdown_value(ui('%paymentaccountid-' + index, this)));
+
+    if(isNaN(n_payment_accountid)) n_payment_accountid = 0;
+
+    if(n_payment_amount > 0 &&
+      n_payment_date.length == 8 &&
+      n_payment_currency_rate > 0 &&
+      n_payment_accountid > 0){
+      paymentamount_in_currency += n_payment_amount;
+      paymentamount += n_payment_amount * n_payment_currency_rate;
+    }
+
+  });
+
+  if(ui("%downpaymentamount") != null) ui.textbox_setvalue(ui('%downpaymentamount_in_currency'), downpaymentamount_in_currency);
+  ui.textbox_setvalue(ui('%paymentamount_in_currency'), downpaymentamount_in_currency + paymentamount_in_currency);
+  ui.textbox_setvalue(ui('%paymentamount'), downpaymentamount + paymentamount);
+
+  var ispaid = paymentamount_in_currency + downpaymentamount_in_currency >= total_in_currency ? 1 : 0;
+  ui.checkbox_setvalue(ui('%ispaid'), ispaid);
+
+  if(paymentamount_in_currency + downpaymentamount_in_currency > total_in_currency)
+    alert('Jumlah pembayaran melebihi total yang harus dibayar.');
+
+}
+function purchaseinvoice_subtotal(){
+
+  var subtotal = 0;
+  var inventories = ui.grid_value(ui('%inventories', ui('.modal')));
+  for(var i = 0 ; i < inventories.length ; i++){
+    var unittotal = parseFloat(inventories[i]['unittotal']);
+    if(isNaN(unittotal)) unittotal = 0;
+    subtotal += unittotal;
+  }
+  ui.label_setvalue(ui('%subtotal', ui('.modal')), subtotal);
+  return subtotal;
+
+}
 function purchaseinvoice_total(){
+
+  var subtotal = purchaseinvoice_subtotal();
+  var discountamount = parseFloat($("*[data-name='discountamount']", '.modal').val());
+  var freightcharge = parseFloat($("*[data-name='freightcharge']", '.modal').val());
+  var total = subtotal - discountamount + freightcharge;
+  $("*[data-name='total']", '.modal').val(total);
+  return total;
 
   var currencyrate = parseFloat($("*[data-name='currencyrate']", '.modal').val());
   var subtotal = purchaseinvoice_subtotal();
-  var discountamount = parseFloat($("*[data-name='discountamount']", '.modal').val());
   var taxamount = parseFloat($("*[data-name='taxamount']", '.modal').val());
-  var freightcharge = parseFloat($("*[data-name='freightcharge']", '.modal').val());
   var pph = parseFloat($("*[data-name='pph']", '.modal').val());
   var kso = parseFloat($("*[data-name='kso']", '.modal').val());
   var ski = parseFloat($("*[data-name='ski']", '.modal').val());
@@ -216,12 +259,6 @@ function purchaseinvoice_discountamountchange(){
 function purchaseinvoice_taxchange(){
 
   purchaseinvoice_total();
-
-}
-
-function purchaseinvoice_ispaid(){
-
-
 
 }
 

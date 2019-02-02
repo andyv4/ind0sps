@@ -58,6 +58,7 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
   $tax_code = ov('tax_code', $purchaseinvoice, 0, '');
 
   $downpaymentamount = ov('downpaymentamount', $purchaseinvoice, 0, 0);
+  $downpaymentamount_in_currency = ov('downpaymentamount_in_currency', $purchaseinvoice, 0, 0);
   $downpaymentdate = ov('downpaymentdate', $purchaseinvoice, 0);
   $downpaymentaccountid = ov('downpaymentaccountid', $purchaseinvoice);
 
@@ -66,6 +67,7 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
   $taxaccountid = ov('taxaccountid', $purchaseinvoice);
 
   $paymentaccountid = ov('paymentaccountid', $purchaseinvoice);
+  $paymentamount_in_currency = ov('paymentamount_in_currency', $purchaseinvoice);
 
   $pphdate = ov('pphdate', $purchaseinvoice, 0);
   $ksodate = ov('ksodate', $purchaseinvoice, 0);
@@ -186,13 +188,16 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
     'discount'=>array('type'=>'textbox', 'name'=>'discount', 'value'=>$discount, 'width'=>60, 'datatype'=>'number', 'readonly'=>$readonly, 'onchange'=>"purchaseinvoice_discountchange()"),
     'discountamount'=>array('type'=>'textbox', 'name'=>'discountamount', 'value'=>$discountamount, 'width'=>150, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseinvoice_discountamountchange()"),
 
-    'downpaymentamount'=>array('type'=>'textbox', 'name'=>'downpaymentamount', 'datatype'=>'money', 'value'=>$downpaymentamount, 'align'=>'right', 'readonly'=>1),
+    'downpaymentamount'=>array('type'=>'textbox', 'name'=>'downpaymentamount', 'datatype'=>'money', 'value'=>$downpaymentamount, 'align'=>'right', 'readonly'=>1, 'width'=>150),
+
+    'downpaymentamount_in_currency'=>array('type'=>'textbox', 'name'=>'downpaymentamount_in_currency', 'datatype'=>'money', 'value'=>$downpaymentamount_in_currency, 'align'=>'right', 'readonly'=>1, 'width'=>150),
     'downpaymentdate'=>array('type'=>'datepicker', 'name'=>'downpaymentdate', 'value'=>$downpaymentdate, 'readonly'=>$readonly, 'onchange'=>"", 'align'=>'right', 'readonly'=>1),
     'downpaymentaccountid'=>array('type'=>'dropdown', 'name'=>'downpaymentaccountid', 'value'=>$downpaymentaccountid, 'items'=>$chartofaccounts, 'readonly'=>1, 'width'=>150, 'onchange'=>"", 'align'=>'right'),
 
     'paymentdate'=>array('type'=>'datepicker', 'name'=>'paymentdate', 'value'=>$paymentdate, 'readonly'=>$readonly, 'onchange'=>"", 'align'=>'right'),
     'paymentaccountid'=>array('type'=>'dropdown', 'name'=>'paymentaccountid', 'value'=>$paymentaccountid, 'items'=>$chartofaccounts, 'readonly'=>$readonly, 'width'=>150, 'onchange'=>"", 'align'=>'right'),
     'paymentamount'=>array('type'=>'textbox', 'name'=>'paymentamount', 'value'=>$paymentamount, 'readonly'=>1, 'width'=>150, 'datatype'=>'money', 'onchange'=>"purchaseinvoice_onpaymentamountchange()"),
+    'paymentamount_in_currency'=>array('type'=>'textbox', 'name'=>'paymentamount_in_currency', 'value'=>$paymentamount_in_currency, 'readonly'=>1, 'width'=>150, 'datatype'=>'money', 'onchange'=>"purchaseinvoice_onpaymentamountchange()"),
 
     'taxamount'=>array('type'=>'textbox', 'name'=>'taxamount', 'value'=>$taxamount, 'width'=>150, 'datatype'=>'money', 'readonly'=>$tax_readonly, 'onchange'=>"purchaseinvoice_total()"),
     'taxdate'=>array('type'=>'datepicker', 'name'=>'taxdate', 'value'=>$taxdate, 'readonly'=>$readonly, 'onchange'=>"", 'align'=>'right', 'readonly'=>$tax_readonly, 'onchange'=>"purchaseinvoice_total()"),
@@ -224,7 +229,7 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
 
     'freightcharge'=>array('type'=>'textbox', 'name'=>'freightcharge', 'value'=>$freightcharge, 'width'=>150, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseinvoice_total()"),
     'total'=>array('type'=>'label', 'name'=>'total', 'value'=>$total, 'width'=>150, 'datatype'=>'money', 'readonly'=>$readonly),
-    'ispaid'=>array('type'=>'checkbox', 'name'=>'ispaid', 'value'=>$ispaid, 'readonly'=>$readonly, 'onchange'=>"purchaseinvoice_ispaid()"),
+    'ispaid'=>array('type'=>'checkbox', 'name'=>'ispaid', 'value'=>$ispaid, 'readonly'=>1, 'onchange'=>"purchaseinvoice_ispaid()"),
     'warehouseid'=>array('type'=>'dropdown', 'name'=>'warehouseid', 'value'=>$warehouseid, 'items'=>array_cast(warehouselist(), array('text'=>'name', 'value'=>'id')), 'readonly'=>$readonly, 'width'=>150, 'onchange'=>""),
     'handlingfeevolume'=>array('type'=>'textbox', 'name'=>'handlingfeevolume', 'value'=>$handlingfeevolume, 'placeholder'=>'Volume...', 'readonly'=>$readonly, 'width'=>80, 'datatype'=>'number'),
     'items'=>array('columns'=>$detailcolumns, 'name'=>'inventories', 'value'=>$inventories, 'mode'=>'write', 'readonly'=>$readonly, 'id'=>'inventories', 'onremove'=>"purchaseinvoice_total()", 'write_no_add'=>($purchaseorder ? 1 : 0)),
@@ -243,14 +248,14 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
     if($n_paymentcurrencyrate < 1) $n_paymentcurrencyrate = 1;
 
     $controls["paymentamount_$i"] = array('type'=>'textbox', 'class'=>'paymentamount', 'name'=>"paymentamount-$i", 'value'=>$n_paymentamount,
-      'readonly'=>$readonly, 'width'=>150, 'datatype'=>'money', 'onchange'=>"purchaseorder_paymentamountchange()");
+      'readonly'=>$readonly, 'width'=>150, 'datatype'=>'money', 'onchange'=>'purchaseinvoice_calculate()');
     $controls["paymentcurrencyrate_$i"] = array('type'=>'textbox', 'class'=>'paymentcurrencyrate', 'name'=>"paymentcurrencyrate-$i",
-      'value'=>$n_paymentcurrencyrate, 'readonly'=>$readonly, 'width'=>150, 'datatype'=>'money', 'onchange'=>"purchaseorder_paymentamountchange()");
+      'value'=>$n_paymentcurrencyrate, 'readonly'=>$readonly, 'width'=>150, 'datatype'=>'money', 'onchange'=>'purchaseinvoice_calculate()');
     $controls["paymentdate_$i"] = array('type'=>'datepicker', 'class'=>'paymentdate', 'name'=>"paymentdate-$i",
-      'value'=>$n_paymentdate, 'readonly'=>$readonly, 'onchange'=>"purchaseorder_paymentamountchange()", 'align'=>'right');
+      'value'=>$n_paymentdate, 'readonly'=>$readonly, 'align'=>'right', 'onchange'=>'purchaseinvoice_calculate()');
     $controls["paymentaccountid_$i"] = array('type'=>'dropdown', 'class'=>'paymentaccountid', 'name'=>"paymentaccountid-$i",
       'value'=>$n_paymentaccountid, 'items'=>$chartofaccounts,
-      'readonly'=>$readonly, 'onchange'=>"purchaseorder_paymentamountchange()", 'width'=>150, 'align'=>'right');
+      'readonly'=>$readonly, 'width'=>150, 'align'=>'right', 'onchange'=>'purchaseinvoice_calculate()');
 
   }
 
@@ -281,11 +286,12 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
 
   // Action Controls
   $actions = array();
-  if($removable && !$readonly && $purchaseinvoice && privilege_get('purchaseinvoice', 'delete')) $actions[] = "<td><button class='red' onclick=\"if(confirm('Hapus $code?')) ui.async('ui_purchaseinvoiceremove', [ $id ], { waitel:this, callback:'purchaseinvoice_onremovecompleted()' })\"><span class='fa fa-edit'></span><label>Hapus</label></button></td>";
-  if(!$readonly && !$purchaseinvoice && privilege_get('purchaseinvoice', 'new')) $actions[] = "<td><button class='blue' onclick=\"ui.async('ui_purchaseinvoicesave', [ ui.container_value(ui('.modal')) ], { waitel:this })\"><span class='fa fa-check'></span><label>" . lang('002') . "</label></button></td>";
-  if(!$readonly && $purchaseinvoice && privilege_get('purchaseinvoice', 'modify')) $actions[] = "<td><button class='blue' onclick=\"ui.async('ui_purchaseinvoicesave', [ ui.container_value(ui('.modal')) ], { waitel:this })\"><span class='fa fa-check'></span><label>" . lang('002') . "</label></button></td>";
-  if($readonly && $purchaseinvoice && privilege_get('purchaseinvoice', 'modify')) $actions[] = "<td><button class='blue' onclick=\"ui.async('ui_purchaseinvoicemodify', [ $id ], { waitel:this })\"><span class='fa fa-edit'></span><label>" . lang('001') . "</label></button></td>";
-  $actions[] = "<td><button class='hollow' onclick=\"$closebtn_onclicked\"><span class='fa fa-times'></span><label>Close</label></button></td>";
+  if($removable && !$readonly && $purchaseinvoice && privilege_get('purchaseinvoice', 'delete')) $actions[] = "<td><button class='red' style='margin-right:50px;width:88px' onclick=\"if(confirm('Hapus $code?')) ui.async('ui_purchaseinvoiceremove', [ $id ], { waitel:this, callback:'purchaseinvoice_onremovecompleted()' })\"><span class='fa fa-trash-o''></span><label>Hapus</label></button></td>";
+  $actions[] = "<td style='width: 100%'></td>";
+  if(!$readonly && !$purchaseinvoice && privilege_get('purchaseinvoice', 'new')) $actions[] = "<td><button class='blue' style='width:88px' onclick=\"ui.async('ui_purchaseinvoicesave', [ ui.container_value(ui('.modal')) ], { waitel:this })\"><span class='fa fa-check'></span><label>" . lang('002') . "</label></button></td>";
+  if(!$readonly && $purchaseinvoice && privilege_get('purchaseinvoice', 'modify')) $actions[] = "<td><button class='blue' style='width:88px' onclick=\"ui.async('ui_purchaseinvoicesave', [ ui.container_value(ui('.modal')) ], { waitel:this })\"><span class='fa fa-check'></span><label>" . lang('002') . "</label></button></td>";
+  if($readonly && $purchaseinvoice && privilege_get('purchaseinvoice', 'modify')) $actions[] = "<td><button class='blue' style='width:88px' onclick=\"ui.async('ui_purchaseinvoicemodify', [ $id ], { waitel:this })\"><span class='fa fa-edit'></span><label>" . lang('001') . "</label></button></td>";
+  $actions[] = "<td><button style='width:88px' class='hollow' onclick=\"$closebtn_onclicked\"><span class='fa fa-times'></span><label>Close</label></button></td>";
 
   //<div class='statusbar'>$status</div>
   $c = "<element exp='.modal'>";
@@ -349,7 +355,7 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
 
           $off = !isset($payments[$i]) && $i > 0 ? 'off' : '';
 
-          $c .= "<tr class='$off'>
+          $c .= "<tr class='$off payment-row'>
                   <th style='text-align:left'>" . (!$readonly ? "<span class='fa fa-times-circle payment-remove-btn' style='color:red' onclick='purchaseinvoice_paymentremove(this)'></span>" : '') . "<label>Pembayaran " . ($i + 1) . "</label></th>
                   <td>" . ui_control($controls["paymentamount_$i"]) . "</td>
                   <td>" . ui_control($controls["paymentcurrencyrate_$i"]) . "</td>
@@ -367,7 +373,7 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
         $c .= "</span>";
 
         $c .= "<div class='height15'></div>
-        <span style='background:rgb(255, 250, 237)' class='padding10'>
+        <span style='background:rgb(255, 250, 237);width:700px' class='padding10'>
           <table cellspacing='0' class='form'>";
 
           if($downpaymentamount > 0){
@@ -375,17 +381,25 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
               <th><label>Uang Muka</label></th>
               <td></td>
               <td>" . ui_control($controls['downpaymentamount']) . "</td>
-              <td>" . ui_control($controls['downpaymentdate']) . "</td>
-              <td>" . ui_control($controls['downpaymentaccountid']) . "</td>
+              <td></td>
+              <td style='background:rgb(240, 250, 237)' align='right'>" . ui_control($controls['downpaymentamount_in_currency']) . "</td>
             </tr>";
           }
 
           $c .= "<tr>
-              <th><label>Pelunasan</label></th>
-              <td class='align-right'>" . ui_control($controls['ispaid']) . "</td>
+              <th><label>Total Pembayaran</label></th>
+              <td class='align-right'></td>
               <td>" . ui_control($controls['paymentamount']) . "</td>
-              <td>" . ui_control($controls['paymentdate']) . "</td>
-              <td>" . ui_control($controls['paymentaccountid']) . "</td>
+              <td></td>
+              <td style='background:rgb(240, 250, 237)' align='right'>" . ui_control($controls['paymentamount_in_currency']) . "</td>
+            </tr>";
+
+          $c .= "<tr>
+              <th><label>Lunas</label></th>
+              <td class='align-right'></td>
+              <td align='right'>" . ui_control($controls['ispaid']) . "&nbsp;</td>
+              <td></td>
+              <td></td>
             </tr>";
 
           if(systemvarget('purchaseinvoice_taxaccountid') > 0) {
@@ -469,8 +483,7 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
     <div class='foot'>
       <table cellspacing='5'>
         <tr>
-          <td style='width: 100%'></td>
-          " . implode('', $actions) . "
+           " . implode('', $actions) . "
         </tr>
       </table>
     </div>

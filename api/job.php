@@ -2,6 +2,8 @@
 
 function job_create_and_run($function, $params){
 
+  return call_user_func_array($function, $params);
+
   $id = mysql_insert_row('jobs', [
     'createdon'=>date('YmdHis'),
     'attempt'=>0,
