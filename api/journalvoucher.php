@@ -123,6 +123,7 @@ function journalvoucherentries($journalvouchers){
     if(!is_array($details) && count($details) > 0) throw new Exception("Invalid details parameter.");
     if(!is_array($details) || count($details) <= 0) throw new Exception('Detil akun belum diisi.');
 
+    $totaldebitamount = $totalcreditamount = 0;
     for($j = 0 ; $j < count($details) ; $j++){
       $detail = $details[$j];
       if(!isset($detail['coaid'])) throw new Exception('Parameter coaid of detail is required.');
@@ -130,70 +131,86 @@ function journalvoucherentries($journalvouchers){
       if(isset($detail['debitamount']) && $detail['debitamount'] < 0) throw new Exception('Invalid debit amount parameter, number required. ' . $detail['debitamount']);
       if(isset($detail['creditamount']) && $detail['creditamount'] < 0) throw new Exception('Invalid credit amount parameter, number required. ' . $detail['creditamount']);
       if(!isset($chartofaccounts_indexbyid[$detail['coaid']])) throw new Exception('Invalid coaid parameter.');
-    }
-  }
-
-  $related_coaids = [];
-
-  foreach($journalvouchers as $journalvoucher){
-    $rows = pmrs("select t2.coaid from journalvoucher t1, journalvoucherdetail t2 where t1.id = t2.jvid and 
-      t1.ref = ? and t1.refid = ?", [ $journalvoucher['ref'], $journalvoucher['refid'] ]);
-    if(is_array($rows))
-      foreach($rows as $row)
-        $related_coaids[$row['coaid']] = 1;
-    pm("delete from journalvoucher where `ref` = ? and refid = ?", [ $journalvoucher['ref'], $journalvoucher['refid'] ]);
-  }
-
-  $params = $queries = [];
-  for($i = 0 ; $i < count($journalvouchers) ; $i++){
-
-    $journalvoucher = $journalvouchers[$i];
-    $date = ov('date', $journalvoucher);
-    $description = ov('description', $journalvoucher, 1, array('notempty'=>1));
-    $ref = ov('ref', $journalvoucher, 0, 'JV');
-    $refid = ov('refid', $journalvoucher, 0, 0);
-    $details = ov('details', $journalvoucher, 1);
-    $type = ov('type', $journalvoucher, 0, 'M');
-    $createdon = date('YmdHis');
-    $createdby = isset($journalvoucher['createdby']) ? $journalvoucher['createdby'] : (isset($_SESSION['user']['id']) ? $_SESSION['user']['id'] : 0);
-
-    $totaldebitamount = $totalcreditamount = 0;
-    for($j = 0 ; $j < count($details) ; $j++){
-      $detail = $details[$j];
       $totaldebitamount += $detail['debitamount'];
       $totalcreditamount += $detail['creditamount'];
     }
     if(abs($totaldebitamount - $totalcreditamount) > 0.001){
       throw new Exception("Jurnal tidak balance $totaldebitamount-$totalcreditamount " . json_encode($details));
     }
+  }
 
-    $query = "INSERT INTO journalvoucher(`date`, `type`, description, amount, ref, refid, createdon, createdby) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-    $id = pmi($query, array($date, $type, $description, abs($totaldebitamount), $ref, $refid, $createdon, $createdby));
+  $related_coaids = [];
 
-    for($j = 0 ; $j < count($details) ; $j++){
+  try{
 
-      $detail = $details[$j];
-      $coaid = $detail['coaid'];
-      $section = ov('section', $detail, 0, 0);
-      $debitamount = floatval($detail['debitamount']);
-      $creditamount = floatval($detail['creditamount']);
-      $type = isset($detail['type']) && in_array($detail['type'], array('D', 'C')) ? $detail['type'] : ($debitamount == 0 ? 'C' : 'D');
-      $amount = $type == 'C' ? $creditamount : $debitamount;
-      $totaldebitamount += $debitamount;
-      $totalcreditamount += $creditamount;
-      $debit = $type == 'D' ? $amount : 0;
-      $credit = $type == 'C' ? $amount : 0;
+    pdo_begin_transaction();
 
-      $section = !$section ? 0 : $section;
-
-      $queries[] = "(?, ?, ?, ?, ?, ?)";
-      array_push($params, $id, $section, $coaid, $type, $debit, $credit);
-      $related_coaids[$coaid] = 1;
+    foreach($journalvouchers as $journalvoucher){
+      $rows = pmrs("select t2.coaid from journalvoucher t1, journalvoucherdetail t2 where t1.id = t2.jvid and 
+      t1.ref = ? and t1.refid = ?", [ $journalvoucher['ref'], $journalvoucher['refid'] ]);
+      if(is_array($rows))
+        foreach($rows as $row)
+          $related_coaids[$row['coaid']] = 1;
+      pm("delete from journalvoucher where `ref` = ? and refid = ?", [ $journalvoucher['ref'], $journalvoucher['refid'] ]);
     }
 
+    $params = $queries = [];
+    for($i = 0 ; $i < count($journalvouchers) ; $i++){
+
+      $journalvoucher = $journalvouchers[$i];
+      $date = ov('date', $journalvoucher);
+      $description = ov('description', $journalvoucher, 1, array('notempty'=>1));
+      $ref = ov('ref', $journalvoucher, 0, 'JV');
+      $refid = ov('refid', $journalvoucher, 0, 0);
+      $details = ov('details', $journalvoucher, 1);
+      $type = ov('type', $journalvoucher, 0, 'M');
+      $createdon = date('YmdHis');
+      $createdby = isset($journalvoucher['createdby']) ? $journalvoucher['createdby'] : (isset($_SESSION['user']['id']) ? $_SESSION['user']['id'] : 0);
+
+      $totaldebitamount = $totalcreditamount = 0;
+      for($j = 0 ; $j < count($details) ; $j++){
+        $detail = $details[$j];
+        $totaldebitamount += $detail['debitamount'];
+        $totalcreditamount += $detail['creditamount'];
+      }
+
+      $query = "INSERT INTO journalvoucher(`date`, `type`, description, amount, ref, refid, createdon, createdby) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+      $id = pmi($query, array($date, $type, $description, abs($totaldebitamount), $ref, $refid, $createdon, $createdby));
+
+      for($j = 0 ; $j < count($details) ; $j++){
+
+        $detail = $details[$j];
+        $coaid = $detail['coaid'];
+        $section = ov('section', $detail, 0, 0);
+        $debitamount = floatval($detail['debitamount']);
+        $creditamount = floatval($detail['creditamount']);
+        $type = isset($detail['type']) && in_array($detail['type'], array('D', 'C')) ? $detail['type'] : ($debitamount == 0 ? 'C' : 'D');
+        $amount = $type == 'C' ? $creditamount : $debitamount;
+        $totaldebitamount += $debitamount;
+        $totalcreditamount += $creditamount;
+        $debit = $type == 'D' ? $amount : 0;
+        $credit = $type == 'C' ? $amount : 0;
+
+        $section = !$section ? 0 : $section;
+
+        $queries[] = "(?, ?, ?, ?, ?, ?)";
+        array_push($params, $id, $section, $coaid, $type, $debit, $credit);
+        $related_coaids[$coaid] = 1;
+      }
+
+    }
+    $query = "INSERT INTO journalvoucherdetail(jvid, section, coaid, `type`, debit, credit) VALUES " . implode(',', $queries);
+    pm($query, $params);
+
+    pdo_commit();
+
   }
-  $query = "INSERT INTO journalvoucherdetail(jvid, section, coaid, `type`, debit, credit) VALUES " . implode(',', $queries);
-  pm($query, $params);
+  catch(Exception $ex){
+
+    pdo_rollback();
+    throw $ex;
+
+  }
 
   chartofaccountrecalculate(array_keys($related_coaids));
 

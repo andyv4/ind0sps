@@ -550,15 +550,6 @@ function inventorybalanceentries($inventorybalances){
       $warehouses[$warehouseid] = 1;
 
     }
-
-    $related_inventories = [];
-    $inventories = array_keys($inventories);
-    $warehouses = array_keys($warehouses);
-    foreach($inventories as $inventoryid)
-      $related_inventories[$inventoryid] = $warehouses;
-
-    inventory_calc_qty($related_inventories);
-
     pdo_commit();
 
   }
@@ -569,6 +560,13 @@ function inventorybalanceentries($inventorybalances){
     throw $ex;
 
   }
+
+  $related_inventories = [];
+  $inventories = array_keys($inventories);
+  $warehouses = array_keys($warehouses);
+  foreach($inventories as $inventoryid)
+    $related_inventories[$inventoryid] = $warehouses;
+  inventory_calc_qty($related_inventories);
 
 }
 function inventorybalanceremove($filters){
