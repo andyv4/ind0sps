@@ -330,7 +330,8 @@ function purchaseinvoicevalidate(&$updated, $original = null){
   $total_in_currency = 0;
   foreach($updated['inventories'] as $inventory)
     $total_in_currency += $inventory['qty'] * $inventory['unitprice'];
-  if($total_payment_in_currency > $total_in_currency) exc("Jumlah pembayaran melebihi total yang harus dibayar.");
+  $total_in_currency = $total_in_currency - $discountamount + $freightcharge;
+  if($total_payment_in_currency > $total_in_currency) exc("Jumlah pembayaran melebihi total yang harus dibayar. {$total_payment_in_currency}:{$total_in_currency}");
 
   if(isset($updated['taxamount']) && $updated['taxamount'] != ov('taxamount', $original)){
 
