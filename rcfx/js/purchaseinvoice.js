@@ -88,6 +88,35 @@ function purchaseinvoice_calculate(){
   var downpaymentamount = ui("%downpaymentamount") != null ? ui.textbox_value(ui("%downpaymentamount")) : 0;
   var downpaymentamount_in_currency = ui("%downpaymentamount") != null ? ui.textbox_value(ui("%downpaymentamount_in_currency")) : 0;
 
+  var payment = purchaseinvoice_paymenttotal();
+  var paymentamount_in_currency = payment['paymentamount_in_currency'];
+  var paymentamount = payment['paymentamount'];
+  var currency_rate = payment['currency_rate'];
+
+  ui.hidden_setvalue(ui('%currencyrate'), currency_rate);
+  if(ui("%downpaymentamount") != null) ui.textbox_setvalue(ui('%downpaymentamount_in_currency'), downpaymentamount_in_currency);
+  ui.textbox_setvalue(ui('%paymentamount_in_currency'), downpaymentamount_in_currency + paymentamount_in_currency);
+  ui.textbox_setvalue(ui('%paymentamount'), downpaymentamount + paymentamount);
+
+  var total_unittax = 0;
+  $('#inventories tr').each(function(){
+    var unittax = $("*[data-name='unittax']", this).val();
+    if(isNaN(unittax)) unittax = 0;
+    total_unittax += unittax > 0 ? unittax : 0;
+  });
+  $("*[data-name='import_cost']", '.modal').val(total_unittax);
+
+  var ispaid = paymentamount_in_currency + downpaymentamount_in_currency >= total_in_currency ? 1 : 0;
+  ui.checkbox_setvalue(ui('%ispaid'), ispaid);
+
+  purchaseinvoice_costprice();
+
+  if(paymentamount_in_currency + downpaymentamount_in_currency > total_in_currency)
+    alert('Jumlah pembayaran melebihi total yang harus dibayar.');
+
+}
+function purchaseinvoice_paymenttotal(){
+
   var paymentamount_in_currency = 0;
   var paymentamount = 0;
   $('.payment-row').each(function(){
@@ -109,16 +138,13 @@ function purchaseinvoice_calculate(){
     }
 
   });
+  var currency_rate = paymentamount / paymentamount_in_currency;
 
-  if(ui("%downpaymentamount") != null) ui.textbox_setvalue(ui('%downpaymentamount_in_currency'), downpaymentamount_in_currency);
-  ui.textbox_setvalue(ui('%paymentamount_in_currency'), downpaymentamount_in_currency + paymentamount_in_currency);
-  ui.textbox_setvalue(ui('%paymentamount'), downpaymentamount + paymentamount);
-
-  var ispaid = paymentamount_in_currency + downpaymentamount_in_currency >= total_in_currency ? 1 : 0;
-  ui.checkbox_setvalue(ui('%ispaid'), ispaid);
-
-  if(paymentamount_in_currency + downpaymentamount_in_currency > total_in_currency)
-    alert('Jumlah pembayaran melebihi total yang harus dibayar.');
+  return {
+    paymentamount_in_currency:paymentamount_in_currency,
+    paymentamount:paymentamount,
+    currency_rate:currency_rate
+  }
 
 }
 function purchaseinvoice_subtotal(){
@@ -141,9 +167,17 @@ function purchaseinvoice_total(){
   var freightcharge = parseFloat($("*[data-name='freightcharge']", '.modal').val());
   var total = subtotal - discountamount + freightcharge;
   $("*[data-name='total']", '.modal').val(total);
+
   return total;
 
-  var currencyrate = parseFloat($("*[data-name='currencyrate']", '.modal').val());
+}
+function purchaseinvoice_costprice(){
+
+  var discountamount = parseFloat($("*[data-name='discountamount']", '.modal').val());
+  var freightcharge = parseFloat($("*[data-name='freightcharge']", '.modal').val());
+
+  var currencyrate = ui.hidden_value(ui('%currencyrate'));
+
   var subtotal = purchaseinvoice_subtotal();
   var taxamount = parseFloat($("*[data-name='taxamount']", '.modal').val());
   var pph = parseFloat($("*[data-name='pph']", '.modal').val());
@@ -161,33 +195,31 @@ function purchaseinvoice_total(){
   if(isNaN(clearance_fee)) clearance_fee = 0;
   if(isNaN(handlingfeepaymentamount)) handlingfeepaymentamount = 0;
 
-  var total = subtotal - discountamount + freightcharge;
-  $("*[data-name='total']", '.modal').val(total);
-
   subtotal = subtotal * currencyrate;
   discountamount = discountamount * currencyrate;
   freightcharge = freightcharge * currencyrate;
-  total = subtotal - discountamount + freightcharge;
 
   var subtotal_after_discount = subtotal - discountamount;
 
   var discount_percentage = discountamount / subtotal;
   var tax_percentage = (freightcharge + taxamount + pph + kso + ski + clearance_fee + handlingfeepaymentamount) / subtotal_after_discount;
 
-  /*console.log([
-    taxamount,
-    freightcharge,
-    pph,
-    kso,
-    ski,
-    clearance_fee,
-    handlingfeepaymentamount,
-    subtotal_after_discount,
-    tax_percentage,
-    discount_percentage
-  ]);*/
+  console.log({
+    currencyrate:currencyrate,
+    subtotal:subtotal,
+    subtotal_after_discount:subtotal_after_discount,
+    discountamount:discountamount,
+    freightcharge:freightcharge,
+    taxamount:taxamount,
+    pph:pph,
+    kso:kso,
+    ski:ski,
+    clearance_fee:clearance_fee,
+    handlingfeepaymentamount:handlingfeepaymentamount,
+    discount_percentage:discount_percentage,
+    tax_percentage:tax_percentage
+  });
 
-  var total_unittax = 0;
   $('#inventories tr').each(function(){
 
     if(this.classList.contains('newrowopt')) return;
@@ -203,7 +235,7 @@ function purchaseinvoice_total(){
     if(isNaN(unittotal)) unittotal = 0;
     if(isNaN(unittax)) unittax = 0;
 
-    unittax_per_unit = unittax / qty;
+    var unittax_per_unit = unittax / qty;
     var unitprice = unittotal / qty;
     var unitcostprice = unitprice - (discount_percentage * unitprice);
     unitcostprice = unitcostprice + (tax_percentage * unitcostprice);
@@ -211,12 +243,7 @@ function purchaseinvoice_total(){
     unitcostprice = Math.round(unitcostprice * currencyrate) + unittax_per_unit;
     $("*[data-name='unitcostprice']", this).val(unitcostprice);
 
-    total_unittax += unittax > 0 ? unittax : 0;
-
   });
-  $("*[data-name='import_cost']", '.modal').val(total_unittax);
-
-  return total;
 
 }
 

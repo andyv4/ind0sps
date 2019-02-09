@@ -182,7 +182,7 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
     'pocode'=>array('type'=>'label', 'name'=>'pocode', 'value'=>$pocode),
     'address'=>array('type'=>'textarea', 'name'=>'address', 'value'=>$address, 'width'=>400, 'height'=>60, 'readonly'=>$readonly),
     'currencyid'=>array('type'=>'dropdown', 'name'=>'currencyid', 'value'=>$currencyid, 'width'=>150, 'items'=>array_cast(currencylist(), array('text'=>'name', 'value'=>'id')), 'readonly'=>$readonly),
-    'currencyrate'=>array('type'=>'textbox', 'name'=>'currencyrate', 'value'=>$currencyrate, 'width'=>120, 'readonly'=>$readonly, 'align'=>'left', 'datatype'=>'money', 'onchange'=>"purchaseinvoice_total()"),
+    'currencyrate'=>array('type'=>'hidden', 'name'=>'currencyrate', 'value'=>$currencyrate, 'width'=>120, 'readonly'=>$readonly, 'align'=>'left', 'datatype'=>'money', 'onchange'=>"purchaseinvoice_total()"),
     'note'=>array('type'=>'textarea', 'name'=>'note', 'value'=>$note, 'width'=>380, 'height'=>90, 'readonly'=>$readonly),
     'subtotal'=>array('type'=>'label', 'name'=>'subtotal', 'value'=>$subtotal, 'width'=>150, 'datatype'=>'money', 'readonly'=>$readonly),
     'discount'=>array('type'=>'textbox', 'name'=>'discount', 'value'=>$discount, 'width'=>60, 'datatype'=>'number', 'readonly'=>$readonly, 'onchange'=>"purchaseinvoice_discountchange()"),
@@ -294,12 +294,15 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
   $actions[] = "<td><button style='width:88px' class='hollow' onclick=\"$closebtn_onclicked\"><span class='fa fa-times'></span><label>Close</label></button></td>";
 
   //<div class='statusbar'>$status</div>
+
+
   $c = "<element exp='.modal'>";
   $c .= "
     <div class='head padding10'><h5>$title</h5></div>    
     <div class='scrollable padding1020'>
       " . ui_control($controls['id']) . "
       " . ui_control($controls['purchaseorderid']) . "
+      " . ui_control($controls['currencyrate']) . "
       <table class='form'>
         " . ui_formrow('Tanggal', ui_control($controls['date'])) . "
         " . ui_formrow('Kode', ui_control($controls['code'])) . "
@@ -308,7 +311,7 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
       </table>
       <table class='form'>
         " . ui_formrow('Mata Uang', ui_control($controls['currencyid'])) . "
-        " . ui_formrow('Nilai Tukar', ui_control($controls['currencyrate'])) . "
+        " . "
         " . ui_formrow('Gudang', ui_control($controls['warehouseid'])) . "
         " . (ov('purchaseorderid', $purchaseinvoice) > 0 ? "<tr><th><label>Nomor PO</label></th><td>" . ui_control($controls['pocode']) . "<button class='hollow' onclick=\"ui.async('ui_purchaseorderdetail', [ " . ov('purchaseorderid', $purchaseinvoice) . ", 'read', { callback:'ui_purchaseinvoicedetail', params:[ $id, 'read' ] } ], { waitel:this })\"><label>Buka Pesanan</label></button></td></tr>" : '') . "
         <tr class='tax-ctl' style='display:none'><th><label>Kode Pajak</label></th><td>" . ui_control($controls['tax_code']) . "</td></tr>
