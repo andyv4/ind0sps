@@ -176,8 +176,8 @@ function ui_customerdetail_pricedetail($id){
           'value'=>$quickfiltervalue, 'separator'=>'|', 'onchange'=>"ui.async('ui_customerdetail_pricedetail_quickfilterapply', [ ui.multicomplete_value(this) ], {})")) . "</td>";
   $c .= "</tr></table>";
   $c .= ui_gridhead(array('columns'=>$detailpricepreset['columns'], 'gridexp'=>'#pricedetailgrid',
-      'oncolumnresize'=>"ui.async('ui_customerdetail_pricedetail_columnresize', [ name, width ], {})",
-      'oncolumnclick'=>"ui.async('ui_customerdetail_pricedetail_sortapply', [ name ], {})",
+      'oncolumnresize'=>"ui_customerdetail_pricedetail_columnresize",
+      'oncolumnclick'=>"ui_customerdetail_pricedetail_sortapply",
       'oncolumnapply'=>'ui_customerdetail_pricedetail_columnapply'));
   $c .= "</element>";
   $c .= "<element exp='#customerdetailscrollable2'>";
@@ -344,8 +344,8 @@ function ui_customerdetail_salesdetail($id){
           'value'=>$quickfiltervalue, 'separator'=>'|', 'onchange'=>"ui.async('ui_customerdetail_salesdetail_quickfilterapply', [ ui.multicomplete_value(this) ], {})")) . "</td>";
   $c .= "</tr></table>";
   $c .= ui_gridhead(array('columns'=>$detailsalespreset['columns'], 'gridexp'=>'#salesdetailgrid',
-      'oncolumnresize'=>"ui.async('ui_customerdetail_salesdetail_columnresize', [ name, width ], {})",
-      'oncolumnclick'=>"ui.async('ui_customerdetail_salesdetail_sortapply', [ name ], {})",
+      'oncolumnresize'=>"ui_customerdetail_salesdetail_columnresize",
+      'oncolumnclick'=>"ui_customerdetail_salesdetail_sortapply",
       'oncolumnapply'=>'ui_customerdetail_salesdetail_columnapply'));
   $c .= "</element>";
   $c .= "<element exp='#customerdetailscrollable3'>";

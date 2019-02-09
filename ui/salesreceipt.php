@@ -64,7 +64,7 @@ function ui_salesreceiptdetail($id, $mode = 'read'){
       </table>
       <div style='height:22px'></div>
       <div id='cont33120'>
-        " . ui_gridhead(array('columns'=>$detailcolumns, 'oncolumnresize'=>"ui.async('ui_salesreceiptdetail_columnresize', [ name, width ], {})", 'gridexp'=>'#items')) . "
+        " . ui_gridhead(array('columns'=>$detailcolumns, 'oncolumnresize'=>"ui_salesreceiptdetail_columnresize", 'gridexp'=>'#items')) . "
         " . ui_grid(array('columns'=>$detailcolumns, 'name'=>'items', 'value'=>ov('items', $obj), 'readonly'=>$readonly, 'id'=>'items')) . "
       </div>
       <div style='height:22px'></div>

@@ -165,8 +165,8 @@ function ui_supplierdetail_mutationdetail($id){
           'value'=>$quickfiltervalue, 'separator'=>'|', 'onchange'=>"ui.async('ui_supplierdetail_mutationdetail_quickfilterapply', [ ui.multicomplete_value(this) ], {})")) . "</td>";
   $c .= "</tr></table>";
   $c .= ui_gridhead(array('columns'=>$columns, 'gridexp'=>'#mutationdetailgrid',
-      'oncolumnresize'=>"ui.async('ui_supplierdetail_mutationdetail_columnresize', [ name, width ], {})",
-      'oncolumnclick'=>"ui.async('ui_supplierdetail_mutationdetail_sortapply', [ name ], {})",
+      'oncolumnresize'=>"ui_supplierdetail_mutationdetail_columnresize",
+      'oncolumnclick'=>"ui_supplierdetail_mutationdetail_sortapply",
       'oncolumnapply'=>'ui_supplierdetail_mutationdetail_columnapply'));
   $c .= ui_grid(array('id'=>'mutationdetailgrid', 'columns'=>$columns, 'value'=>$items, 'scrollel'=>'.modal .scrollable'));
   $c .= "</element>";
