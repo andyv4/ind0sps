@@ -53,6 +53,7 @@ $purchaseinvoice_columns = [
   'qty'=>[ 'active'=>1, 'text'=>'Kts', 'width'=>60, 'datatype'=>'number'],
   'unit'=>[ 'active'=>1, 'text'=>'Satuan', 'width'=>60],
   'unitprice'=>[ 'active'=>1, 'text'=>'Harga Satuan', 'width'=>60, 'datatype'=>'money'],
+  'unitcostprice'=>[ 'active'=>1, 'text'=>'Harga Modal', 'width'=>60, 'datatype'=>'money', 'nodittomark'=>1],
   'unitdiscount'=>[ 'active'=>1, 'text'=>'Diskon Barang%', 'width'=>60, 'datatype'=>'number'],
   'unitdiscountamount'=>[ 'active'=>1, 'text'=>'Diskon Barang', 'width'=>60, 'datatype'=>'money'],
   'unittotal'=>[ 'active'=>1, 'text'=>'Jumlah Barang', 'width'=>60, 'datatype'=>'money'],
@@ -178,6 +179,7 @@ function purchaseinvoicelist($columns, $sorts, $filters, $limits, $groups = null
     'qty'=>'t2.qty',
     'unit'=>'t2.unit',
     'unitprice'=>'t2.unitprice',
+    'unitcostprice'=>'t2.unitcostprice',
     'unitdiscount'=>'t2.unitdiscount',
     'unitdiscountamount'=>'t2.unitdiscountamount',
     'unittotal'=>'t2.unittotal',
@@ -823,7 +825,8 @@ function purchaseinvoicemodify($purchaseinvoice){
 
     userlog('purchaseinvoicemodify', $current, $updatedrows, $_SESSION['user']['id'], $id);
 
-    job_create_and_run('purchaseinvoice_ext', [ $id ]);
+    //job_create_and_run('purchaseinvoice_ext', [ $id ]);
+    purchaseinvoice_ext($id);
 
     pdo_commit();
 
@@ -881,10 +884,41 @@ function purchaseinvoiceremove($filters){
 
 }
 
+function purchaseinvoice_payment($purchaseinvoice){
+
+  $total_payment = 0;
+  $total_payment_in_currency = 0;
+  $payments = $purchaseinvoice['payments'];
+  if(count($payments) > 0){
+
+    foreach($payments as $index=>$payment){
+
+      $paymentaccountid = $payment['paymentaccountid'];
+      $paymentamount = $payment['paymentamount'];
+      $paymenttotalamount = $payment['paymenttotalamount'];
+      $paymentdate = $payment['paymentdate'];
+
+      if($paymentaccountid > 0 && $paymenttotalamount > 0 && isdate($paymentdate)){
+        $total_payment += $paymenttotalamount;
+        $total_payment_in_currency += $paymentamount;
+      }
+
+    }
+
+  }
+  $currency_rate = $total_payment_in_currency > 0 ? $total_payment / $total_payment_in_currency : 1;
+
+  return [
+    'total_payment'=>$total_payment,
+    'total_payment_in_currency'=>$total_payment_in_currency,
+    'currency_rate'=>$currency_rate
+  ];
+
+}
+
 function purchaseinvoice_ext($id){
 
-  global $purchaseinvoice_inventoryaccountid, $purchaseinvoice_downpaymentaccountid, $purchaseinvoice_debtaccountid,
-         $purchaseinvoice_payment_tolerance_accountid, $purchaseinvoice_payment_tolerance;
+  global $purchaseinvoice_inventoryaccountid, $purchaseinvoice_downpaymentaccountid;
 
   $purchaseinvoice = purchaseinvoicedetail(null, array('id'=>$id));
   if(!$purchaseinvoice) return;
@@ -904,56 +938,6 @@ function purchaseinvoice_ext($id){
   $purchaseorder = purchaseorderdetail(null, array('id'=>$purchaseorderid));
   $downpaymentamount = ov('paymentamount', $purchaseorder, 0);
 
-  $tax_paid = isset($purchaseorder['taxamount']) && $purchaseorder['taxamount'] > 0;
-  $pph_paid = isset($purchaseorder['pph']) && $purchaseorder['pph'] > 0;
-  $kso_paid = isset($purchaseorder['kso']) && $purchaseorder['kso'] > 0;
-  $ski_paid = isset($purchaseorder['ski']) && $purchaseorder['ski'] > 0;
-  $cf_paid = isset($purchaseorder['clearance_fee']) && $purchaseorder['clearance_fee'] > 0;
-  $ic_paid = isset($purchaseorder['import_cost']) && $purchaseorder['import_cost'] > 0;
-  $hf_paid = isset($purchaseorder['handlingfeepaymentamount']) && $purchaseorder['handlingfeepaymentamount'] > 0;
-
-  /* Calculate cost price */
-  /*$currencyrate = floatval($purchaseinvoice['currencyrate']);
-  $subtotal = 0;
-  foreach($inventories as $inventory){
-    $unit_total = floatval($inventory['unittotal']);
-    $subtotal += $unit_total;
-  }
-  $discountamount = floatval($purchaseinvoice['discountamount']);
-  $taxamount = floatval($purchaseinvoice['taxamount']);
-  $freightcharge = floatval($purchaseinvoice['freightcharge']);
-  $pph = floatval($purchaseinvoice['pph']);
-  $kso = floatval($purchaseinvoice['kso']);
-  $ski = floatval($purchaseinvoice['ski']);
-  $clearance_fee = floatval($purchaseinvoice['clearance_fee']);
-  $handlingfeepaymentamount = floatval($purchaseinvoice['handlingfeepaymentamount']);*/
-
-  /**
-   * Inventory Balance
-   */
-  $inventorybalances = [];
-  foreach($inventories as $inventory){
-
-    $purchaseinvoiceinventoryid = $inventory['id'];
-    $inventoryid = $inventory['inventoryid'];
-    $qty = $inventory['qty'];
-    $unitcostprice = $inventory['unitcostprice'];
-
-    $inventorybalances[] = [
-      'ref'=>'PI',
-      'refid'=>$id,
-      'refitemid'=>$purchaseinvoiceinventoryid,
-      'date'=>$date,
-      'description'=>$supplierdescription,
-      'inventoryid'=>$inventoryid,
-      'warehouseid'=>$warehouseid,
-      'in'=>$qty,
-      'amount'=>$qty * $unitcostprice,
-      'createdon'=>date('YmdHis')
-    ];
-
-  }
-  inventorybalanceentries($inventorybalances);
 
   $total_payment = 0;
   $total_payment_in_currency = 0;
@@ -1017,6 +1001,7 @@ function purchaseinvoice_ext($id){
 
   // Tax
   $taxamount = ov('taxamount', $purchaseinvoice);
+  $tax_paid = isset($purchaseorder['taxamount']) && $purchaseorder['taxamount'] > 0;
   if($taxamount > 0 && !$tax_paid){
     $taxdate = ov('taxdate', $purchaseinvoice);
     $taxaccountid = ov('taxaccountid', $purchaseinvoice);
@@ -1038,6 +1023,7 @@ function purchaseinvoice_ext($id){
 
   // PPh
   $pph = ov('pph', $purchaseinvoice);
+  $pph_paid = isset($purchaseorder['pph']) && $purchaseorder['pph'] > 0;
   if($pph > 0 && !$pph_paid){
     $pphdate = ov('pphdate', $purchaseinvoice);
     $pphaccountid = ov('pphaccountid', $purchaseinvoice);
@@ -1059,6 +1045,7 @@ function purchaseinvoice_ext($id){
 
   // KSO
   $kso = ov('kso', $purchaseinvoice);
+  $kso_paid = isset($purchaseorder['kso']) && $purchaseorder['kso'] > 0;
   if($kso > 0 && !$kso_paid){
     $ksodate = ov('ksodate', $purchaseinvoice);
     $ksoaccountid = ov('ksoaccountid', $purchaseinvoice);
@@ -1080,6 +1067,7 @@ function purchaseinvoice_ext($id){
 
   // SKI
   $ski = ov('ski', $purchaseinvoice);
+  $ski_paid = isset($purchaseorder['ski']) && $purchaseorder['ski'] > 0;
   if($ski > 0 && !$ski_paid){
     $skidate = ov('skidate', $purchaseinvoice);
     $skiaccountid = ov('skiaccountid', $purchaseinvoice);
@@ -1101,6 +1089,7 @@ function purchaseinvoice_ext($id){
 
   // Clearance Fee
   $clearance_fee = ov('clearance_fee', $purchaseinvoice);
+  $cf_paid = isset($purchaseorder['clearance_fee']) && $purchaseorder['clearance_fee'] > 0;
   if($clearance_fee > 0 && !$cf_paid){
     $clearance_fee_date = ov('clearance_fee_date', $purchaseinvoice);
     $clearance_fee_accountid = ov('clearance_fee_accountid', $purchaseinvoice);
@@ -1122,6 +1111,7 @@ function purchaseinvoice_ext($id){
 
   // Import Cost
   $import_cost = ov('import_cost', $purchaseinvoice);
+  $ic_paid = isset($purchaseorder['import_cost']) && $purchaseorder['import_cost'] > 0;
   if($import_cost > 0 && !$ic_paid){
     $import_cost_date = ov('import_cost_date', $purchaseinvoice);
     $import_cost_accountid = ov('import_cost_accountid', $purchaseinvoice);
@@ -1142,6 +1132,7 @@ function purchaseinvoice_ext($id){
   }
 
   // Create journal for handling fee if any
+  $hf_paid = isset($purchaseorder['handlingfeepaymentamount']) && $purchaseorder['handlingfeepaymentamount'] > 0;
   if($handlingfeepaymentamount > 0 && !$hf_paid){
 
     $details = [];
@@ -1160,14 +1151,102 @@ function purchaseinvoice_ext($id){
   }
 
   journalvoucherremove(array('ref'=>'PI', 'refid'=>$id));
-  if(count($journalvouchers) > 0){
+  if(count($journalvouchers) > 0)
     journalvoucherentries($journalvouchers);
-  }
 
   if($purchaseinvoice['purchaseorderid'] > 0)
     $total_payment_in_currency += pmc("select sum(amount) from purchaseorderpayment where purchaseorderid = ?", [ $purchaseinvoice['purchaseorderid'] ]);
-
   $ispaid = $total_payment_in_currency >= $total ? 1 : 0;
+
+  /* Calculate cost price */
+  $discountamount = floatval($purchaseinvoice['discountamount']);
+  $freightcharge = floatval($purchaseinvoice['freightcharge']);
+  $payment = purchaseinvoice_payment($purchaseinvoice);
+  $currencyrate = $payment['currency_rate'] > 0 ? $payment['currency_rate'] : 1;
+  $subtotal = 0;
+  foreach($inventories as $inventory){
+    $unit_total = floatval($inventory['unittotal']);
+    $subtotal += $unit_total;
+  }
+  $taxamount = floatval($purchaseinvoice['taxamount']);
+  $pph = floatval($purchaseinvoice['pph']);
+  $kso = floatval($purchaseinvoice['kso']);
+  $ski = floatval($purchaseinvoice['ski']);
+  $clearance_fee = floatval($purchaseinvoice['clearance_fee']);
+  $handlingfeepaymentamount = floatval($purchaseinvoice['handlingfeepaymentamount']);
+  $subtotal = $subtotal * $currencyrate;
+  $discountamount = $discountamount * $currencyrate;
+  $freightcharge = $freightcharge * $currencyrate;
+  $subtotal_after_discount = $subtotal - $discountamount;
+  $discount_percentage = $subtotal > 0 ? $discountamount / $subtotal : 0;
+  $tax_percentage = $subtotal_after_discount > 0 ? ($freightcharge + $taxamount + $pph + $kso + $ski + $clearance_fee + $handlingfeepaymentamount) / $subtotal_after_discount : 0;
+
+  /*console_log([
+    'currencyrate'=>$currencyrate,
+    'subtotal'=>$subtotal,
+    'subtotal_after_discount'=>$subtotal_after_discount,
+    'discountamount'=>$discountamount,
+    'freightcharge'=>$freightcharge,
+    'taxamount'=>$taxamount,
+    'pph'=>$pph,
+    'kso'=>$kso,
+    'ski'=>$ski,
+    'clearance_fee'=>$clearance_fee,
+    'handlingfeepaymentamount'=>$handlingfeepaymentamount,
+    'discount_percentage'=>$discount_percentage,
+    'tax_percentage'=>$tax_percentage
+  ]);*/
+
+  foreach($purchaseinvoice['inventories'] as $index=>$inventory){
+
+    $qty = $inventory['qty'];
+    if(!$qty) continue;
+    $unittotal = $inventory['unittotal'];
+    $unittax = $inventory['unittax'];
+    $unitcostpriceflag = $inventory['unitcostpriceflag'];
+
+    if(!$unitcostpriceflag){
+      $unittax_per_unit = $unittax / $qty;
+      $unitprice = $unittotal / $qty;
+      $unitcostprice = $unitprice - ($discount_percentage * $unitprice);
+      $unitcostprice = $unitcostprice + ($tax_percentage * $unitcostprice);
+      $unitcostprice = round($unitcostprice * $currencyrate) + $unittax_per_unit;
+      $unitcostprice = $unitcostprice * $ispaid; // Cost price only available if fully paid
+
+      if($purchaseinvoice['inventories'][$index]['unitcostprice'] != $unitcostprice){
+        pm("update purchaseinvoiceinventory set unitcostprice = ? where `id` = ?", [ $unitcostprice, $inventory['id'] ]);
+        $purchaseinvoice['inventories'][$index]['unitcostprice'] = $unitcostprice;
+      }
+    }
+
+  }
+
+  /**
+   * Inventory Balance
+   */
+  $inventorybalances = [];
+  foreach($inventories as $inventory){
+
+    $purchaseinvoiceinventoryid = $inventory['id'];
+    $inventoryid = $inventory['inventoryid'];
+    $qty = $inventory['qty'];
+    $unitcostprice = $inventory['unitcostprice'];
+
+    $inventorybalances[] = [
+      'ref'=>'PI',
+      'refid'=>$id,
+      'refitemid'=>$purchaseinvoiceinventoryid,
+      'date'=>$date,
+      'description'=>$supplierdescription,
+      'inventoryid'=>$inventoryid,
+      'warehouseid'=>$warehouseid,
+      'in'=>$qty,
+      'amount'=>$qty * $unitcostprice,
+      'createdon'=>date('YmdHis')
+    ];
+
+  }
+  inventorybalanceentries($inventorybalances);
 
   $updates = [
     'paymentamount'=>$total_payment,
@@ -1184,6 +1263,105 @@ function purchaseinvoice_ext($id){
   return $journalvouchers;
 
 }
+function purchaseinvoice_calc_costprice($id){
+
+  $purchaseinvoice = purchaseinvoicedetail(null, array('id'=>$id));
+
+  if(!$purchaseinvoice) return;
+
+  $total = ov('total', $purchaseinvoice);
+  $date = $purchaseinvoice['date'];
+  $supplierdescription = $purchaseinvoice['supplierdescription'];
+  $inventories = $purchaseinvoice['inventories'];
+  $warehouseid = $purchaseinvoice['warehouseid'];
+  $payment = purchaseinvoice_payment($purchaseinvoice);
+  $total_payment_in_currency = $payment['total_payment_in_currency'];
+
+  if($purchaseinvoice['purchaseorderid'] > 0)
+    $total_payment_in_currency += pmc("select sum(amount) from purchaseorderpayment where purchaseorderid = ?", [ $purchaseinvoice['purchaseorderid'] ]);
+  $ispaid = $total_payment_in_currency >= $total ? 1 : 0;
+
+  /* Calculate cost price */
+  $discountamount = floatval($purchaseinvoice['discountamount']);
+  $freightcharge = floatval($purchaseinvoice['freightcharge']);
+  $payment = purchaseinvoice_payment($purchaseinvoice);
+  $currencyrate = $payment['currency_rate'] > 0 ? $payment['currency_rate'] : 1;
+  $subtotal = 0;
+  foreach($inventories as $inventory){
+    $unit_total = floatval($inventory['unittotal']);
+    $subtotal += $unit_total;
+  }
+  $taxamount = floatval($purchaseinvoice['taxamount']);
+  $pph = floatval($purchaseinvoice['pph']);
+  $kso = floatval($purchaseinvoice['kso']);
+  $ski = floatval($purchaseinvoice['ski']);
+  $clearance_fee = floatval($purchaseinvoice['clearance_fee']);
+  $handlingfeepaymentamount = floatval($purchaseinvoice['handlingfeepaymentamount']);
+  $subtotal = $subtotal * $currencyrate;
+  $discountamount = $discountamount * $currencyrate;
+  $freightcharge = $freightcharge * $currencyrate;
+  $subtotal_after_discount = $subtotal - $discountamount;
+  $discount_percentage = $subtotal > 0 ? $discountamount / $subtotal : 0;
+  $tax_percentage = $subtotal_after_discount > 0 ? ($freightcharge + $taxamount + $pph + $kso + $ski + $clearance_fee + $handlingfeepaymentamount) / $subtotal_after_discount : 0;
+
+  $inventory_costprices = [];
+  foreach($purchaseinvoice['inventories'] as $index=>$inventory){
+
+    $qty = $inventory['qty'];
+    if(!$qty) continue;
+    $unittotal = $inventory['unittotal'];
+    $unittax = $inventory['unittax'];
+    $unitcostpriceflag = $inventory['unitcostpriceflag'];
+
+    if(!$unitcostpriceflag){
+      $unittax_per_unit = $unittax / $qty;
+      $unitprice = $unittotal / $qty;
+      $unitcostprice = $unitprice - ($discount_percentage * $unitprice);
+      $unitcostprice = $unitcostprice + ($tax_percentage * $unitcostprice);
+      $unitcostprice = round($unitcostprice * $currencyrate) + $unittax_per_unit;
+      $unitcostprice = $unitcostprice * $ispaid; // Cost price only available if fully paid
+
+      if($purchaseinvoice['inventories'][$index]['unitcostprice'] != $unitcostprice){
+        pm("update purchaseinvoiceinventory set unitcostprice = ? where `id` = ?", [ $unitcostprice, $inventory['id'] ]);
+        $purchaseinvoice['inventories'][$index]['unitcostprice'] = $unitcostprice;
+      }
+      $inventory_costprices[$inventory['id']] = $purchaseinvoice['inventories'][$index]['unitcostprice'];
+      echo $inventory['inventorycode'] . ": " . $purchaseinvoice['inventories'][$index]['unitcostprice'] . PHP_EOL;
+    }
+
+  }
+
+  /**
+   * Inventory Balance
+   */
+  $inventorybalances = [];
+  foreach($inventories as $inventory){
+
+    $purchaseinvoiceinventoryid = $inventory['id'];
+    $inventoryid = $inventory['inventoryid'];
+    $qty = $inventory['qty'];
+    $unitcostprice = $inventory['unitcostprice'];
+
+    $inventorybalances[] = [
+      'ref'=>'PI',
+      'refid'=>$id,
+      'refitemid'=>$purchaseinvoiceinventoryid,
+      'date'=>$date,
+      'description'=>$supplierdescription,
+      'inventoryid'=>$inventoryid,
+      'warehouseid'=>$warehouseid,
+      'in'=>$qty,
+      'amount'=>$qty * $unitcostprice,
+      'createdon'=>date('YmdHis')
+    ];
+
+  }
+  inventorybalanceentries($inventorybalances);
+
+  return $inventory_costprices;
+
+}
+
 function purchaseinvoicecalculateall(){
 
   $purchaseinvoiceids = pmrs("select id from purchaseinvoice");
@@ -1266,54 +1444,13 @@ function purchaseinvoice_get_costprice($id, $itemid){
 
 }
 
-function purchaseinvoice_calc_zero_costprice($id){
+function purchaseinvoice_recalc_costprice(){
 
-  $purchaseinvoice = pmr("select * from purchaseinvoice where `id` = ?", [ $id ]);
-  $inventories = pmrs("select * from purchaseinvoiceinventory where purchaseinvoiceid = ?", [ $id ]);
-
-  $subtotal = 0;
-  foreach($inventories as $inventory){
-    $unittotal = $inventory['unittotal'];
-    $subtotal += $unittotal;
+  $rows = pmrs("select `id`, code from purchaseinvoice");
+  foreach($rows as $index=>$row){
+    echo '[' . ($index + 1) . "/" . count($rows) . '] ' . $row['code'] . PHP_EOL;
+    purchaseinvoice_calc_costprice($row['id']);
   }
-  $discountamount = $purchaseinvoice['discountamount'];
-  $subtotal_after_discount = $subtotal - $discountamount;
-  $taxamount = $purchaseinvoice['taxamount'];;
-  $freightcharge = round($purchaseinvoice['freightcharge'], 2);
-  $pph = round($purchaseinvoice['pph'], 2);
-  $kso = round($purchaseinvoice['kso'], 2);
-  $ski = round($purchaseinvoice['ski'], 2);
-  $clearance_fee = round($purchaseinvoice['clearance_fee'], 2);
-
-  $discount_percentage = $discountamount / $subtotal;
-  $tax_percentage = ($taxamount + $freightcharge + $pph + $kso + $ski + $clearance_fee) / $subtotal_after_discount;
-
-  $currencyrate = $purchaseinvoice['currencyrate'];
-
-  $queries = $params = [];
-  foreach($inventories as $inventory){
-
-    // Only apply for unset inventory cost price
-    if($inventory['unitcostprice'] <= 0){
-      $purchaseinvoiceinventoryid = $inventory['id'];
-      $qty = $inventory['qty'];
-      $unittotal = $inventory['unittotal'];
-      $unittax = $inventory['unittax'];
-      $unitprice = $unittotal / $qty;
-      $unitcostprice = $unitprice - ($discount_percentage * $unitprice);
-      $unitcostprice = $unitcostprice + ($tax_percentage * $unitcostprice);
-      $unitcostprice = round($unitcostprice * $currencyrate) + $unittax;
-      $queries[] = "update purchaseinvoiceinventory set unitcostprice = ? where `id` = ?";
-      array_push($params, $unitcostprice, $purchaseinvoiceinventoryid);
-    }
-
-  }
-
-  if(count($queries) > 0){
-    pm(implode(';', $queries), $params);
-    return true;
-  }
-  return false;
 
 }
 

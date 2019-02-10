@@ -11,10 +11,7 @@ require_once __DIR__ . '/../rcfx/php/pdo.php';
 require_once __DIR__ . '/../rcfx/php/util.php';
 require_once __DIR__ . '/../api/purchaseinvoice.php';
 
-inventorybalance_calc_refitemid();
-//$updated = purchaseinvoice_calc_zero_costprice(3343);
-
-
+purchaseinvoice_recalc_costprice();
 
 echo "Completed in " . (microtime(1) - $t1) . PHP_EOL;
 

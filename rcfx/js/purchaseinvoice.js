@@ -139,6 +139,7 @@ function purchaseinvoice_paymenttotal(){
 
   });
   var currency_rate = paymentamount / paymentamount_in_currency;
+  if(isNaN(currency_rate)) currency_rate = 1;
 
   return {
     paymentamount_in_currency:paymentamount_in_currency,
@@ -173,6 +174,7 @@ function purchaseinvoice_total(){
 }
 function purchaseinvoice_costprice(){
 
+  var ispaid = ui.checkbox_value(ui('%ispaid'));
   var discountamount = parseFloat($("*[data-name='discountamount']", '.modal').val());
   var freightcharge = parseFloat($("*[data-name='freightcharge']", '.modal').val());
 
@@ -241,6 +243,7 @@ function purchaseinvoice_costprice(){
     unitcostprice = unitcostprice + (tax_percentage * unitcostprice);
     unitcostprice = isNaN(unitcostprice) ? 0 : unitcostprice;
     unitcostprice = Math.round(unitcostprice * currencyrate) + unittax_per_unit;
+    unitcostprice = unitcostprice * ispaid; // Cost price only available if fully paid
     $("*[data-name='unitcostprice']", this).val(unitcostprice);
 
   });
@@ -268,11 +271,10 @@ function purchaseinvoice_unitcostprice_changed(textbox){
 function purchaseinvoice_unitcostpriceflag_changed(checkbox){
 
   if(ui.checkbox_value(checkbox) > 0){
-    ui.textbox_setvalue(checkbox.nextElementSibling, '');
     $("input", checkbox.nextElementSibling).select();
   }
   else
-    purchaseinvoice_total();
+    purchaseinvoice_calculate();
 
 }
 

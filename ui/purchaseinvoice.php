@@ -182,7 +182,7 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
     'pocode'=>array('type'=>'label', 'name'=>'pocode', 'value'=>$pocode),
     'address'=>array('type'=>'textarea', 'name'=>'address', 'value'=>$address, 'width'=>400, 'height'=>60, 'readonly'=>$readonly),
     'currencyid'=>array('type'=>'dropdown', 'name'=>'currencyid', 'value'=>$currencyid, 'width'=>150, 'items'=>array_cast(currencylist(), array('text'=>'name', 'value'=>'id')), 'readonly'=>$readonly),
-    'currencyrate'=>array('type'=>'hidden', 'name'=>'currencyrate', 'value'=>$currencyrate, 'width'=>120, 'readonly'=>$readonly, 'align'=>'left', 'datatype'=>'money', 'onchange'=>"purchaseinvoice_total()"),
+    'currencyrate'=>array('type'=>'hidden', 'name'=>'currencyrate', 'value'=>$currencyrate, 'width'=>120, 'readonly'=>$readonly, 'align'=>'left', 'datatype'=>'money', 'onchange'=>"purchaseinvoice_calculate()"),
     'note'=>array('type'=>'textarea', 'name'=>'note', 'value'=>$note, 'width'=>380, 'height'=>90, 'readonly'=>$readonly),
     'subtotal'=>array('type'=>'label', 'name'=>'subtotal', 'value'=>$subtotal, 'width'=>150, 'datatype'=>'money', 'readonly'=>$readonly),
     'discount'=>array('type'=>'textbox', 'name'=>'discount', 'value'=>$discount, 'width'=>60, 'datatype'=>'number', 'readonly'=>$readonly, 'onchange'=>"purchaseinvoice_discountchange()"),
@@ -199,40 +199,40 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
     'paymentamount'=>array('type'=>'textbox', 'name'=>'paymentamount', 'value'=>$paymentamount, 'readonly'=>1, 'width'=>150, 'datatype'=>'money', 'onchange'=>"purchaseinvoice_onpaymentamountchange()"),
     'paymentamount_in_currency'=>array('type'=>'textbox', 'name'=>'paymentamount_in_currency', 'value'=>$paymentamount_in_currency, 'readonly'=>1, 'width'=>150, 'datatype'=>'money', 'onchange'=>"purchaseinvoice_onpaymentamountchange()"),
 
-    'taxamount'=>array('type'=>'textbox', 'name'=>'taxamount', 'value'=>$taxamount, 'width'=>150, 'datatype'=>'money', 'readonly'=>$tax_readonly, 'onchange'=>"purchaseinvoice_total()"),
-    'taxdate'=>array('type'=>'datepicker', 'name'=>'taxdate', 'value'=>$taxdate, 'readonly'=>$readonly, 'onchange'=>"", 'align'=>'right', 'readonly'=>$tax_readonly, 'onchange'=>"purchaseinvoice_total()"),
-    'taxaccountid'=>array('type'=>'dropdown', 'name'=>'taxaccountid', 'value'=>$taxaccountid, 'items'=>$chartofaccounts, 'readonly'=>$tax_readonly, 'width'=>150, 'onchange'=>"purchaseinvoice_total()", 'align'=>'right'),
+    'taxamount'=>array('type'=>'textbox', 'name'=>'taxamount', 'value'=>$taxamount, 'width'=>150, 'datatype'=>'money', 'readonly'=>$tax_readonly, 'onchange'=>"purchaseinvoice_calculate()"),
+    'taxdate'=>array('type'=>'datepicker', 'name'=>'taxdate', 'value'=>$taxdate, 'readonly'=>$readonly, 'onchange'=>"", 'align'=>'right', 'readonly'=>$tax_readonly, 'onchange'=>"purchaseinvoice_calculate()"),
+    'taxaccountid'=>array('type'=>'dropdown', 'name'=>'taxaccountid', 'value'=>$taxaccountid, 'items'=>$chartofaccounts, 'readonly'=>$tax_readonly, 'width'=>150, 'onchange'=>"purchaseinvoice_calculate()", 'align'=>'right'),
 
-    'pph'=>array('type'=>'textbox', 'name'=>'pph', 'value'=>$pph, 'width'=>150, 'datatype'=>'money', 'readonly'=>$pph_readonly, 'onchange'=>"purchaseinvoice_total()"),
-    'pphdate'=>array('type'=>'datepicker', 'name'=>'pphdate', 'value'=>$pphdate, 'datatype'=>'money', 'readonly'=>$pph_readonly, 'onchange'=>"purchaseinvoice_total()", 'align'=>'right'),
-    'pphaccountid'=>array('type'=>'dropdown', 'name'=>'pphaccountid', 'value'=>$pphaccountid, 'width'=>150, 'items'=>$chartofaccounts, 'readonly'=>$pph_readonly, 'onchange'=>"purchaseinvoice_total()", 'align'=>'right'),
+    'pph'=>array('type'=>'textbox', 'name'=>'pph', 'value'=>$pph, 'width'=>150, 'datatype'=>'money', 'readonly'=>$pph_readonly, 'onchange'=>"purchaseinvoice_calculate()"),
+    'pphdate'=>array('type'=>'datepicker', 'name'=>'pphdate', 'value'=>$pphdate, 'datatype'=>'money', 'readonly'=>$pph_readonly, 'onchange'=>"purchaseinvoice_calculate()", 'align'=>'right'),
+    'pphaccountid'=>array('type'=>'dropdown', 'name'=>'pphaccountid', 'value'=>$pphaccountid, 'width'=>150, 'items'=>$chartofaccounts, 'readonly'=>$pph_readonly, 'onchange'=>"purchaseinvoice_calculate()", 'align'=>'right'),
 
-    'kso'=>array('type'=>'textbox', 'name'=>'kso', 'value'=>$kso, 'width'=>150, 'datatype'=>'money', 'readonly'=>$kso_readonly, 'onchange'=>"purchaseinvoice_total()"),
-    'ksodate'=>array('type'=>'datepicker', 'name'=>'ksodate', 'value'=>$ksodate, 'datatype'=>'money', 'readonly'=>$kso_readonly, 'onchange'=>"purchaseinvoice_total()", 'align'=>'right'),
-    'ksoaccountid'=>array('type'=>'dropdown', 'name'=>'ksoaccountid', 'value'=>$ksoaccountid, 'width'=>150, 'items'=>$chartofaccounts, 'readonly'=>$kso_readonly, 'onchange'=>"purchaseinvoice_total()", 'align'=>'right'),
+    'kso'=>array('type'=>'textbox', 'name'=>'kso', 'value'=>$kso, 'width'=>150, 'datatype'=>'money', 'readonly'=>$kso_readonly, 'onchange'=>"purchaseinvoice_calculate()"),
+    'ksodate'=>array('type'=>'datepicker', 'name'=>'ksodate', 'value'=>$ksodate, 'datatype'=>'money', 'readonly'=>$kso_readonly, 'onchange'=>"purchaseinvoice_calculate()", 'align'=>'right'),
+    'ksoaccountid'=>array('type'=>'dropdown', 'name'=>'ksoaccountid', 'value'=>$ksoaccountid, 'width'=>150, 'items'=>$chartofaccounts, 'readonly'=>$kso_readonly, 'onchange'=>"purchaseinvoice_calculate()", 'align'=>'right'),
 
-    'ski'=>array('type'=>'textbox', 'name'=>'ski', 'value'=>$ski, 'width'=>150, 'datatype'=>'money', 'readonly'=>$ski_readonly, 'onchange'=>"purchaseinvoice_total()"),
-    'skidate'=>array('type'=>'datepicker', 'name'=>'skidate', 'value'=>$skidate, 'datatype'=>'money', 'readonly'=>$ski_readonly, 'onchange'=>"purchaseinvoice_total()", 'align'=>'right'),
-    'skiaccountid'=>array('type'=>'dropdown', 'name'=>'skiaccountid', 'value'=>$skiaccountid, 'width'=>150, 'items'=>$chartofaccounts, 'readonly'=>$ski_readonly, 'onchange'=>"purchaseinvoice_total()", 'align'=>'right'),
+    'ski'=>array('type'=>'textbox', 'name'=>'ski', 'value'=>$ski, 'width'=>150, 'datatype'=>'money', 'readonly'=>$ski_readonly, 'onchange'=>"purchaseinvoice_calculate()"),
+    'skidate'=>array('type'=>'datepicker', 'name'=>'skidate', 'value'=>$skidate, 'datatype'=>'money', 'readonly'=>$ski_readonly, 'onchange'=>"purchaseinvoice_calculate()", 'align'=>'right'),
+    'skiaccountid'=>array('type'=>'dropdown', 'name'=>'skiaccountid', 'value'=>$skiaccountid, 'width'=>150, 'items'=>$chartofaccounts, 'readonly'=>$ski_readonly, 'onchange'=>"purchaseinvoice_calculate()", 'align'=>'right'),
 
-    'clearance_fee'=>array('type'=>'textbox', 'name'=>'clearance_fee', 'value'=>$clearance_fee, 'width'=>150, 'datatype'=>'money', 'readonly'=>$cf_readonly, 'onchange'=>"purchaseinvoice_total()"),
-    'clearance_fee_date'=>array('type'=>'datepicker', 'name'=>'clearance_fee_date', 'value'=>$clearance_fee_date, 'datatype'=>'money', 'readonly'=>$cf_readonly, 'onchange'=>"purchaseinvoice_total()", 'align'=>'right'),
-    'clearance_fee_accountid'=>array('type'=>'dropdown', 'name'=>'clearance_fee_accountid', 'value'=>$clearance_fee_accountid, 'width'=>150, 'items'=>$chartofaccounts, 'readonly'=>$cf_readonly, 'onchange'=>"purchaseinvoice_total()", 'align'=>'right'),
+    'clearance_fee'=>array('type'=>'textbox', 'name'=>'clearance_fee', 'value'=>$clearance_fee, 'width'=>150, 'datatype'=>'money', 'readonly'=>$cf_readonly, 'onchange'=>"purchaseinvoice_calculate()"),
+    'clearance_fee_date'=>array('type'=>'datepicker', 'name'=>'clearance_fee_date', 'value'=>$clearance_fee_date, 'datatype'=>'money', 'readonly'=>$cf_readonly, 'onchange'=>"purchaseinvoice_calculate()", 'align'=>'right'),
+    'clearance_fee_accountid'=>array('type'=>'dropdown', 'name'=>'clearance_fee_accountid', 'value'=>$clearance_fee_accountid, 'width'=>150, 'items'=>$chartofaccounts, 'readonly'=>$cf_readonly, 'onchange'=>"purchaseinvoice_calculate()", 'align'=>'right'),
 
-    'import_cost'=>array('type'=>'textbox', 'name'=>'import_cost', 'value'=>$import_cost, 'width'=>150, 'datatype'=>'money', 'readonly'=>1, 'onchange'=>"purchaseinvoice_total()"),
-    'import_cost_date'=>array('type'=>'datepicker', 'name'=>'import_cost_date', 'value'=>$import_cost_date, 'datatype'=>'money', 'readonly'=>$import_cost_readonly, 'onchange'=>"purchaseinvoice_total()", 'align'=>'right'),
-    'import_cost_accountid'=>array('type'=>'dropdown', 'name'=>'import_cost_accountid', 'value'=>$import_cost_accountid, 'width'=>150, 'items'=>$chartofaccounts, 'readonly'=>$import_cost_readonly, 'onchange'=>"purchaseinvoice_total()", 'align'=>'right'),
+    'import_cost'=>array('type'=>'textbox', 'name'=>'import_cost', 'value'=>$import_cost, 'width'=>150, 'datatype'=>'money', 'readonly'=>1, 'onchange'=>"purchaseinvoice_calculate()"),
+    'import_cost_date'=>array('type'=>'datepicker', 'name'=>'import_cost_date', 'value'=>$import_cost_date, 'datatype'=>'money', 'readonly'=>$import_cost_readonly, 'onchange'=>"purchaseinvoice_calculate()", 'align'=>'right'),
+    'import_cost_accountid'=>array('type'=>'dropdown', 'name'=>'import_cost_accountid', 'value'=>$import_cost_accountid, 'width'=>150, 'items'=>$chartofaccounts, 'readonly'=>$import_cost_readonly, 'onchange'=>"purchaseinvoice_calculate()", 'align'=>'right'),
 
-    'handlingfeepaymentamount'=>array('type'=>'textbox', 'name'=>'handlingfeepaymentamount', 'value'=>$handlingfeepaymentamount, 'readonly'=>$hf_readonly, 'width'=>150, 'datatype'=>'money', 'onchange'=>"purchaseinvoice_total()"),
+    'handlingfeepaymentamount'=>array('type'=>'textbox', 'name'=>'handlingfeepaymentamount', 'value'=>$handlingfeepaymentamount, 'readonly'=>$hf_readonly, 'width'=>150, 'datatype'=>'money', 'onchange'=>"purchaseinvoice_calculate()"),
     'handlingfeedate'=>array('type'=>'datepicker', 'name'=>'handlingfeedate', 'value'=>$handlingfeedate, 'readonly'=>$hf_readonly, 'align'=>'right'),
     'handlingfeeaccountid'=>array('type'=>'dropdown', 'name'=>'handlingfeeaccountid', 'value'=>$handlingfeeaccountid, 'items'=>$chartofaccounts, 'readonly'=>$hf_readonly, 'width'=>150, 'onchange'=>"", 'align'=>'right'),
 
-    'freightcharge'=>array('type'=>'textbox', 'name'=>'freightcharge', 'value'=>$freightcharge, 'width'=>150, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseinvoice_total()"),
+    'freightcharge'=>array('type'=>'textbox', 'name'=>'freightcharge', 'value'=>$freightcharge, 'width'=>150, 'datatype'=>'money', 'readonly'=>$readonly, 'onchange'=>"purchaseinvoice_calculate()"),
     'total'=>array('type'=>'label', 'name'=>'total', 'value'=>$total, 'width'=>150, 'datatype'=>'money', 'readonly'=>$readonly),
     'ispaid'=>array('type'=>'checkbox', 'name'=>'ispaid', 'value'=>$ispaid, 'readonly'=>1, 'onchange'=>"purchaseinvoice_ispaid()"),
     'warehouseid'=>array('type'=>'dropdown', 'name'=>'warehouseid', 'value'=>$warehouseid, 'items'=>array_cast(warehouselist(), array('text'=>'name', 'value'=>'id')), 'readonly'=>$readonly, 'width'=>150, 'onchange'=>""),
     'handlingfeevolume'=>array('type'=>'textbox', 'name'=>'handlingfeevolume', 'value'=>$handlingfeevolume, 'placeholder'=>'Volume...', 'readonly'=>$readonly, 'width'=>80, 'datatype'=>'number'),
-    'items'=>array('columns'=>$detailcolumns, 'name'=>'inventories', 'value'=>$inventories, 'mode'=>'write', 'readonly'=>$readonly, 'id'=>'inventories', 'onremove'=>"purchaseinvoice_total()", 'write_no_add'=>($purchaseorder ? 1 : 0)),
+    'items'=>array('columns'=>$detailcolumns, 'name'=>'inventories', 'value'=>$inventories, 'mode'=>'write', 'readonly'=>$readonly, 'id'=>'inventories', 'onremove'=>"purchaseinvoice_calculate()", 'write_no_add'=>($purchaseorder ? 1 : 0)),
     'itemshead'=>[ 'columns'=>$detailcolumns, 'gridexp'=>'#inventories' ],
 
   ];
@@ -494,7 +494,7 @@ function ui_purchaseinvoicedetail($purchaseinvoice, $readonly = true, $options =
   $c .= "</element>";
   $c .= "
 	<script>
-	  ui.loadscript('rcfx/js/purchaseinvoice.js', \"ui.modal_open(ui('.modal'), { closeable:$closable, width:1060, autoheight:true });purchaseinvoice_total()\");
+	  ui.loadscript('rcfx/js/purchaseinvoice.js', \"ui.modal_open(ui('.modal'), { closeable:$closable, width:1060, autoheight:true });purchaseinvoice_calculate()\");
 	</script>
 	";
   return $c;
@@ -721,7 +721,7 @@ function ui_purchaseinvoicedetail_col9($obj, $params){
       'readonly'=>$readonly,
       'class'=>'block',
       'datatype'=>'money',
-      'onchange'=>'purchaseinvoice_total()',
+      'onchange'=>'purchaseinvoice_calculate()',
       'ischild'=>1
     ));
   }
