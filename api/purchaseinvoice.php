@@ -52,8 +52,8 @@ $purchaseinvoice_columns = [
   'inventorydescription'=>[ 'active'=>1, 'text'=>'Nama Barang', 'width'=>150, 'type'=>'html', 'html'=>'purchaseinvoicelist_inventorydescription'],
   'qty'=>[ 'active'=>1, 'text'=>'Kts', 'width'=>60, 'datatype'=>'number'],
   'unit'=>[ 'active'=>1, 'text'=>'Satuan', 'width'=>60],
-  'unitprice'=>[ 'active'=>1, 'text'=>'Harga Satuan', 'width'=>60, 'datatype'=>'money'],
-  'unitcostprice'=>[ 'active'=>1, 'text'=>'Harga Modal', 'width'=>60, 'datatype'=>'money', 'nodittomark'=>1],
+  'unitprice'=>[ 'active'=>1, 'text'=>'Harga Satuan', 'width'=>80, 'datatype'=>'money'],
+  'unitcostprice'=>[ 'active'=>1, 'text'=>'Harga Modal', 'width'=>80, 'datatype'=>'money', 'nodittomark'=>1],
   'unitdiscount'=>[ 'active'=>1, 'text'=>'Diskon Barang%', 'width'=>60, 'datatype'=>'number'],
   'unitdiscountamount'=>[ 'active'=>1, 'text'=>'Diskon Barang', 'width'=>60, 'datatype'=>'money'],
   'unittotal'=>[ 'active'=>1, 'text'=>'Jumlah Barang', 'width'=>60, 'datatype'=>'money'],
@@ -1320,10 +1320,10 @@ function purchaseinvoice_calc_costprice($id){
       $unitcostprice = round($unitcostprice * $currencyrate) + $unittax_per_unit;
       $unitcostprice = $unitcostprice * $ispaid; // Cost price only available if fully paid
 
-      if($purchaseinvoice['inventories'][$index]['unitcostprice'] != $unitcostprice){
-        pm("update purchaseinvoiceinventory set unitcostprice = ? where `id` = ?", [ $unitcostprice, $inventory['id'] ]);
-        $purchaseinvoice['inventories'][$index]['unitcostprice'] = $unitcostprice;
-      }
+      pm("update purchaseinvoiceinventory set unitcostprice = ? where `id` = ?", [ $unitcostprice, $inventory['id'] ]);
+      pm("update inventorybalance set unitamount = ?, amount = ? where ref = 'PI' and refid = ? and refitemid = ?",
+        [ $unitcostprice, $qty * $unitcostprice, $id, $inventory['id'] ]);
+      $purchaseinvoice['inventories'][$index]['unitcostprice'] = $unitcostprice;
       $inventory_costprices[$inventory['id']] = $purchaseinvoice['inventories'][$index]['unitcostprice'];
       echo $inventory['inventorycode'] . ": " . $purchaseinvoice['inventories'][$index]['unitcostprice'] . PHP_EOL;
     }
@@ -1333,7 +1333,7 @@ function purchaseinvoice_calc_costprice($id){
   /**
    * Inventory Balance
    */
-  $inventorybalances = [];
+  /*$inventorybalances = [];
   foreach($inventories as $inventory){
 
     $purchaseinvoiceinventoryid = $inventory['id'];
@@ -1355,7 +1355,7 @@ function purchaseinvoice_calc_costprice($id){
     ];
 
   }
-  inventorybalanceentries($inventorybalances);
+  inventorybalanceentries($inventorybalances);*/
 
   return $inventory_costprices;
 
@@ -1447,7 +1447,7 @@ function purchaseinvoice_recalc_costprice(){
 
   $rows = pmrs("select `id`, code from purchaseinvoice");
   foreach($rows as $index=>$row){
-    echo '[' . ($index + 1) . "/" . count($rows) . '] ' . $row['code'] . PHP_EOL;
+    echo '[' . ($index + 1) . "/" . count($rows) . '] ' . $row['code'] . '#' . $row['id'] . PHP_EOL;
     purchaseinvoice_calc_costprice($row['id']);
   }
 
