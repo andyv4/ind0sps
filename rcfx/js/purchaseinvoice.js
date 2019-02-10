@@ -111,9 +111,6 @@ function purchaseinvoice_calculate(){
 
   purchaseinvoice_costprice();
 
-  if(paymentamount_in_currency + downpaymentamount_in_currency > total_in_currency)
-    alert('Jumlah pembayaran melebihi total yang harus dibayar.');
-
 }
 function purchaseinvoice_paymenttotal(){
 
