@@ -724,12 +724,14 @@ function inventory_purchaseorderqty(){
   if(count($queries) > 0) pm(implode(';', $queries), $params);
   
 }
-function inventorywarehouse_calc_all(){
+function inventorywarehouse_calc($inventoryids = null){
 
-  $inventoryids = [];
-  $rows = pmrs("select `id` from inventory");
-  foreach($rows as $row)
-    $inventoryids[] = $row['id'];
+  if(!$inventoryids){
+    $inventoryids = [];
+    $rows = pmrs("select `id` from inventory");
+    foreach($rows as $row)
+      $inventoryids[] = $row['id'];
+  }
 
   $warehouseids = [];
   $rows = pmrs("select `id` from warehouse");
