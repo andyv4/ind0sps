@@ -446,54 +446,69 @@ function inventorybalanceentry($inventorybalance){
   $inventories = [];
   $warehouses = [];
 
-  $rows = pmrs("select inventoryid, warehouseid from inventorybalance where `ref` = ? and refid = ?", [
-    $inventorybalance['ref'], $inventorybalance['refid']
-  ]);
-  if(is_array($rows)){
-    foreach($rows as $row){
-      $inventories[$row['inventoryid']] = 1;
-      $warehouses[$row['warehouseid']] = 1;
+  try {
+
+    pdo_begin_transaction();
+
+    $rows = pmrs("select inventoryid, warehouseid from inventorybalance where `ref` = ? and refid = ?", [
+      $inventorybalance['ref'], $inventorybalance['refid']
+    ]);
+    if (is_array($rows)) {
+      foreach ($rows as $row) {
+        $inventories[$row['inventoryid']] = 1;
+        $warehouses[$row['warehouseid']] = 1;
+      }
+      pm("delete from inventorybalance where ref =  ? and refid = ?", [$inventorybalance['ref'], $inventorybalance['refid']]);
     }
-    pm("delete from inventorybalance where ref =  ? and refid = ?", [ $inventorybalance['ref'], $inventorybalance['refid']]);
-  }
 
-  // Required parameters
-  $inventoryid = ov('inventoryid', $inventorybalance, 1);
-  $warehouseid = ov('warehouseid', $inventorybalance, 1);
-  $date = ov('date', $inventorybalance, 1, array('type'=>'date'));
-  $in = ov('in', $inventorybalance, 0, 0);
-  $out = ov('out', $inventorybalance, 0, 0);
-  $ref = ov('ref', $inventorybalance, 1);
-  $refid = ov('refid', $inventorybalance, 1);
-  $refitemid = ov('refitemid', $inventorybalance, 1);
-  $description = ov('description', $inventorybalance, 0, '');
-  $amount = ov('amount', $inventorybalance, 0, 0);
-  $createdon = $lastupdatedon = date('YmdHis');
-  $section = ov('section', $inventorybalance, 0, 0);
-  $autoamount = $amount > 0 ? 0 : 1;
-  $qty = $in > 0 ? $in : $out;
-  if($qty > 0) $unitamount = round($amount / $qty, 2); else $unitamount = 0;
-  if($autoamount && $section < 1) $section = 1;
+    // Required parameters
+    $inventoryid = ov('inventoryid', $inventorybalance, 1);
+    $warehouseid = ov('warehouseid', $inventorybalance, 1);
+    $date = ov('date', $inventorybalance, 1, array('type' => 'date'));
+    $in = ov('in', $inventorybalance, 0, 0);
+    $out = ov('out', $inventorybalance, 0, 0);
+    $ref = ov('ref', $inventorybalance, 1);
+    $refid = ov('refid', $inventorybalance, 1);
+    $refitemid = ov('refitemid', $inventorybalance, 1);
+    $description = ov('description', $inventorybalance, 0, '');
+    $amount = ov('amount', $inventorybalance, 0, 0);
+    $createdon = $lastupdatedon = date('YmdHis');
+    $section = ov('section', $inventorybalance, 0, 0);
+    $autoamount = $amount > 0 ? 0 : 1;
+    $qty = $in > 0 ? $in : $out;
+    if ($qty > 0) $unitamount = round($amount / $qty, 2); else $unitamount = 0;
+    if ($autoamount && $section < 1) $section = 1;
 
-  if($out > 0 && $amount > 0) $amount = $amount * -1;
-  if($in > 0 && $amount < 0) $amount = $amount * -1;
+    if ($out > 0 && $amount > 0) $amount = $amount * -1;
+    if ($in > 0 && $amount < 0) $amount = $amount * -1;
 
-  $query = "INSERT INTO inventorybalance(inventoryid, `date`, warehouseid, `section`, description, `in`, `out`, unitamount, 
+    $query = "INSERT INTO inventorybalance(inventoryid, `date`, warehouseid, `section`, description, `in`, `out`, unitamount, 
         autoamount, `amount`, `ref`, `refid`, refitemid, createdon, lastupdatedon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-  $params = [ $inventoryid, $date, $warehouseid, $section, $description, $in, $out, $unitamount, $autoamount,
-    $amount, $ref, $refid, $refitemid, $createdon, $lastupdatedon ];
-  pm($query, $params);
+    $params = [$inventoryid, $date, $warehouseid, $section, $description, $in, $out, $unitamount, $autoamount,
+      $amount, $ref, $refid, $refitemid, $createdon, $lastupdatedon];
+    pm($query, $params);
 
-  $inventories[$inventoryid] = 1;
-  $warehouses[$warehouseid] = 1;
+    $inventories[$inventoryid] = 1;
+    $warehouses[$warehouseid] = 1;
 
-  $related_inventories = [];
-  $inventories = array_keys($inventories);
-  $warehouses = array_keys($warehouses);
-  foreach($inventories as $inventoryid)
-    $related_inventories[$inventoryid] = $warehouses;
+    $related_inventories = [];
+    $inventories = array_keys($inventories);
+    $warehouses = array_keys($warehouses);
+    foreach ($inventories as $inventoryid)
+      $related_inventories[$inventoryid] = $warehouses;
 
-  inventory_calc_qty($related_inventories);
+    inventory_calc_qty($related_inventories);
+
+    pdo_commit();
+
+  }
+  catch(Exception $ex){
+
+    pdo_rollback();
+
+    throw $ex;
+
+  }
 
 }
 function inventorybalanceentries($inventorybalances){
@@ -550,6 +565,14 @@ function inventorybalanceentries($inventorybalances){
       $warehouses[$warehouseid] = 1;
 
     }
+
+    $related_inventories = [];
+    $inventories = array_keys($inventories);
+    $warehouses = array_keys($warehouses);
+    foreach($inventories as $inventoryid)
+      $related_inventories[$inventoryid] = $warehouses;
+    inventory_calc_qty($related_inventories);
+
     pdo_commit();
 
   }
@@ -560,13 +583,6 @@ function inventorybalanceentries($inventorybalances){
     throw $ex;
 
   }
-
-  $related_inventories = [];
-  $inventories = array_keys($inventories);
-  $warehouses = array_keys($warehouses);
-  foreach($inventories as $inventoryid)
-    $related_inventories[$inventoryid] = $warehouses;
-  inventory_calc_qty($related_inventories);
 
 }
 function inventorybalanceremove($filters){
@@ -613,10 +629,13 @@ function inventorybalanceremove($filters){
 
 function inventoryqty_calculate($inventoryids){
 
+  $date = date('Ymd');
   if(is_array($inventoryids) && count($inventoryids) > 0){
-    $date = date('Ymd');
     $query = "UPDATE inventory t1 SET qty = (select SUM(`in` - `out`) from inventorybalance where inventoryid = t1.id and `date` <= ?) WHERE t1.id IN (" . implode(', ', $inventoryids) . ");";
     pm($query, [ $date ]);
+  }
+  else{
+    pm("UPDATE inventory t1 SET qty = (select SUM(`in` - `out`) from inventorybalance where inventoryid = t1.id and `date` <= ?)", [ $date ]);
   }
 
 }
@@ -729,35 +748,35 @@ function inventorywarehouse_calc_all(){
 
 }
 
-function inventorycostprice($id = null, $date = null){
+function inventorycostprice($id = null, $date = null, $callback = null){
 
   $method = systemvarget('costprice_method', 'average');
 
   switch($method){
 
     case 'fifo':
-      inventorycostprice_fifo($id, $date);
+      inventorycostprice_fifo($id, $date, $callback);
       break;
 
     default:
-      inventorycostprice_avg($id, $date);
+      inventorycostprice_avg($id, $date, $callback);
       break;
 
   }
 
 }
-function inventorycostprice_fifo($id = null, $date = null){
+function inventorycostprice_fifo($id = null, $date = null, $callback = null){
 
   if(!$id){
     $ids = pmrs("select `id` from inventory");
     foreach($ids as $obj)
-      inventorycostprice_fifo_id($obj['id'], $date);
+      inventorycostprice_fifo_id($obj['id'], $date, $callback);
   }
   else
-    inventorycostprice_fifo_id($id, $date);
+    inventorycostprice_fifo_id($id, $date, $callback);
 
 }
-function inventorycostprice_fifo_id($id, $date = null){
+function inventorycostprice_fifo_id($id, $date = null, $callback = null){
 
   /*
    * detail:
@@ -777,10 +796,12 @@ function inventorycostprice_fifo_id($id, $date = null){
   if(!$row_prev['detail']) $detail = [ 'qty'=>0, 'costprice'=>0, 'deficit'=>0, 'items'=>[] ];
   else $detail = json_decode($row_prev['detail'], true);
 
+  if(is_callable($callback)) if(is_callable($callback)) $callback("--- --- \t" . (str_pad($detail['qty'], 10, ' ' , STR_PAD_LEFT)) . "\t" . (str_pad($detail['costprice'], 10, ' ' , STR_PAD_LEFT)));
+
   $current_qty = $row_prev['qty'];
 
   // Update every inventorybalance from date
-  $rows = pmrs("select * from inventorybalance where inventoryid = ? and `date` >= ? order by `date`, `section`, `id`", [ $id, $date ]);
+  $rows = pmrs("select * from inventorybalance where inventoryid = ? and `date` >= ? order by `date`, autoamount, `id`", [ $id, $date ]);
 
   $queries = $params = [];
   for($i = 0 ; $i < count($rows) ; $i++){
@@ -788,14 +809,14 @@ function inventorycostprice_fifo_id($id, $date = null){
     $row = $rows[$i];
     $rowid = $row['id'];
     $date = $row['date'];
-    $section = $row['section'];
     $ref = $row['ref'];
     $refid = $row['refid'];
     $refitemid = $row['refitemid'];
     $unitamount = $row['unitamount'];
     $in = $row['in'];
     $out = $row['out'];
-    $autoamount = $row['autoamount'];
+
+    $remarks = [];
 
     if($in > 0){
 
@@ -804,6 +825,7 @@ function inventorycostprice_fifo_id($id, $date = null){
         case 'IA':
 
           $iadetail = pmr("select code from inventoryadjustment where `id` = ?", [ $refid ]);
+          $iadetail['unitamount'] = $unitamount;
 
           $detail['items'][] =  [
             'qty'=>$in,
@@ -828,19 +850,20 @@ function inventorycostprice_fifo_id($id, $date = null){
     }
     else if($out > 0){
 
+      $unitamount = 0;
+
       switch($ref){
 
         case 'SI':
         case 'IA':
         case 'SJS':
 
-          //echo json_encode([ $out, $detail['deficit'] ]) . PHP_EOL;
-
           // Decrease deficit items
           if($detail['deficit'] > 0) {
             for($j = 0 ; $j < count($detail['items']) ; $j++) {
               if ($detail['items'][$j]['qty'] < $detail['deficit']) {
                 $detail['deficit'] -= $detail['items'][$j]['qty'];
+                $detail['items'][$j]['qty'] = 0;
               } else {
                 $detail['items'][$j]['qty'] -= $detail['deficit'];
                 $detail['deficit'] = 0;
@@ -859,11 +882,13 @@ function inventorycostprice_fifo_id($id, $date = null){
           for($j = 0 ; $j < count($detail['items']) ; $j++){
             if($qty > 0){
               if($detail['items'][$j]['qty'] < $qty){
+                $remarks[] = str_pad($detail['items'][$j]['qty'], 8, ' ', STR_PAD_RIGHT) . ' ' . $detail['items'][$j]['detail']['code'] . ' @' . $detail['items'][$j]['detail']['unitamount'];
                 $qty -= $detail['items'][$j]['qty'];
                 $totalprice += $detail['items'][$j]['qty'] * $detail['items'][$j]['price'];
                 $detail['items'][$j]['qty'] = 0;
               }
               else{
+                $remarks[] = str_pad($qty, 8, ' ', STR_PAD_RIGHT) . ' ' . $detail['items'][$j]['detail']['code'] . ' @' . $detail['items'][$j]['detail']['unitamount'];
                 $detail['items'][$j]['qty'] -= $qty;
                 $totalprice += $qty * $detail['items'][$j]['price'];
                 $qty = 0;
@@ -874,6 +899,7 @@ function inventorycostprice_fifo_id($id, $date = null){
             $detail['deficit'] += $qty;
 
           $unitamount = $out > 0 ? round($totalprice / $out, 2) : 0;
+
           // Update salesinvoiceinventory
           $queries[] = "update salesinvoiceinventory set costprice = ?, margin = (unitprice - ?) / ? * 100 where salesinvoiceid = ? and inventoryid = ?";
           array_push($params, $unitamount, $unitamount, $unitamount, $refid, $id);
@@ -913,6 +939,16 @@ function inventorycostprice_fifo_id($id, $date = null){
       $queries = $params = [];
     }
 
+    if(is_callable($callback)){
+      $type = $in > 0 ? 'IN' : 'OUT';
+
+      $callback(
+        str_pad($type, 5, ' ', STR_PAD_RIGHT) . "\t" . str_pad($ref, 5, ' ', STR_PAD_RIGHT) . "\t" .
+        (str_pad(($in > 0 ? $in : $out), 10, ' ', STR_PAD_LEFT)) . "\t" . (str_pad($unitamount, 10, ' ', STR_PAD_LEFT)) . "\t" .
+        implode(', ', $remarks)
+      );
+    }
+
   }
 
   $queries[] = "update inventory t1 set avgcostprice = 
@@ -927,7 +963,6 @@ function inventorycostprice_fifo_id($id, $date = null){
   if(isset($salesinvoiceids) && is_array($salesinvoiceids) && count($salesinvoiceids) > 0)
     pm("update salesinvoice t1 set avgsalesmargin = (select avg(margin) from salesinvoiceinventory where salesinvoiceid = t1.id)
       where `id` in (" . implode(', ', $salesinvoiceids) . ")");
-
 
 }
 function inventorycostprice_avg($id = null, $date){

@@ -33,7 +33,7 @@ $rows = pmrs("select t1.id, t1.date, group_concat(t2.inventoryid) as g,
 (select count(*) from salesinvoiceinventory where salesinvoiceid = t1.id) as cnt, 
 (select count(*) from inventorybalance where ref = 'SI' and refid = t1.id) as cnt_i 
 from salesinvoice t1, salesinvoiceinventory t2 where t1.id = t2.salesinvoiceid
-and t1.date >= '2019-01-01'
+and t1.date >= '2018-06-01'
 group by t1.id having cnt <> cnt_i;");
 
 foreach($rows as $row){
@@ -41,7 +41,8 @@ foreach($rows as $row){
   $date = pmc("select createdon from inventorybalance where ref = 'SI' and refid = ? order by createdon desc limit 1",
     [ $row['id' ]]);
 
-  echo $row['id'] . "\t" . $date . "\n";
+  echo $row['id'] . "\t" . $date
+    . "\n";
 
   salesinvoice_ext($row['id']);
 }

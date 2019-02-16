@@ -258,10 +258,15 @@ function ui_inventoryqty($id){
     order by `date` desc, `section` desc, `id` desc limit 1", [ $id ]), true);
   $items = ov('items', $detail, 0, []);
 
+  foreach($items as $index=>$item){
+    $items[$index]['code'] = $item['detail']['code'];
+  }
+
   $columns = [
     [ 'active'=>1, 'text'=>'Tanggal', 'name'=>'date', 'width'=>100, 'datatype'=>'date' ],
     [ 'active'=>1, 'text'=>'Kts', 'name'=>'qty', 'width'=>60, 'datatype'=>'number', 'nodittomark'=>1 ],
     [ 'active'=>1, 'text'=>'Harga', 'name'=>'price', 'width'=>100, 'datatype'=>'money', 'nodittomark'=>1 ],
+    [ 'active'=>1, 'text'=>'Dari', 'name'=>'code', 'width'=>100 ],
   ];
 
   $gridhead = [
@@ -278,6 +283,7 @@ function ui_inventoryqty($id){
   $c = "<element exp='.modal'>";
   $c .= "
   <div>
+    <span class='padding10'><b>Kts tersisa: </b></span><br />
     " . ui_gridhead($gridhead) . "
   </div>
   <div class='scrollable' style='height:240px'>
