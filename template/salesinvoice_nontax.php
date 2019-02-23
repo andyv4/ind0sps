@@ -221,7 +221,7 @@ for($a = 0 ; $a < $page ; $a++){
         <tr>
           <th style="text-align: right;white-space: nowrap"></th>
           <td></td>`
-          <td style="font-size:.8em;width:40mm;text-align: right">
+          <td style="width:40mm;text-align: right">
             <?=strtolower($salesinvoice['salesmanname'])?> <?=strlen($pic_admin) > 0 ? ' / ' .$pic_admin : ''?>
             <div></div>
             harga sudah termasuk ppn
