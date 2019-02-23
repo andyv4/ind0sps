@@ -255,8 +255,8 @@ userkeystoreadd($_SESSION['user']['id'], 'lasturl', $url);
   <script type="text/javascript" src="rcfx/js/jquery-3.2.1.min.js"></script>
   <script type="text/javascript" src="rcfx/js/php.js?nocache=<?=$nocache?>"></script>
   <script type="text/javascript" src="rcfx/js/mattkrusedate.js?nocache=<?=$nocache?>"></script>
-  <script type="text/javascript" src="rcfx/js/component.js?nocache=<?=$nocache?>"></script>
-  <script type="text/javascript" src="rcfx/js/gridoption.js?nocache=<?=$nocache?>"></script>
+  <script type="text/javascript" src="rcfx/js/component.min.js?nocache=<?=$nocache?>"></script>
+  <script type="text/javascript" src="rcfx/js/gridoption.min.js?nocache=<?=$nocache?>"></script>
   <script type="text/javascript" src="rcfx/js/chartjs/Chart.js"></script>
 </head>
 <body>

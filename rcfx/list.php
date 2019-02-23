@@ -538,7 +538,7 @@ ui_async();
   ?>
   <script type="text/javascript" src="rcfx/js/php.js"></script>
   <script type="text/javascript" src="rcfx/js/mattkrusedate.js"></script>
-  <script type="text/javascript" src="rcfx/js/component.js"></script>
+  <script type="text/javascript" src="rcfx/js/component.min.js"></script>
   <?php
     if(function_exists('scripts')){
       $list_customscripts = scripts();

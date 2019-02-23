@@ -99,7 +99,7 @@ ui_async();
   <script type="text/javascript" src="rcfx/js/jquery-3.2.1.min.js"></script>
   <script type="text/javascript" src="rcfx/js/php.js"></script>
   <script type="text/javascript" src="rcfx/js/mattkrusedate.js"></script>
-  <script type="text/javascript" src="rcfx/js/component.js"></script>
+  <script type="text/javascript" src="rcfx/js/component.min.js"></script>
   <style type="text/css">
 
     .checkbox{

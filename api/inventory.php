@@ -1038,6 +1038,9 @@ function inventoryanalysisgenerate(){
     ORDER BY inventoryid, t1.supplierid, YEAR(`date`), MONTH(`date`)
   ");
 
+
+  echo 123;
+  return;
   pm("CREATE TABLE vv_inventory_ordered$uid (
     inventoryid INT(10),    
     qty_ordered DOUBLE(16,2),
@@ -1208,6 +1211,39 @@ function inventoryanalysislist($columns = null, $sorts = null, $filters = null, 
 
   }
   return $data;
+
+}
+
+function inventorymonthly_recalc(){
+
+  $inventories = pmrs("select `id`, code from inventory");
+
+  foreach($inventories as $inventory){
+
+    $queries = $params = [];
+    for($i = -12 ; $i <= 0 ; $i++){
+
+      $start_date = date('Ymd', mktime(0, 0, 0, $i, 1, date('Y')));
+      $end_date = date('Ymd', mktime(0, 0, 0, $i + 1, 0, date('Y')));
+
+      $inventoryid = $inventory['id'];
+      $date = $start_date;
+      $sold_qty = pmc("select sum(qty) from salesinvoice t1, salesinvoiceinventory t2 where t1.id = t2.salesinvoiceid and 
+        t1.date between ? and ? and t2.inventoryid = ?", [ $start_date, $end_date, $inventoryid ]);
+      $purchased_qty = pmc("select sum(qty) from purchaseinvoice t1, purchaseinvoiceinventory t2 where t1.id = t2.purchaseinvoiceid and 
+        t1.date between ? and ? and t2.inventoryid = ?", [ $start_date, $end_date, $inventoryid ]);
+
+      $sold_qty = !$sold_qty ? 0 : $sold_qty;
+      $purchased_qty = !$purchased_qty ? 0 : $purchased_qty;
+
+      $queries[] = "(?, ?, ?, ?)";
+      array_push($params, $inventoryid, $date, $sold_qty, $purchased_qty);
+
+      echo $inventory['code'] . "/" . $start_date . '-' . $end_date . ": " . $sold_qty . "/" . $purchased_qty . PHP_EOL;
+    }
+    pm("insert into inventorymonthly(inventoryid, `date`, sold_qty, purchased_qty) values " . implode(',', $queries), $params);
+
+  }
 
 }
 

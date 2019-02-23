@@ -271,7 +271,5 @@ function m_griddoubleclick(){
 
 }
 
-$mod_reset = 1;
-
 include 'rcfx/dashboard1.php';
 ?>

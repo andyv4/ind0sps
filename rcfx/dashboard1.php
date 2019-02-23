@@ -370,7 +370,7 @@ function m_savestate($module){
 
   if(isset($module['_systemmodule'])) return; // Dont save system module
   global $cachedir, $modulename;
-  $path = $cachedir . '/' . md5($modulename);
+  $path = $cachedir . '/' . md5($modulename);;
   file_put_contents($path, serialize($module));
 
 }
