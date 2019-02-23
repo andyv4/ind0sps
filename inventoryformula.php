@@ -68,6 +68,8 @@ function defaultmodule(){
 
 function datasource($columns = null, $sorts = null, $filters = null, $limits = null){
 
+  global $module;
+
   $date = isset($module['presets'][$module['presetidx']]['date']) ? $module['presets'][$module['presetidx']]['date'] : date('Ymd');
 
   $inventory_columnaliases = array(
@@ -80,11 +82,9 @@ function datasource($columns = null, $sorts = null, $filters = null, $limits = n
     'soldqty'=>"t1.soldqty"
   );
 
-  global $module;
-
   $params = [ $date ];
   $columnquery = columnquery_from_columnaliases($columns, $inventory_columnaliases);
-  $wherequery = wherequery_from_filters($params, $filters, $inventory_columnaliases);
+  if($filters) $wherequery = wherequery_from_filters($params, $filters, $inventory_columnaliases);
   $sortquery = sortquery_from_sorts($sorts, $inventory_columnaliases);
   $limitquery = limitquery_from_limitoffset($limits);
 
