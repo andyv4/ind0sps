@@ -8,3 +8,5 @@ rcfx/img/.DS_Store
 rcfx/js/.DS_Store
 rcfx/php/.DS_Store
 ui/.DS_Store
+rcfx/js/component.js
+rcfx/js/gridoption.js
