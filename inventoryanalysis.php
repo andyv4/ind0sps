@@ -7,159 +7,46 @@ require_once 'api/inventory.php';
 
 function defaultmodule(){
 
-  $uid = 7;
-
-  $defined_columns = [
+  $columns = [
     'id'=>[ 'active'=>0, 'name'=>'id', 'text'=>'ID', 'width'=>50 ],
-    'code'=>[ 'active'=>0, 'name'=>'code', 'text'=>'Kode', 'width'=>60 ],
+    'code'=>[ 'active'=>1, 'name'=>'code', 'text'=>'Kode', 'width'=>60 ],
     'description'=>[ 'active'=>1, 'name'=>'description', 'text'=>'Barang', 'width'=>100 ],
     'unit'=>[ 'active'=>0, 'name'=>'unit', 'text'=>'Satuan', 'width'=>40 ],
-    'qty_in_stock'=>[ 'active'=>1, 'name'=>'qty_in_stock', 'text'=>'Stok', 'width'=>60, 'datatype'=>'number' ],
-    'selected'=>[ 'active'=>1, 'name'=>'selected', 'text'=>"Pesanan", 'width'=>60, 'align'=>'center', 'type'=>'html' ,'html'=>'grid_selected', 'style'=>'padding:0 10px', 'nodittomark'=>1 ],
-    'avg_qty_sold_per_month'=>[ 'active'=>1, 'name'=>'avg_qty_sold_per_month', 'text'=>'Rata2 Jual', 'width'=>70, 'datatype'=>'number', 'decimals'=>'0' ],
+    'qty'=>[ 'active'=>1, 'name'=>'qty', 'text'=>'Stok', 'width'=>60, 'datatype'=>'number' ],
+    'selected'=>[ 'active'=>0, 'name'=>'selected', 'text'=>"Pesanan", 'width'=>60, 'align'=>'center', 'type'=>'html' ,'html'=>'grid_selected', 'style'=>'padding:0 10px', 'nodittomark'=>1 ],
+    'avg_qty_sold_per_month'=>[ 'active'=>0, 'name'=>'avg_qty_sold_per_month', 'text'=>'Rata2 Jual', 'width'=>70, 'datatype'=>'number', 'decimals'=>'0' ],
     'avg_qty_purchased_per_month'=>[ 'active'=>0, 'name'=>'avg_qty_purchased_per_month', 'text'=>'Rata2 Beli', 'width'=>70, 'datatype'=>'number', 'decimals'=>'0' ],
-    'n_days_remaining_stock'=>[ 'active'=>1, 'name'=>'n_days_remaining_stock', 'text'=>'Sisa Stok', 'width'=>60, 'type'=>'html', 'html'=>'grid_n_days', 'align'=>'right' ],
+    'n_days_remaining_stock'=>[ 'active'=>1, 'name'=>'n_days_remaining_stock', 'text'=>'Sisa Stok', 'width'=>60, 'datatype'=>'number', 'type'=>'html', 'html'=>'grid_n_days', 'align'=>'right' ],
     'qty_ordered'=>[ 'active'=>1, 'name'=>'qty_ordered', 'text'=>'Kts Dipesan', 'width'=>70, 'datatype'=>'number' ],
-    'qty_purchased'=>[ 'active'=>1, 'name'=>'qty_purchased', 'text'=>'Kts Dibeli', 'width'=>70, 'datatype'=>'number' ],
-    'qty_sold'=>[ 'active'=>1, 'name'=>'qty_sold', 'text'=>'Kts Terjual', 'width'=>70, 'datatype'=>'number' ],
-    'qty_ordered_detail'=>[ 'active'=>0, 'name'=>'qty_ordered_detail', 'text'=>'Detil Dipesan', 'width'=>'250px', 'type'=>'html', 'html'=>'grid_column9', 'style'=>'padding:0 10px' ],
+    'qty_purchased'=>[ 'active'=>0, 'name'=>'qty_purchased', 'text'=>'Kts Dibeli', 'width'=>70, 'datatype'=>'number' ],
+    'qty_sold'=>[ 'active'=>0, 'name'=>'qty_sold', 'text'=>'Kts Terjual', 'width'=>70, 'datatype'=>'number' ],
   ];
 
-  for($i = 6 ; $i >= 1 ; $i--){
-    $timestamp = date('Ymd', mktime(0, 0, 0, date('m') - $i, 1, date('Y')));
-    $timestamp2 = date('Ym', mktime(0, 0, 0, date('m') - $i, 1, date('Y')));
-    $defined_columns['qty_sold_' . $timestamp2] = [ 'active'=>1, 'name'=>'qty_sold_' . $timestamp2, 'text'=>date('M Y', strtotime($timestamp)), 'width'=>60, 'type'=>'html', 'html'=>'grid_qty_sold_year_month', 'align'=>'right' ];
-  }
-  $columns = [];
-
-  $table_exists = pmc("select count(*) from information_schema.TABLES where TABLE_NAME = 'vv_inventory$uid'");
-  if($table_exists){
-
-    $table_columns = pmrs("SHOW COLUMNS FROM vv_inventory$uid;");
-
-    $suppliers = pmrs("select `id`, description from supplier");
-    $suppliers = array_index($suppliers, [ 'id' ], 1);
-    $supplierids = [];
-    foreach($table_columns as $table_column){
-
-      if(isset($defined_columns[$table_column['Field']])){
-        $columns[] = $defined_columns[$table_column['Field']];
-      }
-      else if(strpos($table_column['Field'], 'qty_ordered_') !== false){
-        $supplierid = str_replace('qty_ordered_', '', $table_column['Field']);
-        $supplier = $suppliers[$supplierid];
-
-        $columns[] = [ 'active'=>0, 'name'=>$table_column['Field'], 'text'=>$supplier['description'], 'width'=>50, 'datatype'=>'number' ];
-        $supplierids[] = $supplierid;
-      }
-      else if(strpos($table_column['Field'], 'qty_purchased_') !== false){
-
-        $supplierid = str_replace('qty_purchased_', '', $table_column['Field']);
-        $supplier = $suppliers[$supplierid];
-        $columns[] = [ 'active'=>0, 'name'=>$table_column['Field'], 'text'=>'Qty Purchased from ' . $supplier['description'], 'width'=>50, 'datatype'=>'number' ];
-
-      }
-
-    }
-    $columns[] = $defined_columns['selected'];
-    $columns[] = $defined_columns['qty_ordered_detail'];
-
-  }
   $presets = [];
 
   $presets[] = [
     'text'=>'Semua',
     'columns'=>$columns,
     'sorts'=>[
-      [ 'name'=>'qty_in_stock', 'sorttype'=>'desc' ],
+      [ 'name'=>'n_days_remaining_stock', 'sorttype'=>'asc' ],
+      [ 'name'=>'qty', 'sorttype'=>'asc' ],
     ],
     'viewtype'=>'list'
   ];
 
-
-  $preset_columns_visible = [
-    'description', 'qty_in_stock', 'qty_ordered', 'n_days_remaining_stock',
-    'selected',
-  ];
-  $preset_columns = [];
-  foreach($columns as $column){
-
-    if(in_array($column['name'], $preset_columns_visible)){
-      $column['active'] = 1;
-    }
-    else if(strpos($column['name'], 'qty_sold_') !== false){
-      $column['active'] = 1;
-    }
-    else
-      $column['active'] = 0;
-    $preset_columns[] = $column;
-  }
   $presets[] = [
     'text'=>'Stok Sisa < 14 Hari',
-    'columns'=>$preset_columns,
+    'columns'=>$columns,
     'sorts'=>[
       [ 'name'=>'n_days_remaining_stock', 'sorttype'=>'asc' ],
-      [ 'name'=>'qty_in_stock', 'sorttype'=>'asc' ],
+      [ 'name'=>'qty', 'sorttype'=>'asc' ],
     ],
     'filters'=>[
       [ 'name'=>'n_days_remaining_stock', 'operator'=>'<', 'value'=>'14' ],
-      [ 'name'=>'qty_sold', 'operator'=>'>', 'value'=>'0' ],
+      [ 'name'=>'qty', 'operator'=>'>', 'value'=>'0' ],
     ],
     'viewtype'=>'list'
   ];
-
-  if(is_array($supplierids)){
-
-    $preset_columns_visible = [
-      'description', 'unit', 'qty_in_stock', 'selected', 'avg_qty_sold_per_month',
-      'avg_qty_purchased_per_month', 'n_days_remaining_stock'
-    ];
-
-    foreach($supplierids as $supplierid){
-
-      $preset_name = '';
-      $preset_columns = [];
-      foreach($columns as $column){
-
-        if(in_array($column['name'], $preset_columns_visible)){
-          $column['active'] = 1;
-        }
-        else if(strpos($column['name'], 'qty_ordered_') !== false){
-          $column_supplierid = str_replace('qty_ordered_', '', $column['name']);
-
-          if($supplierid == $column_supplierid){
-            $column['active'] = 1;
-            $preset_name = $column['text'];
-          }
-          else{
-            $column['active'] = 0;
-          }
-        }
-        else
-          $column['active'] = 0;
-
-        if($column['name'] == 'description')
-          $column['width'] = '350px';
-
-        $preset_columns[] = $column;
-
-      }
-
-      $presets[] = [
-        'text'=>$preset_name,
-        'columns'=>$preset_columns,
-        'filters'=>[
-          [ 'name'=>'qty_purchased_' . $supplierid, 'operator'=>'>', 'value'=>0 ],
-        ],
-        'sorts'=>[
-          [ 'name'=>'qty_ordered_' . $supplierid, 'sorttype'=>'desc' ]
-        ],
-        'viewtype'=>'list'
-      ];
-
-    }
-
-  }
 
   $module = array(
     'title'=>'inventoryanalysis',
@@ -223,10 +110,13 @@ function grid_qty_sold_year_month($obj, $unused, $column){
     }
   }
 
+  $inventoryid = $obj['id'];
+  $date = str_replace('qty_sold_', '', $column['name']);
+
   $value = number_format($value);
   $value = $value == 0 ? '-' : $value;
 
-  $html = "<div class='align-right'>$value</div>";
+  $html = "<div class='align-right' onclick=\"ui.async('ui_iad', [ $inventoryid, '$date' ])\">$value</div>";
   return [ 'html'=>$html, 'style'=>'background:' . $bgcolors[$depth] ];
 
 }
@@ -268,6 +158,87 @@ function grid_column9($obj){
 function m_griddoubleclick(){
 
   //return "ui.async('ui_categorydetail', [ this.dataset['id'] ], {})";
+
+}
+
+function m_loadstate_ex($reset = false){
+
+  global $module;
+
+  $presetidx = $module['presetidx'];
+
+  // Remove qty_sold columns
+  $temp = [];
+  foreach($module['presets'][$presetidx]['columns'] as $column){
+    if(strpos($column['name'], 'qty_sold_') !== false);
+    else
+      $temp[] = $column;
+  }
+  $module['presets'][$presetidx]['columns'] = $temp;
+
+  // Add qty_sold columns
+  $extended_columns = [];
+  for($i = -6 ; $i <= 0 ; $i++){
+
+    $name = 'qty_sold_' . date('Ym', mktime(0, 0, 0, date('m') + $i, 1, date('Y')));
+    $text = date('M Y', mktime(0, 0, 0, date('m') + $i, 1, date('Y')));
+
+    $extended_columns[] = [
+      'active'=>1,
+      'name'=>$name,
+      'text'=>$text,
+      'width'=>65,
+      'datatype'=>'number',
+      'type'=>'html',
+      'html'=>'grid_qty_sold_year_month'
+    ];
+  }
+
+  $module['presets'][$presetidx]['columns'] = array_merge($module['presets'][$presetidx]['columns'], $extended_columns);
+
+  console_log($module);
+
+}
+
+function ui_iad($inventoryid, $date){
+
+  $date .= '01';
+  $Y = date('Y', strtotime($date));
+  $m = date('m', strtotime($date));
+  $d = date('d', strtotime($date));
+
+  $inventory = pmr("select code, description from inventory where `id` = ?", [ $inventoryid ]);
+
+  $start_date = date('Ymd', mktime(0, 0, 0, $m, 1, $Y));
+  $end_date = date('Ymd', mktime(0, 0, 0, $m + 1, 0, $Y));
+
+  $sold_qty = pmc("select sold_qty from inventorymonthly where inventoryid = ? and `date` = ?", [ $inventoryid, $start_date ]);
+  $purchased_qty = pmc("select purchased_qty from inventorymonthly where inventoryid = ? and `date` = ?", [ $inventoryid, $start_date ]);
+
+  $pis = pmrs("select t3.code, t3.description, sum(t2.qty) as qty from purchaseinvoice t1, purchaseinvoiceinventory t2, supplier t3 
+    where t1.id = t2.purchaseinvoiceid and t1.supplierid = t3.id
+    and t2.inventoryid = ? and t1.date between ? and ? group by t1.supplierid", [ $inventoryid, $start_date, $end_date ]);
+
+  $html = [];
+  $html[] = "<element exp='.modal'>";
+  $html[] = "<div class='padding10'>";
+  $html[] = "<table class='form' style='width:100%'>";
+  $html[] = "<tr><td colspan='2' style='white-space: pre-wrap'><label><b>$inventory[code] - $inventory[description]<br />" . date('M Y', strtotime($start_date)) . "</b></label></td></tr>";
+  $html[] = "<tr><td colspan='2' style='border-top:solid 1px #ccc'></td></tr>";
+  $html[] = "<tr><th style='text-align:left'><label>Sold Qty</label></th><td style='width:100%'><label>" . number_format($sold_qty) . "</label></td></tr>";
+  $html[] = "<tr><th style='text-align:left'><label>Purchased Qty</label></th><td><label>" . number_format($purchased_qty) . "</label></td></tr>";
+  if(is_array($pis) && count($pis) > 0){
+    $html[] = "<tr><td colspan='2' style='border-top:solid 1px #ccc'></td></tr>";
+    foreach($pis as $pi){
+      $html[] = "<tr><th><label>$pi[description]</label></th><td><label>" . number_format($pi['qty']) . "</label></td></tr>";
+    }
+  }
+  $html[] = "</table>";
+  $html[] = "</div>";
+  $html[] = "</element>";
+  $html[] = uijs("ui.modal_open(ui('.modal'), { closeable:1, width:300, autoheight:1 })");
+
+  return implode('', $html);
 
 }
 

@@ -1146,17 +1146,23 @@ function inventoryanalysisgenerate(){
 }
 function inventoryanalysislist($columns = null, $sorts = null, $filters = null, $limits = null, $flag = 0){
 
-  $uid = 7;
+  $column_alias = [
+    'code'=>'t1.code',
+    'description'=>'t1.description',
+    'qty'=>'t1.qty',
+    'qty_ordered'=>'t1.qty_ordered',
+    'qty_purchased'=>'t1.qty_purchased',
+    'qty_sold'=>'t1.qty_sold',
+    'n_days_remaining_stock'=>'t1.n_days_remaining_stock',
+  ];
 
-  $exists = pmc("select count(*) from information_schema.tables where table_schema = 'indosps' and table_name = 'vv_inventory$uid'");
-  if(!$exists) inventoryanalysisgenerate();
-
-  $column_alias = [];
-  $table_columns = pmrs("SHOW COLUMNS FROM vv_inventory$uid;");
-  foreach($table_columns as $table_column)
-    $column_alias[$table_column['Field']] = $table_column['Field'];
-
-  $columns_indexed = array_index($columns, [ 'name' ], 1);
+  $extended_columnquery = [];
+  for($i = -6 ; $i <= 0 ; $i++){
+    $date = date('Ymd', mktime(0, 0, 0, date('m') + $i, 1, date('Y')));
+    $name = 'qty_sold_' . date('Ym', mktime(0, 0, 0, date('m') + $i, 1, date('Y')));
+    $extended_columnquery[] = "(select sold_qty from inventorymonthly where inventoryid = t1.id and `date` = '$date') as `$name`";
+  }
+  $extended_columnquery = implode(',', $extended_columnquery);
 
   $params = array();
   $columnquery = columnquery_from_columnaliases($columns, $column_alias);
@@ -1164,10 +1170,12 @@ function inventoryanalysislist($columns = null, $sorts = null, $filters = null, 
   $sortquery = sortquery_from_sorts($sorts, $column_alias);
   $limitquery = limitquery_from_limitoffset($limits);
   $columnquery = strlen($columnquery) > 0 ? ', ' . $columnquery : '';
-  $query = "SELECT `id` $columnquery FROM vv_inventory$uid t1 $wherequery $sortquery $limitquery";
+  $columnquery .= strlen($extended_columnquery) > 0 ? ', ' . $extended_columnquery : '';
+  $query = "SELECT `id` $columnquery FROM (SELECT *, ROUND((qty / avg_qty_sold_per_month) * 31) as n_days_remaining_stock FROM inventory) as t1 $wherequery $sortquery $limitquery";
+  //exc([ $query, $params ]);
   $data = pmrs($query, $params);
 
-  if(is_array($data) && count($data) > 0){
+  /*if(is_array($data) && count($data) > 0){
 
     $supplier_columns = [];
 
@@ -1209,7 +1217,8 @@ function inventoryanalysislist($columns = null, $sorts = null, $filters = null, 
 
     }
 
-  }
+  }*/
+
   return $data;
 
 }
@@ -1221,10 +1230,10 @@ function inventorymonthly_recalc(){
   foreach($inventories as $inventory){
 
     $queries = $params = [];
-    for($i = -12 ; $i <= 0 ; $i++){
+    for($i = -6 ; $i <= 0 ; $i++){
 
-      $start_date = date('Ymd', mktime(0, 0, 0, $i, 1, date('Y')));
-      $end_date = date('Ymd', mktime(0, 0, 0, $i + 1, 0, date('Y')));
+      $start_date = date('Ymd', mktime(0, 0, 0, date('m') + $i, 1, date('Y')));
+      $end_date = date('Ymd', mktime(0, 0, 0, date('m') + $i + 1, 0, date('Y')));
 
       $inventoryid = $inventory['id'];
       $date = $start_date;
@@ -1241,7 +1250,18 @@ function inventorymonthly_recalc(){
 
       echo $inventory['code'] . "/" . $start_date . '-' . $end_date . ": " . $sold_qty . "/" . $purchased_qty . PHP_EOL;
     }
-    pm("insert into inventorymonthly(inventoryid, `date`, sold_qty, purchased_qty) values " . implode(',', $queries), $params);
+    pm("insert into inventorymonthly(inventoryid, `date`, sold_qty, purchased_qty) values " . implode(',', $queries) . " 
+      on duplicate key update sold_qty = values(sold_qty), purchased_qty = values(purchased_qty)", $params);
+
+    $avg_qty_sold_per_month = pmc("select avg(sold_qty) from inventorymonthly where inventoryid = ?", [ $inventory['id'] ]);
+    $avg_qty_purchased_per_month = pmc("select avg(purchased_qty) from inventorymonthly where inventoryid = ?", [ $inventory['id'] ]);
+    $qty_purchased = pmc("select sum(sold_qty) from inventorymonthly where inventoryid = ?", [ $inventory['id'] ]);
+    $qty_sold = pmc("select sum(purchased_qty) from inventorymonthly where inventoryid = ?", [ $inventory['id'] ]);
+    $qty_ordered = pmc("select sum(t2.qty) from purchaseorder t1, purchaseorderinventory t2 where t2.inventoryid = ?
+      and t1.id = t2.purchaseorderid and t1.isinvoiced = 0 and t1.isbaddebt = 0", [ $inventory['id'] ]);
+
+    pm("update inventory set avg_qty_sold_per_month = ?, avg_qty_purchased_per_month = ?, qty_purchased = ?, qty_sold = ?,
+        qty_ordered = ? where `id` = ?", [ $avg_qty_sold_per_month, $avg_qty_purchased_per_month, $qty_purchased, $qty_sold, $qty_ordered, $inventory['id'] ]);
 
   }
 

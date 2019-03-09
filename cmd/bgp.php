@@ -25,13 +25,6 @@ require_once __DIR__ . '/../api/warehouse.php';
 date_default_timezone_set('Asia/Jakarta');
 ini_set('memory_limit', '256M');
 
-
-inventorymonthly_recalc();
-exit();
-
-inventoryanalysisgenerate();
-exit();
-
 $applog_dest = 'echo';
 ob_start();
 register_shutdown_function("onshutdown");
@@ -54,9 +47,9 @@ foreach($rows as $row){
   salesinvoice_ext($row['id']);
 }
 
-inventoryanalysisgenerate();
-//inventorywarehouse_calc_all();
-//inventoryqty_calculateall();
+inventorymonthly_recalc();
+inventoryqty_calculate([]);
+inventorywarehouse_calc([]);
 echo 'OK' . "\n";
 exit();
 
