@@ -4,6 +4,7 @@ if(!systemvarget('salesable') || privilege_get('salesinvoice', 'list') < 1){ inc
 $modulename = 'salesinvoice';
 $groupable = true;
 
+
 require_once 'api/salesinvoice.php';
 require_once 'ui/salesinvoice.php';
 require_once 'ui/salesinvoicegroup.php';
