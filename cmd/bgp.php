@@ -10,7 +10,7 @@ $start_time = microtime(1);
 $__system = 'bgp';
 
 $mysqlpdo_host = '127.0.0.1';
-$mysqlpdo_database = isset($argv[1]) ? $argv[1] : 'indosps';
+$mysqlpdo_database = 'indosps';
 $mysqlpdo_username = 'root';
 $mysqlpdo_password = 'webapp';
 

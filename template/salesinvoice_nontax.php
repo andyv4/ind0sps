@@ -224,7 +224,7 @@ for($a = 0 ; $a < $page ; $a++){
           <td style="width:40mm;text-align: right">
             <?=strtolower($salesinvoice['salesmanname'])?> <?=strlen($pic_admin) > 0 ? ' / ' .$pic_admin : ''?>
             <div></div>
-            harga sudah termasuk ppn
+            <?php if(strpos(strtolower($salesinvoice['customerdescription']), 'srijaya') === false){ ?>harga sudah termasuk ppn<?php } ?>
           </td>
         </tr>
       </table>

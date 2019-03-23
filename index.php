@@ -141,6 +141,8 @@ if(session_id() == '') session_start();
 
 $mysqlpdo_host = '127.0.0.1';
 $mysqlpdo_database = 'indosps';
+//$mysqlpdo_database = 'indosps_70_18';
+//$mysqlpdo_database = 'indosps_full';
 $mysqlpdo_username = 'root';
 $mysqlpdo_password = 'webapp';
 

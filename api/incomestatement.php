@@ -21,8 +21,8 @@ function incomestatementlist($date1, $date2){
   $sales = pmc("select sum(total) from salesinvoice where `date` between ? and ?", [ $date1, $date2 ]);
   $sales_tax = pmc("select sum(total) from salesinvoice where `date` between ? and ? and taxable = 1", [ $date1, $date2 ]);
   $sales_non_tax = pmc("select sum(total) from salesinvoice where `date` between ? and ? and taxable = 0", [ $date1, $date2 ]);
-  $sales_receivable = pmc("select sum(total - paymentamount) from salesinvoice where `date` between ? and ? and taxable = 0", [ $date1, $date2 ]);
-  $sales_tax_amount = pmc("select sum(taxamount) from salesinvoice where `date` between ? and ? and taxamount > 0", [ $date1, $date2 ]);
+  $sales_receivable = pmc("select sum(total - paymentamount) from salesinvoice where `date` between ? and ?", [ $date1, $date2 ]);
+  $sales_tax_amount = 0; // pmc("select sum(taxamount) from salesinvoice where `date` between ? and ? and taxamount > 0", [ $date1, $date2 ]);
   $sales = $sales - $sales_tax_amount;
 
   $purchase = pmc("select sum(paymentamount) from purchaseinvoice where `date` between ? and ?", [ $date1, $date2 ]) +

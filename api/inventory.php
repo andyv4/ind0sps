@@ -742,7 +742,7 @@ function inventorywarehouse_calc($inventoryids = null){
 
   foreach($inventoryids as $inventoryid)
     foreach($warehouseids as $warehouseid){
-      echo $inventoryid . " | " . $warehouseid . "\n";
+      //echo $inventoryid . " | " . $warehouseid . "\n";
       pm("insert into inventorywarehouse (inventoryid, warehouseid, qty) values (?, ?, 
           (select sum(`in` - `out`) from inventorybalance where inventoryid = ? and warehouseid = ? and `date` <= ?)
         ) on duplicate key update qty = values(qty);", [ $inventoryid, $warehouseid, $inventoryid, $warehouseid, $date ]);
@@ -1153,11 +1153,13 @@ function inventoryanalysislist($columns = null, $sorts = null, $filters = null, 
     'qty_ordered'=>'t1.qty_ordered',
     'qty_purchased'=>'t1.qty_purchased',
     'qty_sold'=>'t1.qty_sold',
+    'avg_qty_sold_per_month'=>'t1.avg_qty_sold_per_month',
+    'avg_qty_purchased_per_month'=>'t1.avg_qty_purchased_per_month',
     'n_days_remaining_stock'=>'t1.n_days_remaining_stock',
   ];
 
   $extended_columnquery = [];
-  for($i = -6 ; $i <= 0 ; $i++){
+  for($i = -6 ; $i < 0 ; $i++){
     $date = date('Ymd', mktime(0, 0, 0, date('m') + $i, 1, date('Y')));
     $name = 'qty_sold_' . date('Ym', mktime(0, 0, 0, date('m') + $i, 1, date('Y')));
     $extended_columnquery[] = "(select sold_qty from inventorymonthly where inventoryid = t1.id and `date` = '$date') as `$name`";
@@ -1230,7 +1232,7 @@ function inventorymonthly_recalc(){
   foreach($inventories as $inventory){
 
     $queries = $params = [];
-    for($i = -6 ; $i <= 0 ; $i++){
+    for($i = -6 ; $i < 0 ; $i++){
 
       $start_date = date('Ymd', mktime(0, 0, 0, date('m') + $i, 1, date('Y')));
       $end_date = date('Ymd', mktime(0, 0, 0, date('m') + $i + 1, 0, date('Y')));

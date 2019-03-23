@@ -170,7 +170,7 @@ function m_loadstate_ex($reset = false){
   // Remove qty_sold columns
   $temp = [];
   foreach($module['presets'][$presetidx]['columns'] as $column){
-    if(strpos($column['name'], 'qty_sold_') !== false);
+    if(!in_array($column['name'], [ 'avg_qty_sold_per_month' ]) && strpos($column['name'], 'qty_sold_') !== false);
     else
       $temp[] = $column;
   }
@@ -178,7 +178,7 @@ function m_loadstate_ex($reset = false){
 
   // Add qty_sold columns
   $extended_columns = [];
-  for($i = -6 ; $i <= 0 ; $i++){
+  for($i = -6 ; $i < 0 ; $i++){
 
     $name = 'qty_sold_' . date('Ym', mktime(0, 0, 0, date('m') + $i, 1, date('Y')));
     $text = date('M Y', mktime(0, 0, 0, date('m') + $i, 1, date('Y')));

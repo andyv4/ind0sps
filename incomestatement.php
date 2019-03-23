@@ -25,7 +25,7 @@ function m_loads($params){
   $c[] = "<tr><td colspan='2'><b>Penjualan</b></td><td><a href='#'><b>" . $report['sales']['_total'] . "</b></a></td></tr>";
   $c[] = "<tr><td></td><td>SPS</td><td><a href='#'>" . $report['sales']['SPS'] . "</a></td></tr>";
   $c[] = "<tr><td></td><td>SPSP</td><td><a href='#'>" . $report['sales']['SPSP'] . "</a></td></tr>";
-  $c[] = "<tr><td></td><td>(Tax)</td><td><a href='#'>(" . $report['sales']['tax_amount'] . ")</a></td></tr>";
+  //$c[] = "<tr><td></td><td>(Tax)</td><td><a href='#'>(" . $report['sales']['tax_amount'] . ")</a></td></tr>";
   $c[] = "<tr class='gray'><td></td><td>Piutang</td><td>" . $report['sales']['receivable'] . "</td></tr>";
 
   $c[] = "<tr><td colspan='2'><b>Pembelian</b></td><td><a href='javascript:m_open(5)'><b>" . $report['purchase']['_total'] . "</b></a></td></tr>";
