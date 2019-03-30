@@ -201,6 +201,8 @@ function m_quickfilter_custom($param){
   $items[] = array('text'=>"Cari: $hint", 'value'=>"customerdescription|inventorydescription&contains&" . $hint);
   $items[] = array('text'=>"Kode: $hint", 'value'=>"code&contains&$hint");
   $items[] = array('text'=>"Kode Barang: $hint", 'value'=>"inventorycode&contains&$hint");
+  $items[] = array('text'=>"Nama Pelanggan: $hint", 'value'=>"customerdescription&contains&$hint");
+  $items[] = array('text'=>"Nama Barang: $hint", 'value'=>"inventorydescription&contains&$hint");
   $items[] = array('text'=>"Salesman: $hint", 'value'=>"salesmanname&contains&$hint");
   $items[] = array('text'=>"Hanya Pajak", 'value'=>"taxable&equals&1");
   $items[] = array('text'=>"Hanya Non Pajak", 'value'=>"taxable&equals&0");
